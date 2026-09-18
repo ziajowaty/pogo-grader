@@ -1,0 +1,6 @@
+Ancestor?,Scan date,Nr,Name,Nickname,Gender,Level,possibleLevels,CP,HP,ØATT IV,ØDEF IV,ØHP IV,ØIV%,Unique?,Fast move,Special move,Star,Form,Lucky,Shadow,GL Rank
+0,1/1/2020 00:00:00,194,Wooper,box1,♂,20,20,500,85,0,15,15,66.7,1,Water Gun,Frustration,0,0,1,1,40
+0,1/2/2020 00:00:00,38,Ninetales,box2,♀,20,20,1500,127,12,12,12,80.0,0,Charm,Psyshock,1,61,0,0,90
+1,1/2/2020 00:00:00,38,Ninetales,-,-,18,18,1400,120,12,12,12,80.0,0,Charm,Psyshock,0,61,0,0,
+0,1/3/2020 00:00:00,68,Machamp,box3,♂,30,30,2500,163,15.0,15.0,15.0,100.0,1,Counter,Dynamic Punch,0,0,1,0,200
+0,1/4/2020 00:00:00,,,junk,,20,20,abc,0,-1,-1,-1,0,0,-,-,0,0,1,0,

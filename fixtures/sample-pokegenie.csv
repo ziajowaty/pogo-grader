@@ -1,0 +1,11 @@
+Index,Name,Form,Pokemon,Gender,CP,HP,Atk IV,Def IV,Sta IV,IV Avg,Level Min,Level Max,Quick Move,Charge Move,Charge Move 2,Lucky,Shadow/Purified,Favorite,Rank # (G),Name (G)
+1,Ninetales,Alola,38,♀,1500,127,0,15,15,66.7,20.0,20.0,Powder Snow,Weather Ball,Psyshock,0,1,0,12,Ninetales
+2,Seismitoad,Normal,537,♂,1498,162,1,15,14,66.7,22.5,22.5,Mud Shot,Earth Power,Sludge Bomb,0,0,1,80,Seismitoad
+3,Seismitoad,Normal,537,♂,1400,150,8,10,10,62.2,20.0,20.0,Mud Shot,Earth Power,,0,0,0,900,Seismitoad
+4,Seismitoad,Normal,537,♂,1380,148,12,8,9,64.4,19.0,19.0,Mud Shot,Sludge Wave,,0,0,0,2000,Seismitoad
+5,Machamp,Normal,68,♂,2500,163,15,14,14,95.6,40.0,40.0,Counter,Dynamic Punch,Rock Slide,0,1,0,,
+6,Bidoof,Normal,399,♂,412,74,15,2,4,46.7,20.0,20.0,Tackle,Hyper Fang,,0,0,0,,
+7,Bidoof,Normal,399,♀,380,70,14,3,3,44.4,18.0,18.0,Tackle,Hyper Fang,,0,0,0,,
+8,Caterpie,Normal,10,♂,120,51,15,4,5,53.3,10.0,10.0,Bug Bite,Struggle,,0,0,0,,
+9,Weedle,Normal,13,♀,110,48,13,2,4,42.2,8.0,8.0,Bug Bite,Struggle,,0,0,0,,
+10,Wooper,Normal,194,♂,500,85,0,15,15,66.7,20.0,20.0,Water Gun,Mud Bomb,,0,0,0,4,Quagsire
