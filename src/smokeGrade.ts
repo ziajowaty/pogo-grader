@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { parseInventoryCsv } from "./parseCsv";
 import { loadMeta } from "./meta";
 import { gradeBox } from "./grade";
-import type { Mon } from "./types";
+import { clampFamilyKeep, FAMILY_KEEP_MIN, type Mon } from "./types";
 
 function must(cond: boolean, message: string): void {
   if (!cond) throw new Error(message);
@@ -29,6 +29,7 @@ must(parsed.mons.length === 10, `expected 10 mons, got ${parsed.mons.length}`);
 must(result.pvpRankKeep === 500, "echo pvpRankKeep 500");
 must(result.pvpListKeep === 500, "default pvpListKeep 500");
 must(result.familyKeep === 2, "default familyKeep 2");
+must(clampFamilyKeep(0) === 0 && FAMILY_KEEP_MIN === 0, "familyKeep 0 is a valid clamp");
 must(result.keepAllGood === false, "default extras as dupes");
 must(Array.isArray(meta.glRankings) && meta.glRankings.length === 500, "bundled GL rankings 500");
 must(Array.isArray(meta.lcRankings) && meta.lcRankings.length === 100, "bundled LC rankings 100");
@@ -144,6 +145,39 @@ if (oneToads.every((g) => g.verdict !== "KEEP")) {
   );
 }
 
+const noFavZero = gradeBox(noFavMons, { ...meta, pvpRankKeep: 1, familyKeep: 0 });
+const zeroToads = [...noFavZero.keep, ...noFavZero.look, ...noFavZero.dump].filter(
+  (g) => g.mon.speciesId === "seismitoad",
+);
+if (zeroToads.every((g) => g.verdict !== "KEEP")) {
+  must(
+    zeroToads.every((g) => g.verdict === "DUMP"),
+    "familyKeep 0 dumps a no-keeper GL family",
+  );
+  must(
+    zeroToads.every((g) => g.reasons.some((r) => r.includes("keep 0 per family"))),
+    "familyKeep 0 dump reason",
+  );
+}
+
+const sampleZero = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, familyKeep: 0 });
+must(sampleZero.keep.length === result.keep.length, "familyKeep 0 does not drop KEEP");
+const junkZero = [...sampleZero.keep, ...sampleZero.look, ...sampleZero.dump].filter((g) =>
+  ["bidoof", "caterpie", "weedle"].includes(g.mon.speciesId),
+);
+must(
+  junkZero.every((g) => g.verdict === "DUMP"),
+  "familyKeep 0 dumps ungated junk including only copies",
+);
+must(
+  sampleZero.keep.some((g) => g.mon.speciesId === "wooper" && g.keepClasses.includes("gl")),
+  "familyKeep 0 still KEEPs a PvP floor copy",
+);
+must(
+  sampleZero.dump.every((g) => !g.mon.shadow),
+  "familyKeep 0 still never dumps shadows",
+);
+
 const tight = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 1 });
 must(tight.pvpRankKeep === 1, "echo pvpRankKeep 1");
 const wooperTight = [...tight.keep, ...tight.look, ...tight.dump].find((g) => g.mon.speciesId === "wooper");
@@ -173,6 +207,16 @@ if (wooperRows.every((g) => g.verdict !== "KEEP")) {
   must(
     wooperRows.filter((g) => g.verdict === "DUMP").length === 2,
     "no-keeper wooper family dumps extras beyond 2",
+  );
+}
+const wooperZero = gradeBox([wooperMon!, ...extraWoopers], { ...meta, pvpRankKeep: 1, familyKeep: 0 });
+const wooperZeroRows = [...wooperZero.keep, ...wooperZero.look, ...wooperZero.dump].filter(
+  (g) => g.mon.speciesId === "wooper",
+);
+if (wooperZeroRows.every((g) => g.verdict !== "KEEP")) {
+  must(
+    wooperZeroRows.every((g) => g.verdict === "DUMP"),
+    "familyKeep 0 dumps a no-keeper wooper family",
   );
 }
 must(

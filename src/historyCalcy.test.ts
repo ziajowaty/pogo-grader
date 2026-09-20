@@ -179,6 +179,23 @@ must(
   result.dump.some((g) => g.mon.speciesId === "froakie"),
   "Froakie extras DUMP once a GL keeper exists",
 );
+
+const zero = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, familyKeep: 0 });
+must(zero.familyKeep === 0, "echo familyKeep 0");
+must(zero.keep.length === result.keep.length, "familyKeep 0 does not drop KEEP");
+must(zero.dump.length >= result.dump.length, "familyKeep 0 dumps at least as much");
+must(
+  zero.dump.every((g) => !g.mon.shadow),
+  "familyKeep 0 still never dumps shadows",
+);
+const zeroGibles = [...zero.keep, ...zero.look, ...zero.dump].filter((g) => g.mon.speciesId === "gible");
+const zeroGibleKeep = zeroGibles.filter((g) => g.verdict === "KEEP");
+if (zeroGibleKeep.length === 0) {
+  must(
+    zeroGibles.every((g) => g.verdict === "DUMP" || g.reasons.includes("dump-cap")),
+    "familyKeep 0 dumps a no-keeper Gible family (dump-cap overflow stays LOOK)",
+  );
+}
 must(
   result.dump.every((g) => g.mon.ivUnique),
   "this export has unique IVs on every dump",

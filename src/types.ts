@@ -98,7 +98,7 @@ export interface GradeResult {
   pvpRankKeep: number;
   /** Species in PvPoke GL overall this far down count as PvP. Rank 1 is best. */
   pvpListKeep: number;
-  /** LOOK this many best copies of a PvP/raid family with no KEEP; extras DUMP. */
+  /** LOOK this many best copies of a PvP/raid family with no KEEP; extras DUMP. 0 dumps junk too. */
   familyKeep: number;
   /** When true, every eligible 4* / raid / PvP-floor copy KEEPs. When false, extras are dupes. */
   keepAllGood: boolean;
@@ -129,6 +129,8 @@ export interface Meta {
   pvpListKeep?: number;
   /**
    * When a PvP/raid family has no KEEP, LOOK this many best copies and DUMP the rest.
+   * 0 DUMPs those copies and ungated junk (not useful for PvP or raids), still
+   * never dumping shadows / limited / special / non-unique IVs.
    * Default 2. Does not change KEEP slot caps (2 GL, 2 LC, 6 raid).
    */
   familyKeep?: number;
@@ -151,8 +153,9 @@ export const GL_LIST_CAP = 500;
 export const LC_LIST_CAP = 100;
 export const DEFAULT_PVP_LIST_KEEP = 500;
 
-/** Best copies to LOOK in a PvP/raid family that has no KEEP. */
+/** Best copies to LOOK in a PvP/raid family that has no KEEP. 0 dumps junk too. */
 export const DEFAULT_FAMILY_KEEP = 2;
+export const FAMILY_KEEP_MIN = 0;
 export const FAMILY_KEEP_MAX = 99;
 
 export function clampPvpRankKeep(n: unknown): number {
@@ -178,5 +181,5 @@ export function prettySpeciesId(id: string): string {
 export function clampFamilyKeep(n: unknown): number {
   const v = typeof n === "number" ? n : Number(n);
   if (!Number.isFinite(v)) return DEFAULT_FAMILY_KEEP;
-  return Math.min(FAMILY_KEEP_MAX, Math.max(1, Math.round(v)));
+  return Math.min(FAMILY_KEEP_MAX, Math.max(FAMILY_KEEP_MIN, Math.round(v)));
 }

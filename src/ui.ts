@@ -7,6 +7,7 @@ import {
   DEFAULT_PVP_LIST_KEEP,
   DEFAULT_PVP_RANK_KEEP,
   FAMILY_KEEP_MAX,
+  FAMILY_KEEP_MIN,
   GL_LIST_CAP,
   LC_LIST_CAP,
   prettySpeciesId,
@@ -25,7 +26,7 @@ const DUMP_LIST_MAX = 100;
 const LIST_PAINT_MAX = 200;
 const RANK_PRESETS = [50, 150, 500, 4096] as const;
 const LIST_KEEP_PRESETS = [100, 200, 300, 500] as const;
-const FAMILY_KEEP_PRESETS = [1, 2, 6, FAMILY_KEEP_MAX] as const;
+const FAMILY_KEEP_PRESETS = [FAMILY_KEEP_MIN, 1, 2, 6, FAMILY_KEEP_MAX] as const;
 const RANK_KEEP_KEY = "pogo-grader.pvpRankKeep";
 const LIST_KEEP_KEY = "pogo-grader.pvpListKeep";
 const FAMILY_KEEP_KEY = "pogo-grader.familyKeep";
@@ -250,6 +251,7 @@ function reasonClass(reason: string): string {
   if (r.includes("never dump") || r.includes("cannot dump")) return "chip chip--lock";
   if (r.includes("worse than keep")) return "chip chip--miss";
   if (r.includes("pvp/raid family")) return "chip chip--family";
+  if (r.includes("useless for pvp") || r.includes("keep 0 per family")) return "chip chip--junk";
   if (r.includes("only copy") || r.includes("best junk")) return "chip chip--solo";
   if (r.includes("not gl/lc/raid")) return "chip chip--junk";
   if (
@@ -369,7 +371,7 @@ export function mountApp(root: HTMLElement): void {
           <p class="note">Only species this high on PvPoke Great League overall count as PvP. Little Cup stays top ${LC_LIST_CAP}.</p>
           <div class="rank-row">
             <label class="file-label" for="family-keep">Keep</label>
-            <input id="family-keep" type="number" inputmode="numeric" min="1" max="${FAMILY_KEEP_MAX}" step="1" value="${state.familyKeep}" />
+            <input id="family-keep" type="number" inputmode="numeric" min="${FAMILY_KEEP_MIN}" max="${FAMILY_KEEP_MAX}" step="1" value="${state.familyKeep}" />
             <span class="rank-suffix">per family</span>
           </div>
           <div class="rank-presets" role="group" aria-label="Keep copies per family">
@@ -378,7 +380,7 @@ export function mountApp(root: HTMLElement): void {
                 `<button type="button" class="btn btn--preset" data-family-keep="${n}">${n === FAMILY_KEEP_MAX ? "all" : String(n)}</button>`,
             ).join("")}
           </div>
-          <p class="note">PvP/raid species with no KEEP: LOOK the best this many, DUMP extras.</p>
+          <p class="note">PvP/raid species with no KEEP: LOOK the best this many, DUMP extras. 0 DUMPs anything useless for PvP and raids.</p>
           <div class="mode-row" role="group" aria-label="DUMP extras">
             <button type="button" class="btn btn--preset" data-keep-all="0">DUMP extras</button>
             <button type="button" class="btn btn--preset" data-keep-all="1">KEEP all good</button>

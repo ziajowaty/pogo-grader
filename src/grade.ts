@@ -428,7 +428,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       hasId(meta.raidAttackers, g.mon.speciesId);
 
     if (pvpOrRaidFamily && !anchored) {
-      if (g.copyRankInGroup <= familyKeep) {
+      if (familyKeep > 0 && g.copyRankInGroup <= familyKeep) {
         g.verdict = "LOOK";
         pushReason(g, `PvP/raid family: ${familyKeep} best (no keeper)`);
         continue;
@@ -444,7 +444,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       continue;
     }
 
-    if (g.copiesInGroup === 1 || g.copyRankInGroup === 1) {
+    if (familyKeep > 0 && (g.copiesInGroup === 1 || g.copyRankInGroup === 1)) {
       g.verdict = "LOOK";
       pushReason(g, g.copiesInGroup === 1 ? "only copy" : "best junk copy — not the last");
       continue;
@@ -463,8 +463,12 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
         extraOfKeeper.has(g)
           ? "Extra copy — species already has a keeper"
           : extraOfFamily.has(g)
-            ? `Extra copy — keeping ${familyKeep} best of PvP/raid family`
-            : "Not GL/LC/raid/limited; unique IVs",
+            ? familyKeep === 0
+              ? "Useless for PvP/raids — keep 0 per family"
+              : `Extra copy — keeping ${familyKeep} best of PvP/raid family`
+            : familyKeep === 0
+              ? "Useless for PvP/raids — keep 0 per family"
+              : "Not GL/LC/raid/limited; unique IVs",
       );
       dumped++;
     } else {
