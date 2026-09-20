@@ -51,6 +51,34 @@ must(
   meta.raidRankings?.some((row) => row.speciesId === "bulbasaur" && row.asSpeciesId === "venusaur") === true,
   "bulbasaur listed as Venusaur pre-evo",
 );
+const raidCharizard = meta.raidRankings?.find((row) => row.speciesId === "charizard");
+must(
+  raidCharizard?.types.includes("fire") === true && raidCharizard?.types.includes("flying") === true,
+  "charizard is Fire/Flying",
+);
+const raidMachampRow = meta.raidRankings?.find((row) => row.speciesId === "machamp");
+must(raidMachampRow?.types.includes("fighting") === true && raidMachampRow?.types.includes("fire") !== true, "machamp is Fighting");
+const raidBulba = meta.raidRankings?.find((row) => row.speciesId === "bulbasaur");
+must(raidBulba?.types.includes("grass") === true, "bulbasaur is Grass");
+must(raidBulba?.asTypes?.includes("grass") === true, "bulbasaur KEEP target Venusaur is Grass");
+const raidPrimalGroudon = meta.raidRankings?.find((row) => row.speciesId === "groudon_primal");
+must(
+  raidPrimalGroudon?.types.includes("fire") === true && raidPrimalGroudon?.types.includes("ground") === true,
+  "primal groudon is Fire/Ground",
+);
+const raidShadowCharizard = meta.raidRankings?.find((row) => row.speciesId === "charizard_shadow");
+must(raidShadowCharizard?.types.includes("fire") === true, "shadow charizard inherits Fire");
+const raidMissingTypes = meta.raidRankings?.filter((row) => row.types.length === 0) ?? [];
+must(
+  raidMissingTypes.length === 0,
+  `raid rows missing types: ${raidMissingTypes.slice(0, 8).map((row) => row.speciesId).join(",")}`,
+);
+const fireKeep = meta.raidRankings?.filter(
+  (row) => row.types.includes("fire") || row.asTypes?.includes("fire"),
+);
+must((fireKeep?.length ?? 0) > 10, "Fire filter has KEEP attackers");
+must(fireKeep?.some((row) => row.speciesId === "charizard") === true, "Fire filter includes Charizard");
+must(fireKeep?.some((row) => row.speciesId === "machamp") !== true, "Fire filter excludes Machamp");
 
 const fox = all.find((g) => g.mon.speciesId === "ninetales_alolan_shadow");
 must(fox?.verdict === "KEEP", "alolan shadow ninetales must KEEP");

@@ -1,5 +1,5 @@
-import type { Meta, PvpokeRankRow, RaidAttackerRow } from "./types";
-import { GL_LIST_CAP, LC_LIST_CAP, prettySpeciesId } from "./types";
+import type { Meta, PokemonType, PvpokeRankRow, RaidAttackerRow } from "./types";
+import { GL_LIST_CAP, isPokemonType, LC_LIST_CAP, prettySpeciesId } from "./types";
 // @ts-ignore Vite JSON snapshots
 import glTop500Json from "../data/gl-top500.json";
 // @ts-ignore Vite JSON snapshots
@@ -16,6 +16,8 @@ import limitedJson from "../data/limited.json";
 import raidAttackersJson from "../data/raid-attackers.json";
 // @ts-ignore Vite JSON snapshots
 import evolutionsJson from "../data/evolutions.json";
+// @ts-ignore Vite JSON snapshots
+import speciesTypesJson from "../data/species-types.json";
 
 const DUMP_CAP = 100;
 const PVPOKE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -33,6 +35,11 @@ interface NamedListFile {
 interface EvolutionFile {
   comment?: string;
   from?: Record<string, string[]>;
+}
+
+interface SpeciesTypesFile {
+  comment?: string;
+  types?: Record<string, string[]>;
 }
 
 interface CachedLists {
@@ -66,6 +73,28 @@ function setHasId(set: Set<string>, id: string): boolean {
   if (set.has(id)) return true;
   const core = coreSpeciesId(id);
   return core !== id && set.has(core);
+}
+
+function loadSpeciesTypes(data: unknown): Record<string, PokemonType[]> {
+  const raw = (data as SpeciesTypesFile).types ?? {};
+  const out: Record<string, PokemonType[]> = {};
+  for (const [id, types] of Object.entries(raw)) {
+    if (!Array.isArray(types)) continue;
+    const key = canonId(id);
+    if (!key) continue;
+    const cleaned = types.filter((type): type is PokemonType => typeof type === "string" && isPokemonType(type));
+    if (cleaned.length) out[key] = cleaned;
+  }
+  return out;
+}
+
+function typesOf(id: string, map: Record<string, PokemonType[]>): PokemonType[] {
+  const speciesId = canonId(id);
+  if (!speciesId) return [];
+  const hit = map[speciesId];
+  if (hit) return hit;
+  if (speciesId.endsWith("_shadow")) return typesOf(speciesId.slice(0, -7), map);
+  return [];
 }
 
 function raidTags(id: string, limited: Set<string>, legendary: Set<string>, mythical: Set<string>): string[] {
@@ -195,6 +224,7 @@ function buildRaidRankings(
   limited: Set<string>,
   legendary: Set<string>,
   mythical: Set<string>,
+  typeMap: Record<string, PokemonType[]>,
 ): RaidAttackerRow[] {
   const seen = new Set<string>();
   const rows: RaidAttackerRow[] = [];
@@ -206,6 +236,7 @@ function buildRaidRankings(
       speciesId,
       speciesName: prettySpeciesId(speciesId),
       tags: raidTags(speciesId, limited, legendary, mythical),
+      types: typesOf(speciesId, typeMap),
     });
   }
   for (const [from, to] of Object.entries(raidEvolution)) {
@@ -215,8 +246,10 @@ function buildRaidRankings(
       speciesId: from,
       speciesName: prettySpeciesId(from),
       tags: raidTags(from, limited, legendary, mythical),
+      types: typesOf(from, typeMap),
       asSpeciesId: to,
       asSpeciesName: prettySpeciesId(to),
+      asTypes: typesOf(to, typeMap),
     });
   }
   rows.sort((a, b) => a.speciesName.localeCompare(b.speciesName) || a.speciesId.localeCompare(b.speciesId));
@@ -377,6 +410,7 @@ export async function loadMeta(): Promise<Meta> {
   const raidAttackers = toSet(raidIds);
   const evoEdges = loadEvolutionEdges(evolutionsJson);
   const raidEvolution = buildRaidEvolution(raidAttackers, evoEdges);
+  const typeMap = loadSpeciesTypes(speciesTypesJson);
   const { familyOf, evoReach } = buildFamilyIndex(evoEdges);
   const lists = await loadPvpokeLists();
   return {
@@ -385,7 +419,7 @@ export async function loadMeta(): Promise<Meta> {
     glRankings: lists.gl,
     lcRankings: lists.lc,
     raidAttackers,
-    raidRankings: buildRaidRankings(raidIds, raidEvolution, limited, legendary, mythical),
+    raidRankings: buildRaidRankings(raidIds, raidEvolution, limited, legendary, mythical, typeMap),
     raidEvolution,
     familyOf,
     evoReach,

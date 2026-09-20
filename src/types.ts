@@ -66,14 +66,49 @@ export interface PvpokeRankRow {
   score?: number;
 }
 
+export const POKEMON_TYPES = [
+  "normal",
+  "fire",
+  "water",
+  "grass",
+  "electric",
+  "ice",
+  "fighting",
+  "poison",
+  "ground",
+  "flying",
+  "psychic",
+  "bug",
+  "rock",
+  "ghost",
+  "dragon",
+  "dark",
+  "steel",
+  "fairy",
+] as const;
+
+export type PokemonType = (typeof POKEMON_TYPES)[number];
+
+const POKEMON_TYPE_SET: ReadonlySet<string> = new Set(POKEMON_TYPES);
+
+export function isPokemonType(value: string): value is PokemonType {
+  return POKEMON_TYPE_SET.has(value);
+}
+
+export function prettyPokemonType(type: PokemonType): string {
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
 /** Vendored raid KEEP list row (not a DPS ranking). */
 export interface RaidAttackerRow {
   speciesId: string;
   speciesName: string;
   tags: string[];
+  types: PokemonType[];
   /** Raid attacker this pre-evo KEEPs as, when different from speciesId. */
   asSpeciesId?: string;
   asSpeciesName?: string;
+  asTypes?: PokemonType[];
 }
 
 export interface MetaLeagueRank {

@@ -3,6 +3,7 @@ import type {
   GradedMon,
   Meta,
   ParseResult,
+  PokemonType,
   PvpokeRankRow,
   RaidAttackerRow,
   Verdict,
@@ -22,7 +23,10 @@ import {
   FAMILY_KEEP_MAX,
   FAMILY_KEEP_MIN,
   GL_LIST_CAP,
+  isPokemonType,
   LC_LIST_CAP,
+  POKEMON_TYPES,
+  prettyPokemonType,
   prettySpeciesId,
   PVP_RANK_OF,
   RAID_IV_KEEP_MAX,
@@ -98,6 +102,7 @@ interface AppState {
   keepShadow: boolean;
   rankingsTab: RankingsTab;
   rankingsFilter: string;
+  rankingsRaidType: PokemonType | "";
 }
 
 function readStoredRankKeep(): number {
@@ -197,11 +202,29 @@ const state: AppState = {
   keepShadow: readStoredKeepShadow(),
   rankingsTab: "gl",
   rankingsFilter: "",
+  rankingsRaidType: "",
 };
 
 function errMsg(err: unknown): string {
   if (err instanceof Error && err.message) return err.message;
   return String(err);
+}
+
+function raidTypeFilterButtons(): string {
+  const all = `<button type="button" class="type-chip type-chip--all is-active" data-raid-type="all" aria-pressed="true">All types</button>`;
+  const types = POKEMON_TYPES.map(
+    (type) =>
+      `<button type="button" class="type-chip type-chip--${type}" data-raid-type="${type}" aria-pressed="false">${prettyPokemonType(type)}</button>`,
+  ).join("");
+  return `${all}${types}`;
+}
+
+function raidRowHasType(row: RaidAttackerRow, type: PokemonType): boolean {
+  return row.types.includes(type) || Boolean(row.asTypes?.includes(type));
+}
+
+function typeChipMarkup(type: PokemonType): string {
+  return `<span class="type-chip type-chip--tag type-chip--${type}">${prettyPokemonType(type)}</span>`;
 }
 
 function escapeHtml(value: string): string {
@@ -512,11 +535,12 @@ export function mountApp(root: HTMLElement): void {
           </div>
           <div class="rankings-pane" data-rankings-pane="raid">
             <div class="rankings-pane-head">
-              <h3 class="rankings-pane-title rankings-pane-title--raid">Raid attackers</h3>
+              <h3 class="rankings-pane-title rankings-pane-title--raid" id="rankings-raid-title">Raid attackers</h3>
               <label class="file-label rankings-filter-label" for="rankings-filter-raid">Filter</label>
               <input id="rankings-filter-raid" class="rankings-filter" type="search" placeholder="Species, id, or tag" autocomplete="off" aria-label="Filter raid attackers" data-rankings-filter />
             </div>
-            <p class="note rankings-raid-note">KEEP list the grader uses. Pre-evolutions count toward the same family cap unless a stage is independently listed. Not a DPS ranking.</p>
+            <nav class="rankings-types" aria-label="Filter raid attackers by type">${raidTypeFilterButtons()}</nav>
+            <p class="note rankings-raid-note" id="rankings-raid-note">KEEP list the grader uses. Pre-evolutions count toward the same family cap unless a stage is independently listed. Not a DPS ranking.</p>
             <div id="rankings-raid" class="rankings-table-wrap"></div>
           </div>
         </div>
@@ -679,6 +703,8 @@ export function mountApp(root: HTMLElement): void {
   const rankingsGlEl = root.querySelector("#rankings-gl") as HTMLElement;
   const rankingsLcEl = root.querySelector("#rankings-lc") as HTMLElement;
   const rankingsRaidEl = root.querySelector("#rankings-raid") as HTMLElement;
+  const rankingsRaidTitleEl = root.querySelector("#rankings-raid-title") as HTMLElement;
+  const rankingsRaidNoteEl = root.querySelector("#rankings-raid-note") as HTMLElement;
   const rankingsFilterInputs = [
     ...root.querySelectorAll("[data-rankings-filter]"),
   ] as HTMLInputElement[];
@@ -812,11 +838,25 @@ export function mountApp(root: HTMLElement): void {
     root.querySelectorAll("[data-rankings-pane]").forEach((pane) => {
       pane.classList.toggle("is-active", pane.getAttribute("data-rankings-pane") === state.rankingsTab);
     });
+    root.querySelectorAll("[data-raid-type]").forEach((btn) => {
+      const value = (btn as HTMLElement).dataset.raidType ?? "";
+      const on = value === "all" ? !state.rankingsRaidType : value === state.rankingsRaidType;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
     paintRankings();
   }
 
   function rankingMatches(
-    row: { speciesId: string; speciesName: string; tags?: string[]; asSpeciesId?: string; asSpeciesName?: string },
+    row: {
+      speciesId: string;
+      speciesName: string;
+      tags?: string[];
+      asSpeciesId?: string;
+      asSpeciesName?: string;
+      types?: string[];
+      asTypes?: string[];
+    },
     q: string,
   ): boolean {
     if (!q) return true;
@@ -828,6 +868,8 @@ export function mountApp(root: HTMLElement): void {
       return true;
     }
     if (row.asSpeciesId?.includes(q) || row.asSpeciesName?.toLowerCase().includes(q)) return true;
+    if (row.types?.some((type) => type.includes(q))) return true;
+    if (row.asTypes?.some((type) => type.includes(q))) return true;
     return Boolean(row.tags?.some((tag) => tag.toLowerCase().includes(q)));
   }
 
@@ -878,14 +920,22 @@ export function mountApp(root: HTMLElement): void {
     if (!rows || rows.length === 0) {
       return `<p class="empty">${escapeHtml(empty)}</p>`;
     }
+    const type = state.rankingsRaidType;
+    const typed = type ? rows.filter((row) => raidRowHasType(row, type)) : rows;
     const q = state.rankingsFilter.trim().toLowerCase();
-    const shown = rows.filter((row) => rankingMatches(row, q));
+    const shown = typed.filter((row) => rankingMatches(row, q));
     if (shown.length === 0) {
-      return `<p class="empty">No species match “${escapeHtml(state.rankingsFilter.trim())}”</p>`;
+      const typeLabel = type ? prettyPokemonType(type) : "";
+      if (q) {
+        const inType = typeLabel ? ` in ${typeLabel}` : "";
+        return `<p class="empty">No species match “${escapeHtml(state.rankingsFilter.trim())}”${inType}</p>`;
+      }
+      return `<p class="empty">No ${escapeHtml(typeLabel || "raid")} KEEP attackers</p>`;
     }
     const body = shown
       .map((row) => {
         const chips = [
+          ...row.types.map((pokeType) => typeChipMarkup(pokeType)),
           ...row.tags.map((tag) => `<span class="${raidTagClass(tag)}">${escapeHtml(tag)}</span>`),
         ];
         if (row.asSpeciesName) {
@@ -899,7 +949,7 @@ export function mountApp(root: HTMLElement): void {
       })
       .join("");
     return `<table class="rankings-table">
-      <thead><tr><th>Species</th><th>Tags</th></tr></thead>
+      <thead><tr><th>Species</th><th>Types / tags</th></tr></thead>
       <tbody>${body}</tbody>
     </table>`;
   }
@@ -919,7 +969,15 @@ export function mountApp(root: HTMLElement): void {
     const raidFinals = raid.filter((row) => !row.asSpeciesId).length;
     const raidPre = raid.length - raidFinals;
     const glIn = gl.filter((row) => row.rank <= state.pvpListKeep).length;
-    rankingsStatusEl.textContent = `${pvpokeStatus(meta)} · GL ${glIn}/${gl.length || GL_LIST_CAP} in play · LC top ${lc.length || LC_LIST_CAP} · ${raidFinals} raid attackers · ${raidPre} pre-evos`;
+    const raidType = state.rankingsRaidType;
+    const raidTypeLabel = raidType ? prettyPokemonType(raidType) : "";
+    const raidTyped = raidType ? raid.filter((row) => raidRowHasType(row, raidType)).length : 0;
+    const typeStatus = raidType ? ` · ${raidTyped} ${raidTypeLabel}` : "";
+    rankingsStatusEl.textContent = `${pvpokeStatus(meta)} · GL ${glIn}/${gl.length || GL_LIST_CAP} in play · LC top ${lc.length || LC_LIST_CAP} · ${raidFinals} raid attackers · ${raidPre} pre-evos${typeStatus}`;
+    rankingsRaidTitleEl.textContent = raidType ? `${raidTypeLabel} raid attackers` : "Raid attackers";
+    rankingsRaidNoteEl.textContent = raidType
+      ? `${raidTypeLabel}-type KEEP attackers, including pre-evos that become ${raidTypeLabel}. Not a DPS ranking.`
+      : "KEEP list the grader uses. Pre-evolutions count toward the same family cap unless a stage is independently listed. Not a DPS ranking.";
     rankingsGlEl.innerHTML = renderRankingTable(
       gl,
       state.pvpListKeep,
@@ -1215,6 +1273,17 @@ export function mountApp(root: HTMLElement): void {
       rankingsTabBtn?.dataset.rankingsTab === "raid"
     ) {
       state.rankingsTab = rankingsTabBtn.dataset.rankingsTab;
+      paintRankControls();
+      return;
+    }
+
+    const raidTypeBtn = target.closest("[data-raid-type]") as HTMLElement | null;
+    if (raidTypeBtn?.dataset.raidType != null) {
+      const next = raidTypeBtn.dataset.raidType;
+      if (next === "all") state.rankingsRaidType = "";
+      else if (isPokemonType(next)) {
+        state.rankingsRaidType = state.rankingsRaidType === next ? "" : next;
+      }
       paintRankControls();
       return;
     }

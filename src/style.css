@@ -806,6 +806,142 @@ input[type="file"] {
   margin: 0 0 6px;
 }
 
+.rankings-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 8px;
+}
+
+button.type-chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.58;
+  touch-action: manipulation;
+}
+
+button.type-chip:hover,
+button.type-chip:focus-visible {
+  opacity: 0.92;
+}
+
+button.type-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+button.type-chip.is-active {
+  opacity: 1;
+  box-shadow: 0 0 0 2px #f2f4ea;
+}
+
+.type-chip--tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #fff;
+}
+
+.type-chip--all {
+  background: #3d4a78;
+  color: #e8ecff;
+}
+
+.type-chip--normal {
+  background: #9fa19f;
+}
+
+.type-chip--fire {
+  background: #e05a00;
+}
+
+.type-chip--water {
+  background: #2980ef;
+}
+
+.type-chip--grass {
+  background: #3fa129;
+}
+
+.type-chip--electric {
+  background: #fac000;
+  color: #1a1400;
+}
+
+.type-chip--ice {
+  background: #3dcef3;
+  color: #082028;
+}
+
+.type-chip--fighting {
+  background: #ff8000;
+}
+
+.type-chip--poison {
+  background: #9141cb;
+}
+
+.type-chip--ground {
+  background: #915121;
+}
+
+.type-chip--flying {
+  background: #81b9ef;
+  color: #102030;
+}
+
+.type-chip--psychic {
+  background: #ef4179;
+}
+
+.type-chip--bug {
+  background: #91a119;
+}
+
+.type-chip--rock {
+  background: #afa981;
+  color: #1a180c;
+}
+
+.type-chip--ghost {
+  background: #704170;
+}
+
+.type-chip--dragon {
+  background: #5060e1;
+}
+
+.type-chip--dark {
+  background: #624d4e;
+}
+
+.type-chip--steel {
+  background: #60a1b8;
+  color: #0c1a20;
+}
+
+.type-chip--fairy {
+  background: #ef70ef;
+  color: #2a1028;
+}
+
 .rankings-tags {
   display: flex;
   flex-wrap: wrap;
