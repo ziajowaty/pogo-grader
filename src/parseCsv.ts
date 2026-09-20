@@ -9,6 +9,9 @@ import type { Gender, Mon, ParseIssue, ParseResult } from "./types.ts";
  * - Mega X/Y -> `mega_x` / `mega_y`; other labelled forms slugified
  * - Numeric Calcy Form IDs are stored on `form` but not appended (unknown mapping)
  * - Shadow appends `_shadow` only (never `_purified`)
+ * - Calcy Name suffixes (`Onix Shadow`, `Sandshrew Alolan Shadow`) peel like prefixes
+ * - Calcy `ShadowForm`: 2 = this copy is shadow, 3 = purified; 1/7 mean the species
+ *   can have a shadow, not that this row is one
  * Example: Alolan Ninetales shadow -> ninetales_alolan_shadow
  */
 
@@ -102,6 +105,7 @@ const HEADER_HINTS = new Set([
   "level min",
   "level max",
   "shadow purified",
+  "shadowform",
   "ancestor",
   "possiblelevels",
   "nickname",
@@ -350,8 +354,9 @@ function rowToMon(
     cell(row, cols.i("shadow")),
     cell(row, cols.i("purified")),
   );
-  const shadow = peeled.shadow || sp.shadow;
-  const purified = !shadow && (peeled.purified || sp.purified);
+  const formShadow = parseCalcyShadowForm(cell(row, cols.i("shadowform", "shadow form")));
+  const shadow = peeled.shadow || sp.shadow || formShadow.shadow;
+  const purified = !shadow && (peeled.purified || sp.purified || formShadow.purified);
 
   const atk = parseExactIv(
     cell(row, cols.i("atk iv", "attack iv", "oatt iv", "oatt", "att iv", "atk", "att", "attack")),
@@ -411,7 +416,8 @@ function rowToMon(
     issues.push({ row: sourceRow, message: `skip: could not slugify (${speciesName})` });
     return null;
   }
-  const speciesId = [baseSlug, ...formParts, shadow ? "shadow" : ""].filter(Boolean).join("_");
+  const shadowBit = shadow && !baseSlug.endsWith("_shadow") ? "shadow" : "";
+  const speciesId = [baseSlug, ...formParts, shadowBit].filter(Boolean).join("_");
 
   const form =
     formRaw && !/^(normal|standard|none|default)$/i.test(formRaw)
@@ -420,8 +426,7 @@ function rowToMon(
         ? peeled.forms[0]
         : formSlug ?? "";
 
-  const lucky = dialect === "pokegenie" ? parseBool(cell(row, cols.i("lucky"))) : undefined;
-  // Calcy Lucky is historically inverted (0=lucky). Encoding may have changed; leave undefined.
+  const lucky = parseBool(cell(row, cols.i("lucky")));
 
   const mon: Mon = {
     source: dialect,
@@ -452,6 +457,9 @@ function rowToMon(
 
   const favorite = parseBool(cell(row, cols.i("favorite", "favourite", "star")));
   if (favorite !== undefined) mon.favorite = favorite;
+
+  const dynamax = parseDynamaxFlag(cell(row, cols.i("dynamax", "dmax", "gigantamax", "gmax")));
+  if (dynamax !== undefined) mon.dynamax = dynamax;
 
   assignOptionalFlag(mon, "shiny", cols, row, ["shiny", "is shiny"]);
   assignOptionalFlag(mon, "costume", cols, row, ["costume", "is costume"]);
@@ -539,6 +547,34 @@ function parseGender(raw: string): Gender {
   return "unknown";
 }
 
+/**
+ * Calcy `ShadowForm` on recent history exports:
+ * 2 = this copy is shadow, 3 = purified.
+ * 1 and 7 are species-level "has a shadow form in GO", not this row.
+ */
+function parseCalcyShadowForm(raw: string): { shadow: boolean; purified: boolean } {
+  const s = raw.trim().toLowerCase();
+  if (!s) return { shadow: false, purified: false };
+  if (s === "2" || s === "shadow" || s === "s") return { shadow: true, purified: false };
+  if (s === "3" || s === "purified" || s === "p") return { shadow: false, purified: true };
+  return { shadow: false, purified: false };
+}
+
+function parseDynamaxFlag(raw: string): boolean | undefined {
+  const s = raw.trim().toLowerCase();
+  if (!s) return undefined;
+  if (s === "?" || s === "-") return undefined;
+  if (["0", "false", "no", "n", "none"].includes(s)) return false;
+  if (
+    ["1", "true", "yes", "y", "d", "dmax", "dynamax", "g", "gmax", "gigantamax", "giganta", "x"].includes(
+      s,
+    )
+  ) {
+    return true;
+  }
+  return undefined;
+}
+
 function parseShadowPurified(
   combined: string,
   shadowCol: string,
@@ -598,7 +634,7 @@ function peelName(name: string): { base: string; forms: string[]; shadow: boolea
   let looping = true;
   while (looping) {
     looping = false;
-    const prefixes: Array<{ re: RegExp; apply: () => void }> = [
+    const affixes: Array<{ re: RegExp; apply: () => void }> = [
       { re: /^(alolan|alola)\s+/i, apply: () => forms.push("alolan") },
       { re: /^(galarian|galar)\s+/i, apply: () => forms.push("galarian") },
       { re: /^(hisuian|hisui)\s+/i, apply: () => forms.push("hisuian") },
@@ -606,8 +642,15 @@ function peelName(name: string): { base: string; forms: string[]; shadow: boolea
       { re: /^shadow\s+/i, apply: () => { shadow = true; } },
       { re: /^purified\s+/i, apply: () => { purified = true; } },
       { re: /^mega\s+/i, apply: () => forms.push("mega") },
+      // Calcy history: "Onix Shadow", "Sandshrew Alolan Shadow"
+      { re: /\s+shadow$/i, apply: () => { shadow = true; } },
+      { re: /\s+purified$/i, apply: () => { purified = true; } },
+      { re: /\s+(alolan|alola)$/i, apply: () => forms.push("alolan") },
+      { re: /\s+(galarian|galar)$/i, apply: () => forms.push("galarian") },
+      { re: /\s+(hisuian|hisui)$/i, apply: () => forms.push("hisuian") },
+      { re: /\s+(paldean|paldea)$/i, apply: () => forms.push("paldean") },
     ];
-    for (const p of prefixes) {
+    for (const p of affixes) {
       if (p.re.test(base)) {
         base = base.replace(p.re, "");
         p.apply();

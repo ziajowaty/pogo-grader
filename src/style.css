@@ -1,6 +1,6 @@
 :root {
   color-scheme: dark;
-  --bg: #12150f;
+  --bg: #10140f;
   --bg-elev: #1c2218;
   --bg-elev-2: #252c20;
   --ink: #f2f4ea;
@@ -17,6 +17,10 @@
   --focus: #c5d45b;
   --chip: #2c3528;
   --crowd: #d4b45a;
+  --gl: #7ec8f8;
+  --lc: #8ee0b0;
+  --raid: #ff9a62;
+  --shiny: #f4b8e4;
   --radius: 12px;
   --tap: 44px;
   --pad: 16px;
@@ -34,7 +38,11 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: var(--bg);
+  background:
+    radial-gradient(ellipse 80% 46% at 0% -8%, rgba(125, 206, 160, 0.16), transparent 52%),
+    radial-gradient(ellipse 58% 38% at 100% 0%, rgba(224, 162, 74, 0.13), transparent 48%),
+    radial-gradient(ellipse 50% 28% at 52% 100%, rgba(126, 200, 248, 0.08), transparent 52%),
+    var(--bg);
   color: var(--ink);
   font-family: var(--sans);
   font-size: 16px;
@@ -58,9 +66,14 @@ body {
 
 .app-header h1 {
   margin: 0;
+  width: fit-content;
   font-size: 1.35rem;
   letter-spacing: -0.03em;
   font-weight: 750;
+  background: linear-gradient(90deg, var(--keep) 0%, var(--look) 48%, var(--dump) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .lede {
@@ -89,6 +102,26 @@ body {
   padding: 12px 14px 14px;
 }
 
+.card--csv {
+  border-top: 3px solid var(--keep);
+}
+
+.card--rules {
+  border-top: 3px solid var(--look);
+}
+
+.card--skip {
+  border-top: 3px solid var(--gl);
+}
+
+.dump-card {
+  border-top: 3px solid var(--dump);
+}
+
+.rankings-card {
+  border-top: 3px solid var(--gl);
+}
+
 .card h2 {
   margin: 0 0 8px;
   font-size: 0.72rem;
@@ -96,6 +129,26 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.card--csv h2 {
+  color: var(--keep);
+}
+
+.card--rules h2 {
+  color: var(--look);
+}
+
+.card--skip h2 {
+  color: var(--gl);
+}
+
+.dump-card h2 {
+  color: var(--dump);
+}
+
+.rankings-card h2 {
+  color: var(--gl);
 }
 
 .note {
@@ -242,6 +295,15 @@ body {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.rank-presets + .rank-row,
+.rank-presets + .note {
+  margin-top: 10px;
+}
+
+.note + .rank-row {
+  margin-top: 10px;
+}
+
 .mode-row {
   grid-template-columns: 1fr 1fr;
 }
@@ -271,7 +333,7 @@ input[type="file"] {
   display: block;
   width: 100%;
   padding: 12px;
-  border: 1px dashed var(--line);
+  border: 1px dashed color-mix(in srgb, var(--keep) 50%, var(--line));
   border-radius: 8px;
   background: #0c0f0b;
   color: var(--ink);
@@ -342,14 +404,17 @@ input[type="file"] {
 
 .track--keep {
   border-color: #2f5a40;
+  background: color-mix(in srgb, var(--keep-bg) 42%, var(--bg-elev));
 }
 
 .track--look {
   border-color: #6a5a28;
+  background: color-mix(in srgb, var(--look-bg) 42%, var(--bg-elev));
 }
 
 .track--dump {
   border-color: var(--dump-line);
+  background: color-mix(in srgb, var(--dump-bg) 42%, var(--bg-elev));
 }
 
 .track-head {
@@ -413,6 +478,7 @@ input[type="file"] {
 
 .row--keep {
   border-left: 3px solid var(--keep);
+  background: var(--keep-bg);
 }
 
 .row--look {
@@ -470,35 +536,134 @@ input[type="file"] {
 
 .chip {
   display: inline-block;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
   background: var(--chip);
   font-size: 0.72rem;
+  font-weight: 650;
   line-height: 1.35;
 }
 
 .chip--loud {
   background: #3a3014;
   color: var(--look);
-  font-weight: 650;
 }
 
 .chip--halt {
-  background: #3a2810;
-  color: var(--dump);
+  background: #3d220c;
+  color: #ffb060;
   font-weight: 700;
 }
 
+.chip--lock {
+  background: #322a12;
+  color: #f0d878;
+}
+
+.chip--unknown {
+  background: #2a2e28;
+  color: #c8ccbe;
+}
+
+.chip--miss {
+  background: #3a2018;
+  color: #f0a898;
+}
+
+.chip--shiny {
+  background: #3a2240;
+  color: var(--shiny);
+}
+
+.chip--lucky {
+  background: #3a3210;
+  color: #ffe08a;
+}
+
+.chip--costume {
+  background: #2c2040;
+  color: #d4b0ff;
+}
+
+.chip--background {
+  background: #163530;
+  color: #9ae8d8;
+}
+
+.chip--hundo {
+  background: #3a2e08;
+  color: #ffd24a;
+}
+
+.chip--favorite {
+  background: #3a1820;
+  color: #ff8aa0;
+}
+
+.chip--special {
+  background: #163038;
+  color: #7ee0f0;
+}
+
 .chip--shadow {
-  background: #1e2430;
-  color: #b8c4e0;
-  font-weight: 650;
+  background: #221e38;
+  color: #c4b8f0;
+}
+
+.chip--max {
+  background: #3a1816;
+  color: #ff7a6e;
+}
+
+.chip--legendary {
+  background: #3a2410;
+  color: #ffc078;
+}
+
+.chip--mythical {
+  background: #3a1a32;
+  color: #f090d8;
+}
+
+.chip--limited {
+  background: #1a3030;
+  color: #80d0c8;
+}
+
+.chip--gl {
+  background: #152838;
+  color: var(--gl);
+}
+
+.chip--lc {
+  background: #163028;
+  color: var(--lc);
+}
+
+.chip--raid {
+  background: #3a2014;
+  color: var(--raid);
 }
 
 .chip--dupe {
   background: #3a2c14;
   color: #f0d090;
-  font-weight: 650;
+}
+
+.chip--family {
+  background: #243018;
+  color: #b8d47a;
+}
+
+.chip--solo {
+  background: #2a2412;
+  color: var(--look);
+}
+
+.chip--junk {
+  background: #2c2418;
+  color: #d4b896;
 }
 
 .badge-crowd {
@@ -511,6 +676,164 @@ input[type="file"] {
   font-size: 0.7rem;
   font-weight: 700;
   vertical-align: middle;
+}
+
+.rankings-card {
+  margin-bottom: 12px;
+}
+
+.rankings-pane-title--gl {
+  color: var(--gl);
+}
+
+.rankings-pane-title--lc {
+  color: var(--lc);
+}
+
+.rankings-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.rankings-head h2 {
+  margin: 0;
+}
+
+.rankings-status {
+  margin: 0;
+}
+
+.rankings-toolbar {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rankings-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.rankings-filter-label {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+#rankings-filter {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0c0f0b;
+  color: var(--ink);
+  font: inherit;
+}
+
+#rankings-filter:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.rankings-pane-title {
+  display: none;
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.rankings-pane {
+  display: none;
+}
+
+.rankings-pane.is-active {
+  display: block;
+}
+
+.rankings-table-wrap {
+  max-height: min(28rem, 60vh);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0c0f0b;
+}
+
+.rankings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rankings-table th,
+.rankings-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.rankings-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-elev-2);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  z-index: 1;
+}
+
+.rankings-table tbody tr:hover {
+  background: #161b14;
+}
+
+.rankings-table tr.is-cut td {
+  opacity: 0.42;
+}
+
+.rankings-num {
+  width: 1%;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+@media (min-width: 840px) {
+  .rankings-toolbar {
+    grid-template-columns: auto minmax(12rem, 20rem);
+    align-items: end;
+    justify-content: end;
+  }
+
+  .rankings-tabs {
+    display: none;
+  }
+
+  .rankings-filter-label {
+    display: none;
+  }
+
+  .rankings-panes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .rankings-pane,
+  .rankings-pane.is-active {
+    display: block;
+  }
+
+  .rankings-pane-title {
+    display: block;
+  }
 }
 
 .hidden {
@@ -528,11 +851,26 @@ input[type="file"] {
   cursor: pointer;
 }
 
+.tab[data-tab="KEEP"] {
+  border-color: #2f5a40;
+  color: var(--keep);
+}
+
+.tab[data-tab="LOOK"] {
+  border-color: #6a5a28;
+  color: var(--look);
+}
+
+.tab[data-tab="DUMP"] {
+  border-color: var(--dump-line);
+  color: var(--dump);
+}
+
 .tab .count {
   display: block;
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--muted);
+  color: color-mix(in srgb, currentColor 72%, var(--muted));
 }
 
 .tab.is-active {

@@ -1,5 +1,23 @@
-import type { GradeResult, GradedMon, LeagueRank, Meta, Mon, Verdict } from "./types";
-import { clampPvpRankKeep, DEFAULT_PVP_RANK_KEEP } from "./types";
+import type {
+  GradeResult,
+  GradedMon,
+  LeagueRank,
+  Meta,
+  MetaLeagueRank,
+  Mon,
+  PvpokeRankRow,
+  Verdict,
+} from "./types";
+import {
+  clampFamilyKeep,
+  clampPvpListKeep,
+  clampPvpRankKeep,
+  DEFAULT_FAMILY_KEEP,
+  DEFAULT_PVP_LIST_KEEP,
+  DEFAULT_PVP_RANK_KEEP,
+  GL_LIST_CAP,
+  LC_LIST_CAP,
+} from "./types";
 import { canonId } from "./meta";
 import { getRankGm, rankGreatLeague, rankLittleCup, type RankGm } from "./rank";
 
@@ -13,6 +31,62 @@ function hasId(set: Set<string>, speciesId: string): boolean {
   if (set.has(id)) return true;
   if (id.endsWith("_shadow") && set.has(id.slice(0, -7))) return true;
   return false;
+}
+
+function indexRanks(rows: PvpokeRankRow[] | undefined): Map<string, PvpokeRankRow> {
+  const map = new Map<string, PvpokeRankRow>();
+  if (!rows) return map;
+  for (const row of rows) map.set(row.speciesId, row);
+  return map;
+}
+
+function toMetaRank(row: PvpokeRankRow, of: number): MetaLeagueRank {
+  return {
+    rank: row.rank,
+    of,
+    speciesId: row.speciesId,
+    speciesName: row.speciesName,
+  };
+}
+
+function lookupRank(speciesId: string, index: Map<string, PvpokeRankRow>): PvpokeRankRow | null {
+  const id = canonId(speciesId);
+  const direct = index.get(id);
+  if (direct) return direct;
+  if (id.endsWith("_shadow")) return index.get(id.slice(0, -7)) ?? null;
+  return null;
+}
+
+function glMetaRow(
+  speciesId: string,
+  meta: Meta,
+  index: Map<string, PvpokeRankRow>,
+): PvpokeRankRow | null {
+  const id = canonId(speciesId);
+  const direct = index.get(id);
+  if (direct) return direct;
+  const mapped = meta.glEvolution[id];
+  if (mapped) {
+    const row = index.get(mapped);
+    if (row) return row;
+  }
+  if (id.endsWith("_shadow")) {
+    const inner = glMetaRow(id.slice(0, -7), meta, index);
+    if (!inner) return null;
+    const shadowEvo = inner.speciesId.endsWith("_shadow")
+      ? inner.speciesId
+      : `${inner.speciesId}_shadow`;
+    return index.get(shadowEvo) ?? inner;
+  }
+  return null;
+}
+
+function gatedGlSet(meta: Meta, listKeep: number): Set<string> {
+  const rows = meta.glRankings;
+  if (rows && rows.length > 0) {
+    return new Set(rows.filter((row) => row.rank <= listKeep).map((row) => row.speciesId));
+  }
+  return meta.glTop500;
 }
 
 function glGateId(speciesId: string, meta: Meta): string | null {
@@ -48,6 +122,7 @@ function isHundo(mon: Mon): boolean {
 }
 
 function isMaxForm(mon: Mon): boolean {
+  if (mon.dynamax) return true;
   const blob = `${mon.speciesId} ${mon.form}`;
   return /dynamax|gigantamax|giganta|\bdmax\b|\bgmax\b/i.test(blob);
 }
@@ -132,6 +207,14 @@ function pvpCutoff(meta: Meta): number {
   return clampPvpRankKeep(meta.pvpRankKeep ?? DEFAULT_PVP_RANK_KEEP);
 }
 
+function pvpListCutoff(meta: Meta): number {
+  return clampPvpListKeep(meta.pvpListKeep ?? DEFAULT_PVP_LIST_KEEP);
+}
+
+function familyKeepCap(meta: Meta): number {
+  return clampFamilyKeep(meta.familyKeep ?? DEFAULT_FAMILY_KEEP);
+}
+
 function rankMeets(rank: LeagueRank | null | undefined, cutoff: number): boolean {
   return rank != null && rank.rank <= cutoff;
 }
@@ -143,17 +226,19 @@ function pushReason(g: GradedMon, reason: string): void {
 
 function rankLabel(kind: "GL" | "LC", g: GradedMon, cutoff: number): string {
   const block = kind === "GL" ? g.gl : g.lc;
+  const metaRank = kind === "GL" ? g.glMeta : g.lcMeta;
+  const metaBit = metaRank ? ` #${metaRank.rank}/${metaRank.of}` : "";
   if (!block) {
     return kind === "GL"
-      ? "Great League (IV rank unavailable)"
-      : "Little Cup (IV rank unavailable)";
+      ? `Great League${metaBit} (IV rank unavailable)`
+      : `Little Cup${metaBit} (IV rank unavailable)`;
   }
   const evo =
     kind === "GL" && block.evoSpeciesId && block.evoSpeciesId !== canonId(g.mon.speciesId)
       ? ` as ${block.evoSpeciesId}`
       : "";
   const league = kind === "GL" ? "Great League" : "Little Cup";
-  return `${league}: ${block.rank}/${block.of} (keep ≤${cutoff})${evo}`;
+  return `${league}${metaBit}: ${block.rank}/${block.of} (keep ≤${cutoff})${evo}`;
 }
 
 function missRankReason(kind: "GL" | "LC", g: GradedMon, cutoff: number, n: number, keptCopyRanks: number[]): string {
@@ -176,13 +261,22 @@ function missRankReason(kind: "GL" | "LC", g: GradedMon, cutoff: number, n: numb
 export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const gm: RankGm = getRankGm(meta.glEvolution);
   const cutoff = pvpCutoff(meta);
+  const listKeep = pvpListCutoff(meta);
+  const familyKeep = familyKeepCap(meta);
   const keepAllGood = Boolean(meta.keepAllGood);
   const glSlots = keepAllGood ? Number.POSITIVE_INFINITY : GL_KEEP;
   const lcSlots = keepAllGood ? Number.POSITIVE_INFINITY : LC_KEEP;
   const raidSlots = keepAllGood ? Number.POSITIVE_INFINITY : RAID_KEEP;
+  const glIndex = indexRanks(meta.glRankings);
+  const lcIndex = indexRanks(meta.lcRankings);
+  const glOf = meta.glRankings?.length || GL_LIST_CAP;
+  const lcOf = meta.lcRankings?.length || LC_LIST_CAP;
+  const gateMeta: Meta = { ...meta, glTop500: gatedGlSet(meta, listKeep) };
   const graded: GradedMon[] = mons.map((mon) => {
-    const glSpecies = glGateId(mon.speciesId, meta);
+    const glSpecies = glGateId(mon.speciesId, gateMeta);
     const lc = isLcSpecies(mon.speciesId, meta);
+    const glRow = glMetaRow(mon.speciesId, meta, glIndex);
+    const lcRow = lookupRank(mon.speciesId, lcIndex);
     return {
       mon,
       verdict: "LOOK" as Verdict,
@@ -190,6 +284,8 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       keepClasses: [],
       gl: glSpecies ? rankGreatLeague(mon, gm) : null,
       lc: lc ? rankLittleCup(mon, gm) : null,
+      glMeta: glRow ? toMetaRank(glRow, glOf) : null,
+      lcMeta: lcRow ? toMetaRank(lcRow, lcOf) : null,
       copiesInGroup: 1,
       copyRankInGroup: 1,
     };
@@ -207,13 +303,13 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
 
   for (const [key, rows] of groups) {
     const n = rows.length;
-    rows.sort((a, b) => leaderboardOrder(a, b, meta));
+    rows.sort((a, b) => leaderboardOrder(a, b, gateMeta));
     rows.forEach((g, i) => {
       g.copiesInGroup = n;
       g.copyRankInGroup = i + 1;
     });
 
-    const glRows = glGateId(rows[0].mon.speciesId, meta) ? rows : [];
+    const glRows = glGateId(rows[0].mon.speciesId, gateMeta) ? rows : [];
     const lcRows = isLcSpecies(rows[0].mon.speciesId, meta) ? rows : [];
     const raidRows = hasId(meta.raidAttackers, rows[0].mon.speciesId) ? rows : [];
     const glEligible = glRows.filter((g) => rankMeets(g.gl, cutoff));
@@ -294,6 +390,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const dumpCap = meta.dumpCap ?? 100;
   const dumpFuel: GradedMon[] = [];
   const extraOfKeeper = new Set<GradedMon>();
+  const extraOfFamily = new Set<GradedMon>();
 
   const groupAnchor = new Map<string, boolean>();
   for (const [key, rows] of groups) {
@@ -326,13 +423,18 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     const key = canonId(g.mon.speciesId) || g.mon.speciesId;
     const anchored = groupAnchor.get(key) === true;
     const pvpOrRaidFamily =
-      Boolean(glGateId(g.mon.speciesId, meta)) ||
+      Boolean(glGateId(g.mon.speciesId, gateMeta)) ||
       isLcSpecies(g.mon.speciesId, meta) ||
       hasId(meta.raidAttackers, g.mon.speciesId);
 
     if (pvpOrRaidFamily && !anchored) {
-      g.verdict = "LOOK";
-      pushReason(g, "PvP/raid family with no keeper — not dumping");
+      if (g.copyRankInGroup <= familyKeep) {
+        g.verdict = "LOOK";
+        pushReason(g, `PvP/raid family: ${familyKeep} best (no keeper)`);
+        continue;
+      }
+      extraOfFamily.add(g);
+      dumpFuel.push(g);
       continue;
     }
 
@@ -360,7 +462,9 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
         g,
         extraOfKeeper.has(g)
           ? "Extra copy — species already has a keeper"
-          : "Not GL/LC/raid/limited; unique IVs",
+          : extraOfFamily.has(g)
+            ? `Extra copy — keeping ${familyKeep} best of PvP/raid family`
+            : "Not GL/LC/raid/limited; unique IVs",
       );
       dumped++;
     } else {
@@ -395,6 +499,8 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     dumpCap,
     dumpCapped,
     pvpRankKeep: cutoff,
+    pvpListKeep: listKeep,
+    familyKeep,
     keepAllGood,
     groups: groupSummaries,
   };

@@ -27,7 +27,11 @@ const all = [...result.keep, ...result.look, ...result.dump];
 must(parsed.dialect === "pokegenie", `expected pokegenie, got ${parsed.dialect}`);
 must(parsed.mons.length === 10, `expected 10 mons, got ${parsed.mons.length}`);
 must(result.pvpRankKeep === 500, "echo pvpRankKeep 500");
+must(result.pvpListKeep === 500, "default pvpListKeep 500");
+must(result.familyKeep === 2, "default familyKeep 2");
 must(result.keepAllGood === false, "default extras as dupes");
+must(Array.isArray(meta.glRankings) && meta.glRankings.length === 500, "bundled GL rankings 500");
+must(Array.isArray(meta.lcRankings) && meta.lcRankings.length === 100, "bundled LC rankings 100");
 
 const fox = all.find((g) => g.mon.speciesId === "ninetales_alolan_shadow");
 must(fox?.verdict === "KEEP", "alolan shadow ninetales must KEEP");
@@ -93,11 +97,19 @@ const tightToads = [...noFavTight.keep, ...noFavTight.look, ...noFavTight.dump].
   (g) => g.mon.speciesId === "seismitoad",
 );
 const toadKeep = tightToads.filter((g) => g.verdict === "KEEP");
+const toadLook = tightToads.filter((g) => g.verdict === "LOOK");
 const toadDump = tightToads.filter((g) => g.verdict === "DUMP");
 if (toadKeep.length === 0) {
+  must(tightToads.length === 3, "fixture has 3 seismitoads");
+  must(toadLook.length === 2, "no-keeper GL family LOOKs familyKeep 2");
+  must(toadDump.length === 1, "no-keeper GL family dumps extras beyond familyKeep");
   must(
-    toadDump.length === 0,
-    "GL family with no keeper must not DUMP",
+    toadLook.every((g) => g.copyRankInGroup <= 2),
+    "LOOK copies are the 2 best of the family",
+  );
+  must(
+    toadDump.every((g) => g.copyRankInGroup > 2),
+    "DUMP copies are worse than familyKeep",
   );
 } else {
   must(
@@ -106,11 +118,63 @@ if (toadKeep.length === 0) {
   );
 }
 
+const noFavAll = gradeBox(noFavMons, { ...meta, pvpRankKeep: 1, familyKeep: 99 });
+const allToads = [...noFavAll.keep, ...noFavAll.look, ...noFavAll.dump].filter(
+  (g) => g.mon.speciesId === "seismitoad",
+);
+if (allToads.every((g) => g.verdict !== "KEEP")) {
+  must(
+    allToads.every((g) => g.verdict === "LOOK"),
+    "familyKeep 99 keeps a no-keeper GL family as LOOK",
+  );
+}
+
+const noFavOne = gradeBox(noFavMons, { ...meta, pvpRankKeep: 1, familyKeep: 1 });
+const oneToads = [...noFavOne.keep, ...noFavOne.look, ...noFavOne.dump].filter(
+  (g) => g.mon.speciesId === "seismitoad",
+);
+if (oneToads.every((g) => g.verdict !== "KEEP")) {
+  must(
+    oneToads.filter((g) => g.verdict === "LOOK").length === 1,
+    "familyKeep 1 LOOKs only the best copy",
+  );
+  must(
+    oneToads.filter((g) => g.verdict === "DUMP").length === 2,
+    "familyKeep 1 dumps the other two",
+  );
+}
+
 const tight = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 1 });
 must(tight.pvpRankKeep === 1, "echo pvpRankKeep 1");
 const wooperTight = [...tight.keep, ...tight.look, ...tight.dump].find((g) => g.mon.speciesId === "wooper");
 must(wooperTight?.keepClasses.includes("gl") !== true, "rank-1 floor must drop wooper GL keep");
 must(wooperTight?.verdict !== "DUMP", "only wooper still never DUMP");
+
+const extraWoopers: Mon[] = [1, 2, 3].map((i) => ({
+  ...wooperMon!,
+  sourceRow: 600 + i,
+  atk: 15,
+  def: i,
+  sta: 0,
+  ivPercent: 33.3,
+  favorite: false,
+  nickname: `junk-wooper-${i}`,
+}));
+const wooperFamily = gradeBox([wooperMon!, ...extraWoopers], { ...meta, pvpRankKeep: 1, familyKeep: 2 });
+const wooperRows = [...wooperFamily.keep, ...wooperFamily.look, ...wooperFamily.dump].filter(
+  (g) => g.mon.speciesId === "wooper",
+);
+must(wooperRows.length === 4, "four woopers in family test");
+if (wooperRows.every((g) => g.verdict !== "KEEP")) {
+  must(
+    wooperRows.filter((g) => g.verdict === "LOOK").length === 2,
+    "no-keeper wooper family LOOKs 2 best",
+  );
+  must(
+    wooperRows.filter((g) => g.verdict === "DUMP").length === 2,
+    "no-keeper wooper family dumps extras beyond 2",
+  );
+}
 must(
   tight.keep.some((g) => g.mon.speciesId === "seismitoad" && g.keepClasses.includes("favorite")),
   "favorite still KEEP when rank floor is 1",
@@ -122,6 +186,24 @@ must(
 
 const none = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 4096 });
 must(none.pvpRankKeep === 4096, "pvpRankKeep 4096");
+
+const toadRow = meta.glRankings?.find((row) => row.speciesId === "seismitoad");
+must(Boolean(toadRow), "seismitoad is in bundled GL rankings");
+must(favoriteToad?.glMeta?.rank === toadRow?.rank, "graded seismitoad shows PvPoke GL rank");
+const wooperLcRow = meta.lcRankings?.find((row) => row.speciesId === "wooper");
+must(wooper?.lcMeta?.rank === wooperLcRow?.rank, "graded wooper shows PvPoke LC rank");
+const quagRow = meta.glRankings?.find((row) => row.speciesId === "quagsire");
+must(wooper?.glMeta?.rank === quagRow?.rank, "wooper GL meta rank is the quagsire evo");
+
+const listCut = Math.max(1, (toadRow?.rank ?? 2) - 1);
+const cutList = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, pvpListKeep: listCut });
+must(cutList.pvpListKeep === listCut, "echo pvpListKeep cutoff");
+const cutToad = [...cutList.keep, ...cutList.look, ...cutList.dump].find(
+  (g) => g.mon.speciesId === "seismitoad" && g.mon.favorite === true,
+);
+must(cutToad?.keepClasses.includes("gl") !== true, "GL species cutoff drops seismitoad PvP keep");
+must(cutToad?.glMeta?.rank === toadRow?.rank, "cutoff still shows PvPoke rank on the graded row");
+must(cutToad?.verdict === "KEEP", "favorite seismitoad still KEEP when off the PvPoke list");
 
 function hundoAt(speciesId: string, speciesName: string, row: number, atk = 15): Mon {
   return {
@@ -177,8 +259,12 @@ console.log(
       dumpIds: dumps,
       keepIds: result.keep.map((g) => g.mon.speciesId),
       wooperGl: wooper?.gl,
+      wooperGlMeta: wooper?.glMeta,
+      wooperLcMeta: wooper?.lcMeta,
+      toadGlMeta: favoriteToad?.glMeta,
       extraWooperDump: withExtraWooper.dump.filter((g) => g.mon.speciesId === "wooper").length,
       noFavTightToads: tightToads.map((g) => `${g.verdict}:${g.gl?.rank ?? "?"}`),
+      familyKeep: result.familyKeep,
       raidMachamp,
       dupeMachampKeep: dupeHundos.keep.length,
       allMachampKeep: allHundos.keep.length,

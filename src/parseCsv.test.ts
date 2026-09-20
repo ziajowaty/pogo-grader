@@ -66,7 +66,7 @@ const wooper = calcy.mons[0];
 check("wooper unique", wooper.ivUnique === true);
 check("wooper shadow", wooper.shadow === true);
 check("wooper frustration", wooper.hasSpecialMove === true);
-check("calcy lucky unknown", wooper.lucky === undefined);
+check("calcy lucky", wooper.lucky === true);
 check("wooper id", wooper.speciesId === "wooper_shadow");
 check("wooper nickname", wooper.nickname === "box1");
 
@@ -75,10 +75,47 @@ check("calcy non-unique", calcyFox.ivUnique === false);
 check("calcy numeric form kept", calcyFox.form === "61");
 check("calcy numeric form not in id", calcyFox.speciesId === "ninetales");
 check("calcy favorite from star", calcyFox.favorite === true);
+check("calcy fox not lucky", calcyFox.lucky === false);
 
 const calcyChamp = calcy.mons[2];
 check("calcy exact iv unique", calcyChamp.ivUnique === true);
 check("calcy level", calcyChamp.level === 30);
+check("calcy machamp lucky", calcyChamp.lucky === true);
+
+const CALCY_HISTORY = `Ancestor?,Nr,Name,Nickname,CP,HP,ØATT IV,ØDEF IV,ØHP IV,Unique?,Lucky?,Favorite,Form,ShadowForm,Dynamax
+0,95,Onix Shadow,Oni♀62,223,45,8,11,9,1,0,0,1065,2,?
+0,27,Sandshrew Alolan Shadow,San♂76,278,53,13,15,6,1,0,0,403,2,?
+0,532,Timburr,NotShadow,200,50,10,10,10,1,0,0,2252,7,?
+0,280,Ralts,GL 19,301,72,15,14,12,1,0,0,687,1,D
+0,529,Drilbur,GL 69,428,78,13,12,15,1,1,0,2249,7,?
+0,68,Machop,Mac♂93,724,90,15,15,12,1,0,1,66,7,?
+`;
+
+const history = parseInventoryCsv(CALCY_HISTORY);
+check("history dialect", history.dialect === "calcyiv");
+check("history count", history.mons.length === 6);
+
+const onix = history.mons[0];
+check("history onix id", onix.speciesId === "onix_shadow");
+check("history onix shadow flag", onix.shadow === true);
+check("history onix not double shadow", onix.speciesId !== "onix_shadow_shadow");
+check("history onix numeric form kept", onix.form === "1065");
+
+const alolaSand = history.mons[1];
+check("history alolan shadow id", alolaSand.speciesId === "sandshrew_alolan_shadow");
+check("history alolan shadow flag", alolaSand.shadow === true);
+
+const timburr = history.mons[2];
+check("history shadowform 7 is not shadow", timburr.shadow === false && timburr.speciesId === "timburr");
+
+const dmaxRalts = history.mons[3];
+check("history dynamax D", dmaxRalts.dynamax === true && dmaxRalts.speciesId === "ralts");
+
+const luckyDrill = history.mons[4];
+check("history lucky?", luckyDrill.lucky === true && luckyDrill.speciesId === "drilbur");
+
+const favMachop = history.mons[5];
+check("history favorite", favMachop.favorite === true && favMachop.lucky === false);
 
 const junk = parseInventoryCsv("this is not a csv at all\n???,###");
 check("junk dialect unknown", junk.dialect === "unknown");

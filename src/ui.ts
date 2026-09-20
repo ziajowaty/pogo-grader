@@ -1,5 +1,17 @@
-import type { GradeResult, GradedMon, Meta, ParseResult, Verdict } from "./types";
-import { clampPvpRankKeep, DEFAULT_PVP_RANK_KEEP, PVP_RANK_OF } from "./types";
+import type { GradeResult, GradedMon, Meta, ParseResult, PvpokeRankRow, Verdict } from "./types";
+import {
+  clampFamilyKeep,
+  clampPvpListKeep,
+  clampPvpRankKeep,
+  DEFAULT_FAMILY_KEEP,
+  DEFAULT_PVP_LIST_KEEP,
+  DEFAULT_PVP_RANK_KEEP,
+  FAMILY_KEEP_MAX,
+  GL_LIST_CAP,
+  LC_LIST_CAP,
+  prettySpeciesId,
+  PVP_RANK_OF,
+} from "./types";
 import {
   dumpExecuteString,
   dumpPreviewString,
@@ -12,10 +24,15 @@ const SKIP_SCAN =
 const DUMP_LIST_MAX = 100;
 const LIST_PAINT_MAX = 200;
 const RANK_PRESETS = [50, 150, 500, 4096] as const;
+const LIST_KEEP_PRESETS = [100, 200, 300, 500] as const;
+const FAMILY_KEEP_PRESETS = [1, 2, 6, FAMILY_KEEP_MAX] as const;
 const RANK_KEEP_KEY = "pogo-grader.pvpRankKeep";
+const LIST_KEEP_KEY = "pogo-grader.pvpListKeep";
+const FAMILY_KEEP_KEY = "pogo-grader.familyKeep";
 const KEEP_ALL_GOOD_KEY = "pogo-grader.keepAllGood";
 
 type Tab = Verdict;
+type RankingsTab = "gl" | "lc";
 
 interface Engine {
   parseInventoryCsv: (text: string) => ParseResult;
@@ -33,7 +50,11 @@ interface AppState {
   engine: Engine | null;
   meta: Meta | null;
   pvpRankKeep: number;
+  pvpListKeep: number;
+  familyKeep: number;
   keepAllGood: boolean;
+  rankingsTab: RankingsTab;
+  rankingsFilter: string;
 }
 
 function readStoredRankKeep(): number {
@@ -43,6 +64,26 @@ function readStoredRankKeep(): number {
     return clampPvpRankKeep(Number(raw));
   } catch {
     return DEFAULT_PVP_RANK_KEEP;
+  }
+}
+
+function readStoredListKeep(): number {
+  try {
+    const raw = localStorage.getItem(LIST_KEEP_KEY);
+    if (raw == null || raw === "") return DEFAULT_PVP_LIST_KEEP;
+    return clampPvpListKeep(Number(raw));
+  } catch {
+    return DEFAULT_PVP_LIST_KEEP;
+  }
+}
+
+function readStoredFamilyKeep(): number {
+  try {
+    const raw = localStorage.getItem(FAMILY_KEEP_KEY);
+    if (raw == null || raw === "") return DEFAULT_FAMILY_KEEP;
+    return clampFamilyKeep(Number(raw));
+  } catch {
+    return DEFAULT_FAMILY_KEEP;
   }
 }
 
@@ -64,7 +105,11 @@ const state: AppState = {
   engine: null,
   meta: null,
   pvpRankKeep: readStoredRankKeep(),
+  pvpListKeep: readStoredListKeep(),
+  familyKeep: readStoredFamilyKeep(),
   keepAllGood: readStoredKeepAllGood(),
+  rankingsTab: "gl",
+  rankingsFilter: "",
 };
 
 function errMsg(err: unknown): string {
@@ -161,18 +206,52 @@ function formatIvs(mon: GradedMon["mon"]): string {
   return ivUnique ? "IVs known" : "IVs unknown";
 }
 
+function formatLeagueBits(
+  kind: "GL" | "LC",
+  metaRank: GradedMon["glMeta"],
+  iv: GradedMon["gl"],
+): string {
+  if (metaRank && iv) {
+    return `${kind} #${metaRank.rank}/${metaRank.of} (${iv.rank}/${iv.of})`;
+  }
+  if (metaRank) return `${kind} #${metaRank.rank}/${metaRank.of}`;
+  if (iv) return `${kind} ${iv.rank}/${iv.of}`;
+  return "";
+}
+
 function formatRanks(item: GradedMon): string {
-  const bits: string[] = [];
-  if (item.gl) bits.push(`GL ${item.gl.rank}/${item.gl.of}`);
-  if (item.lc) bits.push(`LC ${item.lc.rank}/${item.lc.of}`);
-  return bits.join(" · ");
+  return [formatLeagueBits("GL", item.glMeta, item.gl), formatLeagueBits("LC", item.lcMeta, item.lc)]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function reasonClass(reason: string): string {
   const r = reason.toLowerCase();
   if (r.includes("dump-cap") || r.includes("dump cap")) return "chip chip--halt";
-  if (r.includes("worse than keep") || r.includes("rank unknown")) return "chip chip--halt";
+  if (r.includes("shiny")) return "chip chip--shiny";
+  if (r.includes("lucky")) return "chip chip--lucky";
+  if (r.includes("costume")) return "chip chip--costume";
+  if (r.includes("background")) return "chip chip--background";
+  if (r.includes("4*") || r.includes("hundo")) return "chip chip--hundo";
+  if (r.includes("favorite")) return "chip chip--favorite";
+  if (r.includes("special") || r.includes("legacy")) return "chip chip--special";
   if (r.includes("shadow")) return "chip chip--shadow";
+  if (r.includes("dynamax") || r.includes("gigantamax")) return "chip chip--max";
+  if (r.includes("legendary")) return "chip chip--legendary";
+  if (r.includes("mythical")) return "chip chip--mythical";
+  if (r.includes("raid attacker")) return "chip chip--raid";
+  if (r.includes("not gl/lc/raid")) return "chip chip--junk";
+  if (r.includes("limited")) return "chip chip--limited";
+  if (r.includes("great league")) return "chip chip--gl";
+  if (r.includes("little cup")) return "chip chip--lc";
+  if (r.includes("rank unknown") || r.includes("ivs not unique") || r.includes("unavailable")) {
+    return "chip chip--unknown";
+  }
+  if (r.includes("never dump") || r.includes("cannot dump")) return "chip chip--lock";
+  if (r.includes("worse than keep")) return "chip chip--miss";
+  if (r.includes("pvp/raid family")) return "chip chip--family";
+  if (r.includes("only copy") || r.includes("best junk")) return "chip chip--solo";
+  if (r.includes("not gl/lc/raid")) return "chip chip--junk";
   if (
     r.includes("duplicate") ||
     r.includes("extra") ||
@@ -255,14 +334,14 @@ export function mountApp(root: HTMLElement): void {
       </header>
 
       <div class="setup">
-        <section class="card" aria-labelledby="csv-title">
+        <section class="card card--csv" aria-labelledby="csv-title">
           <h2 id="csv-title">CSV</h2>
           <label class="file-label" for="csv-file">Calcy IV or Poke Genie export</label>
           <input id="csv-file" type="file" accept=".csv,text/csv" />
           <p class="note">Not uploaded. Skip-scan KEEP museum first — Calcy often omits shiny.</p>
         </section>
 
-        <section class="card" aria-labelledby="rank-title">
+        <section class="card card--rules" aria-labelledby="rank-title">
           <h2 id="rank-title">KEEP rules</h2>
           <div class="rank-row">
             <label class="file-label" for="rank-keep">KEEP PvP ≤</label>
@@ -275,19 +354,69 @@ export function mountApp(root: HTMLElement): void {
                 `<button type="button" class="btn btn--preset" data-rank="${n}">${n === PVP_RANK_OF ? "any" : String(n)}</button>`,
             ).join("")}
           </div>
+          <p class="note">IV floor among 4096 Great League / Little Cup spreads.</p>
+          <div class="rank-row">
+            <label class="file-label" for="pvp-list-keep">PvPoke GL top</label>
+            <input id="pvp-list-keep" type="number" inputmode="numeric" min="1" max="${GL_LIST_CAP}" step="1" value="${state.pvpListKeep}" />
+            <span class="rank-suffix">/ ${GL_LIST_CAP}</span>
+          </div>
+          <div class="rank-presets" role="group" aria-label="PvPoke GL species cutoff">
+            ${LIST_KEEP_PRESETS.map(
+              (n) =>
+                `<button type="button" class="btn btn--preset" data-list-keep="${n}">${n}</button>`,
+            ).join("")}
+          </div>
+          <p class="note">Only species this high on PvPoke Great League overall count as PvP. Little Cup stays top ${LC_LIST_CAP}.</p>
+          <div class="rank-row">
+            <label class="file-label" for="family-keep">Keep</label>
+            <input id="family-keep" type="number" inputmode="numeric" min="1" max="${FAMILY_KEEP_MAX}" step="1" value="${state.familyKeep}" />
+            <span class="rank-suffix">per family</span>
+          </div>
+          <div class="rank-presets" role="group" aria-label="Keep copies per family">
+            ${FAMILY_KEEP_PRESETS.map(
+              (n) =>
+                `<button type="button" class="btn btn--preset" data-family-keep="${n}">${n === FAMILY_KEEP_MAX ? "all" : String(n)}</button>`,
+            ).join("")}
+          </div>
+          <p class="note">PvP/raid species with no KEEP: LOOK the best this many, DUMP extras.</p>
           <div class="mode-row" role="group" aria-label="DUMP extras">
             <button type="button" class="btn btn--preset" data-keep-all="0">DUMP extras</button>
             <button type="button" class="btn btn--preset" data-keep-all="1">KEEP all good</button>
           </div>
         </section>
 
-        <section class="card" aria-labelledby="skip-title">
+        <section class="card card--skip" aria-labelledby="skip-title">
           <h2 id="skip-title">Skip-scan in GO</h2>
           <pre class="search-block" id="skip-scan">${escapeHtml(SKIP_SCAN)}</pre>
           <button type="button" class="btn btn--primary" data-copy="skip">Copy search</button>
           <p class="note">Hides KEEP museum so you scan the rest. Do not add <code>!shadow</code>.</p>
         </section>
       </div>
+
+      <section class="card rankings-card" aria-labelledby="rankings-title">
+        <div class="rankings-head">
+          <h2 id="rankings-title">PvPoke rankings</h2>
+          <p class="note rankings-status" id="rankings-status">Loading PvPoke lists…</p>
+        </div>
+        <div class="rankings-toolbar">
+          <nav class="rankings-tabs" aria-label="PvPoke leagues">
+            <button type="button" class="btn btn--preset" data-rankings-tab="gl">Great League</button>
+            <button type="button" class="btn btn--preset" data-rankings-tab="lc">Little Cup</button>
+          </nav>
+          <label class="file-label rankings-filter-label" for="rankings-filter">Filter</label>
+          <input id="rankings-filter" type="search" placeholder="Species name or id" autocomplete="off" aria-label="Filter PvPoke rankings" />
+        </div>
+        <div class="rankings-panes">
+          <div class="rankings-pane is-active" data-rankings-pane="gl">
+            <h3 class="rankings-pane-title rankings-pane-title--gl">Great League</h3>
+            <div id="rankings-gl" class="rankings-table-wrap"></div>
+          </div>
+          <div class="rankings-pane" data-rankings-pane="lc">
+            <h3 class="rankings-pane-title rankings-pane-title--lc">Little Cup</h3>
+            <div id="rankings-lc" class="rankings-table-wrap"></div>
+          </div>
+        </div>
+      </section>
 
       <div id="error" class="banner banner--error hidden" role="alert"></div>
       <p id="busy" class="status-line hidden"></p>
@@ -357,11 +486,19 @@ export function mountApp(root: HTMLElement): void {
   const listDumpEl = root.querySelector("#list-dump") as HTMLElement;
   const fileInput = root.querySelector("#csv-file") as HTMLInputElement;
   const rankInput = root.querySelector("#rank-keep") as HTMLInputElement;
+  const listKeepInput = root.querySelector("#pvp-list-keep") as HTMLInputElement;
+  const familyKeepInput = root.querySelector("#family-keep") as HTMLInputElement;
+  const rankingsStatusEl = root.querySelector("#rankings-status") as HTMLElement;
+  const rankingsGlEl = root.querySelector("#rankings-gl") as HTMLElement;
+  const rankingsLcEl = root.querySelector("#rankings-lc") as HTMLElement;
+  const rankingsFilterInput = root.querySelector("#rankings-filter") as HTMLInputElement;
 
   function gradeKnobs(meta: Meta): Meta {
     return {
       ...meta,
       pvpRankKeep: state.pvpRankKeep,
+      pvpListKeep: state.pvpListKeep,
+      familyKeep: state.familyKeep,
       keepAllGood: state.keepAllGood,
     };
   }
@@ -369,6 +506,22 @@ export function mountApp(root: HTMLElement): void {
   function persistRankKeep(n: number): void {
     try {
       localStorage.setItem(RANK_KEEP_KEY, String(n));
+    } catch {
+      /* private mode */
+    }
+  }
+
+  function persistListKeep(n: number): void {
+    try {
+      localStorage.setItem(LIST_KEEP_KEY, String(n));
+    } catch {
+      /* private mode */
+    }
+  }
+
+  function persistFamilyKeep(n: number): void {
+    try {
+      localStorage.setItem(FAMILY_KEEP_KEY, String(n));
     } catch {
       /* private mode */
     }
@@ -384,14 +537,93 @@ export function mountApp(root: HTMLElement): void {
 
   function paintRankControls(): void {
     rankInput.value = String(state.pvpRankKeep);
+    listKeepInput.value = String(state.pvpListKeep);
+    familyKeepInput.value = String(state.familyKeep);
     root.querySelectorAll("[data-rank]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-rank"));
       btn.classList.toggle("is-active", n === state.pvpRankKeep);
+    });
+    root.querySelectorAll("[data-list-keep]").forEach((btn) => {
+      const n = Number(btn.getAttribute("data-list-keep"));
+      btn.classList.toggle("is-active", n === state.pvpListKeep);
+    });
+    root.querySelectorAll("[data-family-keep]").forEach((btn) => {
+      const n = Number(btn.getAttribute("data-family-keep"));
+      btn.classList.toggle("is-active", n === state.familyKeep);
     });
     root.querySelectorAll("[data-keep-all]").forEach((btn) => {
       const on = btn.getAttribute("data-keep-all") === "1";
       btn.classList.toggle("is-active", on === state.keepAllGood);
     });
+    root.querySelectorAll("[data-rankings-tab]").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.getAttribute("data-rankings-tab") === state.rankingsTab);
+    });
+    root.querySelectorAll("[data-rankings-pane]").forEach((pane) => {
+      pane.classList.toggle("is-active", pane.getAttribute("data-rankings-pane") === state.rankingsTab);
+    });
+    paintRankings();
+  }
+
+  function rankingMatches(row: PvpokeRankRow, q: string): boolean {
+    if (!q) return true;
+    return (
+      row.speciesName.toLowerCase().includes(q) ||
+      row.speciesId.includes(q) ||
+      prettySpeciesId(row.speciesId).toLowerCase().includes(q)
+    );
+  }
+
+  function renderRankingTable(
+    rows: PvpokeRankRow[] | undefined,
+    cutoff: number | null,
+    empty: string,
+  ): string {
+    if (!rows || rows.length === 0) {
+      return `<p class="empty">${escapeHtml(empty)}</p>`;
+    }
+    const q = state.rankingsFilter.trim().toLowerCase();
+    const shown = rows.filter((row) => rankingMatches(row, q));
+    if (shown.length === 0) {
+      return `<p class="empty">No species match “${escapeHtml(state.rankingsFilter.trim())}”</p>`;
+    }
+    const hasScore = shown.some((row) => row.score != null);
+    const body = shown
+      .map((row) => {
+        const cut = cutoff != null && row.rank > cutoff;
+        const name = row.speciesName || prettySpeciesId(row.speciesId);
+        const score =
+          hasScore && row.score != null ? row.score.toFixed(1) : hasScore ? "—" : "";
+        return `<tr class="${cut ? "is-cut" : ""}">
+          <td class="rankings-num">${row.rank}</td>
+          <td>${escapeHtml(name)}</td>
+          ${hasScore ? `<td class="rankings-num">${score}</td>` : ""}
+        </tr>`;
+      })
+      .join("");
+    return `<table class="rankings-table">
+      <thead><tr><th>#</th><th>Species</th>${hasScore ? "<th>Score</th>" : ""}</tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+  }
+
+  function paintRankings(): void {
+    const meta = state.meta;
+    if (!meta) {
+      rankingsStatusEl.textContent = "Loading PvPoke lists…";
+      rankingsGlEl.innerHTML = `<p class="empty">Waiting for PvPoke lists</p>`;
+      rankingsLcEl.innerHTML = `<p class="empty">Waiting for PvPoke lists</p>`;
+      return;
+    }
+    const gl = meta.glRankings ?? [];
+    const lc = meta.lcRankings ?? [];
+    const glIn = gl.filter((row) => row.rank <= state.pvpListKeep).length;
+    rankingsStatusEl.textContent = `${pvpokeStatus(meta)} · GL ${glIn}/${gl.length || GL_LIST_CAP} in play · LC top ${lc.length || LC_LIST_CAP}`;
+    rankingsGlEl.innerHTML = renderRankingTable(
+      gl,
+      state.pvpListKeep,
+      "Great League list missing",
+    );
+    rankingsLcEl.innerHTML = renderRankingTable(lc, null, "Little Cup list missing");
   }
 
   function showError(message: string): void {
@@ -428,7 +660,7 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
     resultsEl.classList.remove("hidden");
-    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${pvpokeStatus(state.meta)}`;
+    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP} · Keep ${result.familyKeep}/family · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${pvpokeStatus(state.meta)}`;
     const counts: Array<[string, number]> = [
       ["keep", result.keep.length],
       ["look", result.look.length],
@@ -532,6 +764,7 @@ export function mountApp(root: HTMLElement): void {
     state.fileName = file.name;
     state.tab = pickDefaultTab(graded);
     showBusy("");
+    paintRankings();
     paintResults();
   }
 
@@ -556,6 +789,22 @@ export function mountApp(root: HTMLElement): void {
     regradeLive();
   }
 
+  function applyListKeep(raw: unknown): void {
+    const next = clampPvpListKeep(raw);
+    state.pvpListKeep = next;
+    persistListKeep(next);
+    paintRankControls();
+    regradeLive();
+  }
+
+  function applyFamilyKeep(raw: unknown): void {
+    const next = clampFamilyKeep(raw);
+    state.familyKeep = next;
+    persistFamilyKeep(next);
+    paintRankControls();
+    regradeLive();
+  }
+
   function applyKeepAllGood(on: boolean): void {
     state.keepAllGood = on;
     persistKeepAllGood(on);
@@ -570,6 +819,22 @@ export function mountApp(root: HTMLElement): void {
   });
   rankInput.addEventListener("blur", () => {
     applyRankKeep(rankInput.value);
+  });
+  listKeepInput.addEventListener("change", () => {
+    applyListKeep(listKeepInput.value);
+  });
+  listKeepInput.addEventListener("blur", () => {
+    applyListKeep(listKeepInput.value);
+  });
+  familyKeepInput.addEventListener("change", () => {
+    applyFamilyKeep(familyKeepInput.value);
+  });
+  familyKeepInput.addEventListener("blur", () => {
+    applyFamilyKeep(familyKeepInput.value);
+  });
+  rankingsFilterInput.addEventListener("input", () => {
+    state.rankingsFilter = rankingsFilterInput.value;
+    paintRankings();
   });
 
   fileInput.addEventListener("change", () => {
@@ -588,6 +853,25 @@ export function mountApp(root: HTMLElement): void {
     const rankBtn = target.closest("[data-rank]") as HTMLElement | null;
     if (rankBtn?.dataset.rank) {
       applyRankKeep(rankBtn.dataset.rank);
+      return;
+    }
+
+    const listKeepBtn = target.closest("[data-list-keep]") as HTMLElement | null;
+    if (listKeepBtn?.dataset.listKeep) {
+      applyListKeep(listKeepBtn.dataset.listKeep);
+      return;
+    }
+
+    const rankingsTabBtn = target.closest("[data-rankings-tab]") as HTMLElement | null;
+    if (rankingsTabBtn?.dataset.rankingsTab === "gl" || rankingsTabBtn?.dataset.rankingsTab === "lc") {
+      state.rankingsTab = rankingsTabBtn.dataset.rankingsTab;
+      paintRankControls();
+      return;
+    }
+
+    const familyKeepBtn = target.closest("[data-family-keep]") as HTMLElement | null;
+    if (familyKeepBtn?.dataset.familyKeep) {
+      applyFamilyKeep(familyKeepBtn.dataset.familyKeep);
       return;
     }
 
@@ -626,9 +910,10 @@ export function mountApp(root: HTMLElement): void {
     .then((engine) => engine.loadMeta())
     .then((fresh) => {
       state.meta = fresh;
+      paintRankControls();
       if (state.parse) regradeLive();
     })
     .catch(() => {
-      /* bundled lists load on grade */
+      rankingsStatusEl.textContent = "PvPoke bundled lists load on grade";
     });
 }
