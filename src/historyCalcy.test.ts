@@ -180,8 +180,8 @@ must(result.keep.length + result.look.length + result.dump.length === 134, "no d
 must(result.dump.length <= result.dumpCap, "dump cap respected");
 must(result.dumpCapped === false, "134-row box should not hit dump-cap 100");
 must(
-  result.keep.length === 44 && result.look.length === 39 && result.dump.length === 51,
-  `verdict snapshot keep/look/dump 44/39/51, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
+  result.keep.length === 39 && result.look.length === 43 && result.dump.length === 52,
+  `verdict snapshot keep/look/dump 39/43/52, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
 );
 
 must(
@@ -203,7 +203,6 @@ assertTrackIsScanSubsequence(result.look, "LOOK", stream, byRow);
 assertTrackIsScanSubsequence(result.dump, "DUMP", stream, byRow);
 
 const KEEP_HEAD = [
-  "120|GL 129|Eevee|665",
   "124|GL 36|Tentacool Shadow|229",
   "131|GL 14|Charmander|355",
   "133|GL 165|Pikachu|434",
@@ -211,6 +210,7 @@ const KEEP_HEAD = [
   "110|UL 27|Rhyhorn|923",
   "109|Lit♂58|Litwick Shadow|334",
   "106|Por49|Porygon Shadow|346",
+  "101|Fla♂82|Flamigo|1148",
 ];
 const LOOK_HEAD = [
   "112|Tin♀64|Tinkatink|503",
@@ -218,9 +218,9 @@ const LOOK_HEAD = [
   "114|Squ♂27|Squirtle|486",
   "115|Bel♂71|Bellsprout|491",
   "118|Skw♀60|Skwovet|87",
+  "120|GL 129|Eevee|665",
   "121|GL 134|Hatenna|325",
   "125|Fid♀24|Fidough|11",
-  "126|GL 189|Maschiff|781",
 ];
 const DUMP_HEAD = [
   "116|GL 126|Charmander|511",
@@ -399,6 +399,29 @@ if (zeroGibleKeep.length === 0) {
 must(
   result.dump.every((g) => g.mon.ivUnique),
   "this export has unique IVs on every dump",
+);
+
+const eeveeGl = all.find((g) => g.mon.nickname === "GL 129");
+must(eeveeGl?.mon.speciesId === "eevee" && eeveeGl.mon.cp === 665, "history Eevee GL 129");
+must(eeveeGl?.pvpJob?.kind !== "gl", "665 CP Eevee cannot take a Great League job after evolve overshoot");
+must(
+  eeveeGl?.reasons.some((r) => /Sylveon would be CP \d+ over Great League 1500/.test(r)) === true,
+  `Eevee should explain Sylveon overshoot, got ${eeveeGl?.reasons.join(" | ")}`,
+);
+must(
+  all.every(
+    (g) =>
+      g.pvpJob?.kind !== "lc" || g.mon.cp <= 500,
+  ),
+  "no Little Cup job on a copy over 500 CP",
+);
+must(
+  all.every(
+    (g) =>
+      g.pvpJob?.kind !== "gl" ||
+      !g.reasons.some((r) => /over Great League 1500/.test(r)),
+  ),
+  "no Great League job on an over-cap copy",
 );
 
 const dumpPreview = dumpPreviewString(result.dump.map((g) => g.mon));

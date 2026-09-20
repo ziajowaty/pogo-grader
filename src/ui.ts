@@ -10,6 +10,7 @@ import type {
 } from "./types";
 import {
   clampFamilyKeep,
+  clampPvpKeep,
   clampPvpListKeep,
   clampPvpRankKeep,
   clampRaidIvKeep,
@@ -17,6 +18,7 @@ import {
   DEFAULT_KEEP_FAVORITE,
   DEFAULT_KEEP_LUCKY,
   DEFAULT_KEEP_SHADOW,
+  DEFAULT_PVP_KEEP,
   DEFAULT_PVP_LIST_KEEP,
   DEFAULT_PVP_RANK_KEEP,
   DEFAULT_RAID_IV_KEEP,
@@ -28,6 +30,8 @@ import {
   POKEMON_TYPES,
   prettyPokemonType,
   prettySpeciesId,
+  PVP_KEEP_MAX,
+  PVP_KEEP_MIN,
   PVP_RANK_OF,
   RAID_IV_KEEP_MAX,
   RAID_IV_KEEP_MIN,
@@ -62,10 +66,12 @@ const DUMP_LIST_MAX = 100;
 const LIST_PAINT_MAX = 200;
 const RANK_PRESETS = [50, 150, 500, 4096] as const;
 const LIST_KEEP_PRESETS = [100, 200, 300, 500] as const;
+const PVP_KEEP_PRESETS = [1, 2, 3] as const;
 const FAMILY_KEEP_PRESETS = [FAMILY_KEEP_MIN, 1, 2, 6, FAMILY_KEEP_MAX] as const;
 const RAID_IV_PRESETS = [RAID_IV_KEEP_MIN, 80, 90, 95, RAID_IV_KEEP_MAX] as const;
 const RANK_KEEP_KEY = "pogo-grader.pvpRankKeep";
 const LIST_KEEP_KEY = "pogo-grader.pvpListKeep";
+const PVP_KEEP_KEY = "pogo-grader.pvpKeep";
 const FAMILY_KEEP_KEY = "pogo-grader.familyKeep";
 const RAID_IV_KEEP_KEY = "pogo-grader.raidIvKeep";
 const RAID_IV_KEEP_KEY_LEGACY = "pogo-grader.raidSpKeep";
@@ -94,6 +100,7 @@ interface AppState {
   meta: Meta | null;
   pvpRankKeep: number;
   pvpListKeep: number;
+  pvpKeep: number;
   familyKeep: number;
   raidIvKeep: number;
   keepAllGood: boolean;
@@ -122,6 +129,16 @@ function readStoredListKeep(): number {
     return clampPvpListKeep(Number(raw));
   } catch {
     return DEFAULT_PVP_LIST_KEEP;
+  }
+}
+
+function readStoredPvpKeep(): number {
+  try {
+    const raw = localStorage.getItem(PVP_KEEP_KEY);
+    if (raw == null || raw === "") return DEFAULT_PVP_KEEP;
+    return clampPvpKeep(Number(raw));
+  } catch {
+    return DEFAULT_PVP_KEEP;
   }
 }
 
@@ -194,6 +211,7 @@ const state: AppState = {
   meta: null,
   pvpRankKeep: readStoredRankKeep(),
   pvpListKeep: readStoredListKeep(),
+  pvpKeep: readStoredPvpKeep(),
   familyKeep: readStoredFamilyKeep(),
   raidIvKeep: readStoredRaidIvKeep(),
   keepAllGood: readStoredKeepAllGood(),
@@ -374,9 +392,25 @@ function formatRanks(item: GradedMon): string {
   return [...glBits, formatLeagueBits("LC", item.lcMeta, item.lc), raid].filter(Boolean).join(" · ");
 }
 
+function jobLabel(item: GradedMon): string {
+  const job = item.pvpJob;
+  if (!job) return "";
+  const name = prettySpeciesId(job.speciesId);
+  if (job.kind === "lc") return `LC ${name}`;
+  if (job.kind === "raid") return `Raid ${name}`;
+  return `GL ${name}`;
+}
+
 function reasonClass(reason: string): string {
   const r = reason.toLowerCase();
   if (r.includes("dump-cap") || r.includes("dump cap")) return "chip chip--halt";
+  if (r.includes("no pvp/raid job")) return "chip chip--dupe";
+  if (r.includes("stay ") && r.includes("little cup")) return "chip chip--lc";
+  if (r.includes("stay ") && r.includes("great league")) return "chip chip--gl";
+  if (r.includes("evolve to") && r.includes("little cup")) return "chip chip--lc";
+  if (r.includes("evolve to") && r.includes("great league")) return "chip chip--gl";
+  if (r.includes("evolve to") && r.includes("raid")) return "chip chip--raid";
+  if (r.includes("raid attacker")) return "chip chip--raid";
   if (r.includes("shiny")) return "chip chip--shiny";
   if (r.includes("lucky")) return "chip chip--lucky";
   if (r.includes("costume")) return "chip chip--costume";
@@ -388,7 +422,6 @@ function reasonClass(reason: string): string {
   if (r.includes("dynamax") || r.includes("gigantamax")) return "chip chip--max";
   if (r.includes("legendary")) return "chip chip--legendary";
   if (r.includes("mythical")) return "chip chip--mythical";
-  if (r.includes("raid attacker")) return "chip chip--raid";
   if (r.includes("% iv worse") || r.includes("raid iv unavailable")) return "chip chip--miss";
   if (r.includes("not gl/lc/raid")) return "chip chip--junk";
   if (r.includes("limited")) return "chip chip--limited";
@@ -415,6 +448,8 @@ function reasonClass(reason: string): string {
 }
 
 function isNegativeReason(reason: string): boolean {
+  const r = reason.toLowerCase();
+  if (r.includes("no pvp/raid job")) return false;
   const cls = reasonClass(reason);
   if (
     cls.includes("chip--miss") ||
@@ -424,7 +459,6 @@ function isNegativeReason(reason: string): boolean {
   ) {
     return true;
   }
-  const r = reason.toLowerCase();
   return /^(gl|lc) rank unknown/.test(r);
 }
 
@@ -470,11 +504,15 @@ function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null): string {
   const crowdBadge = crowd
     ? `<span class="badge-crowd" title="Family copy rank (best first). Rows stay in scan order (first scanned at top).">${copyRankInGroup}/${copiesInGroup}</span>`
     : "";
+  const job = jobLabel(item);
+  const jobBadge = job
+    ? `<span class="badge-job badge-job--${item.pvpJob?.kind ?? "gl"}">${escapeHtml(job)}</span>`
+    : "";
   const line = [speciesBit, `IVs ${formatIvs(mon)}`, flags, formatRanks(item)].filter(Boolean).join(" · ");
 
   return `<article class="row row--${verdict.toLowerCase()}${crowd ? " row--crowd" : ""}">
     <div class="row-top">
-      <div class="species">${escapeHtml(title)}${crowdBadge}</div>
+      <div class="species">${escapeHtml(title)}${jobBadge}${crowdBadge}</div>
       <div class="cp">${mon.cp}</div>
     </div>
     <div class="meta">${escapeHtml(line)}</div>
@@ -662,6 +700,20 @@ export function mountApp(root: HTMLElement): void {
           </div>
           <div class="rules-block">
             <div class="rank-row">
+              <label class="file-label" for="pvp-keep">Keep PvP</label>
+              <input id="pvp-keep" type="number" inputmode="numeric" min="${PVP_KEEP_MIN}" max="${PVP_KEEP_MAX}" step="1" value="${state.pvpKeep}" />
+              <span class="rank-suffix">per identity</span>
+            </div>
+            <div class="rank-presets" role="group" aria-label="Keep PvP copies per identity">
+              ${PVP_KEEP_PRESETS.map(
+                (n) =>
+                  `<button type="button" class="btn btn--preset" data-pvp-keep="${n}">${n}</button>`,
+              ).join("")}
+            </div>
+            <p class="note">Copies kept for each Great League stage and each Little Cup species. 1 skips a second Dragonair; that copy can take LC or the next evo instead. Raid stays 6.</p>
+          </div>
+          <div class="rules-block">
+            <div class="rank-row">
               <label class="file-label" for="family-keep">Keep</label>
               <input id="family-keep" type="number" inputmode="numeric" min="${FAMILY_KEEP_MIN}" max="${FAMILY_KEEP_MAX}" step="1" value="${state.familyKeep}" />
               <span class="rank-suffix">per family</span>
@@ -739,6 +791,7 @@ export function mountApp(root: HTMLElement): void {
   const fileInput = root.querySelector("#csv-file") as HTMLInputElement;
   const rankInput = root.querySelector("#rank-keep") as HTMLInputElement;
   const listKeepInput = root.querySelector("#pvp-list-keep") as HTMLInputElement;
+  const pvpKeepInput = root.querySelector("#pvp-keep") as HTMLInputElement;
   const familyKeepInput = root.querySelector("#family-keep") as HTMLInputElement;
   const raidIvKeepInput = root.querySelector("#raid-iv-keep") as HTMLInputElement;
   const skipScanEl = root.querySelector("#skip-scan") as HTMLElement;
@@ -757,6 +810,7 @@ export function mountApp(root: HTMLElement): void {
       ...meta,
       pvpRankKeep: state.pvpRankKeep,
       pvpListKeep: state.pvpListKeep,
+      pvpKeep: state.pvpKeep,
       familyKeep: state.familyKeep,
       raidIvKeep: state.raidIvKeep,
       keepAllGood: state.keepAllGood,
@@ -777,6 +831,14 @@ export function mountApp(root: HTMLElement): void {
   function persistListKeep(n: number): void {
     try {
       localStorage.setItem(LIST_KEEP_KEY, String(n));
+    } catch {
+      /* private mode */
+    }
+  }
+
+  function persistPvpKeep(n: number): void {
+    try {
+      localStorage.setItem(PVP_KEEP_KEY, String(n));
     } catch {
       /* private mode */
     }
@@ -833,6 +895,7 @@ export function mountApp(root: HTMLElement): void {
   function paintRankControls(): void {
     rankInput.value = String(state.pvpRankKeep);
     listKeepInput.value = String(state.pvpListKeep);
+    pvpKeepInput.value = String(state.pvpKeep);
     familyKeepInput.value = String(state.familyKeep);
     raidIvKeepInput.value = String(state.raidIvKeep);
     root.querySelectorAll("[data-rank]").forEach((btn) => {
@@ -842,6 +905,10 @@ export function mountApp(root: HTMLElement): void {
     root.querySelectorAll("[data-list-keep]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-list-keep"));
       btn.classList.toggle("is-active", n === state.pvpListKeep);
+    });
+    root.querySelectorAll("[data-pvp-keep]").forEach((btn) => {
+      const n = Number(btn.getAttribute("data-pvp-keep"));
+      btn.classList.toggle("is-active", n === state.pvpKeep);
     });
     root.querySelectorAll("[data-family-keep]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-family-keep"));
@@ -1068,7 +1135,7 @@ export function mountApp(root: HTMLElement): void {
     }
     resultsEl.classList.remove("hidden");
     gradeTablesEl.classList.remove("hidden");
-    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP} · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "LOOK favorite"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}`;
+    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP} · Keep ${result.pvpKeep} PvP/identity · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "LOOK favorite"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}`;
     const counts: Array<[string, number]> = [
       ["keep", result.keep.length],
       ["look", result.look.length],
@@ -1206,6 +1273,14 @@ export function mountApp(root: HTMLElement): void {
     regradeLive();
   }
 
+  function applyPvpKeep(raw: unknown): void {
+    const next = clampPvpKeep(raw);
+    state.pvpKeep = next;
+    persistPvpKeep(next);
+    paintRankControls();
+    regradeLive();
+  }
+
   function applyFamilyKeep(raw: unknown): void {
     const next = clampFamilyKeep(raw);
     state.familyKeep = next;
@@ -1264,6 +1339,12 @@ export function mountApp(root: HTMLElement): void {
   listKeepInput.addEventListener("blur", () => {
     applyListKeep(listKeepInput.value);
   });
+  pvpKeepInput.addEventListener("change", () => {
+    applyPvpKeep(pvpKeepInput.value);
+  });
+  pvpKeepInput.addEventListener("blur", () => {
+    applyPvpKeep(pvpKeepInput.value);
+  });
   familyKeepInput.addEventListener("change", () => {
     applyFamilyKeep(familyKeepInput.value);
   });
@@ -1308,6 +1389,12 @@ export function mountApp(root: HTMLElement): void {
     const listKeepBtn = target.closest("[data-list-keep]") as HTMLElement | null;
     if (listKeepBtn?.dataset.listKeep) {
       applyListKeep(listKeepBtn.dataset.listKeep);
+      return;
+    }
+
+    const pvpKeepBtn = target.closest("[data-pvp-keep]") as HTMLElement | null;
+    if (pvpKeepBtn?.dataset.pvpKeep) {
+      applyPvpKeep(pvpKeepBtn.dataset.pvpKeep);
       return;
     }
 

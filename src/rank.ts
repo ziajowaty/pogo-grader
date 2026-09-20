@@ -203,3 +203,57 @@ export function raidIvPercent(mon: Mon, speciesId: string): RaidIvRank | null {
     evoSpeciesId: canonId(speciesId),
   };
 }
+
+function cpmIndexForLevel(level: number, cpm: number[]): number | null {
+  if (!Number.isFinite(level) || level < 1) return null;
+  const idx = Math.round((level - 1) * 2);
+  if (idx < 0 || idx >= cpm.length) return null;
+  return idx;
+}
+
+/** CP of these IVs on `speciesId` at `level`. Null if stats or level are missing. */
+export function cpAtLevel(
+  speciesId: string,
+  ivs: { atk: number; def: number; sta: number },
+  level: number,
+  gm: RankGm,
+): number | null {
+  const stats = lookupBaseStats(speciesId, gm);
+  if (!stats) return null;
+  const idx = cpmIndexForLevel(level, gm.cpm);
+  if (idx == null) return null;
+  return cpAt(gm.cpm[idx], stats.atk + ivs.atk, stats.def + ivs.def, stats.hp + ivs.sta);
+}
+
+/**
+ * CP this copy would have as `speciesId` at its current level.
+ * Same species uses scanned CP (GO cannot power down). Evolve needs a known level.
+ */
+export function cpAsSpecies(mon: Mon, speciesId: string, gm: RankGm): number | null {
+  const target = canonId(speciesId);
+  if (canonId(mon.speciesId) === target) return mon.cp;
+  const ivs = ivsOf(mon);
+  if (!ivs || mon.level == null) return null;
+  return cpAtLevel(target, ivs, mon.level, gm);
+}
+
+export interface LeagueCapFit {
+  fits: boolean;
+  /** CP used for the check (scanned, or computed after evolve). */
+  cp: number | null;
+}
+
+/**
+ * Whether this copy can enter `cap` CP as `speciesId`. You cannot power down, and
+ * evolving keeps the current level. Unknown evolve CP does not block (missing level).
+ */
+export function fitsLeagueCap(mon: Mon, speciesId: string, cap: number, gm: RankGm): LeagueCapFit {
+  const target = canonId(speciesId);
+  if (canonId(mon.speciesId) === target) {
+    return { fits: mon.cp <= cap, cp: mon.cp };
+  }
+  if (mon.cp > cap) return { fits: false, cp: mon.cp };
+  const asCp = cpAsSpecies(mon, target, gm);
+  if (asCp == null) return { fits: true, cp: null };
+  return { fits: asCp <= cap, cp: asCp };
+}

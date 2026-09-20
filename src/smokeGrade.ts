@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { parseInventoryCsv } from "./parseCsv";
 import { loadMeta, parsePokebattlerAttackers, pokebattlerToCanonId, unionUniqueIds } from "./meta";
 import { gradeBox, compareScanStream } from "./grade";
-import { clampFamilyKeep, clampRaidIvKeep, FAMILY_KEEP_MIN, RAID_IV_KEEP_MIN, type Mon } from "./types";
+import { clampFamilyKeep, clampPvpKeep, clampRaidIvKeep, FAMILY_KEEP_MIN, PVP_KEEP_MAX, PVP_KEEP_MIN, RAID_IV_KEEP_MIN, type Mon } from "./types";
+import { cpAsSpecies, fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, LITTLE_CUP_CAP } from "./rank";
 
 function must(cond: boolean, message: string): void {
   if (!cond) throw new Error(message);
@@ -57,6 +58,9 @@ must(parsed.dialect === "pokegenie", `expected pokegenie, got ${parsed.dialect}`
 must(parsed.mons.length === 10, `expected 10 mons, got ${parsed.mons.length}`);
 must(result.pvpRankKeep === 500, "echo pvpRankKeep 500");
 must(result.pvpListKeep === 500, "default pvpListKeep 500");
+must(result.pvpKeep === 2, "default pvpKeep 2");
+must(clampPvpKeep(0) === PVP_KEEP_MIN && PVP_KEEP_MIN === 1, "pvpKeep clamps down to 1");
+must(clampPvpKeep(9) === PVP_KEEP_MAX && PVP_KEEP_MAX === 3, "pvpKeep clamps up to 3");
 must(result.familyKeep === 2, "default familyKeep 2");
 must(clampFamilyKeep(0) === 0 && FAMILY_KEEP_MIN === 0, "familyKeep 0 is a valid clamp");
 must(result.raidIvKeep === 90, "default raid IV keep 90");
@@ -174,7 +178,9 @@ const machamp = all.find((g) => g.mon.speciesId === "machamp_shadow");
 must(machamp?.verdict === "KEEP", "shadow machamp must KEEP");
 
 const wooper = all.find((g) => g.mon.speciesId === "wooper");
-must(wooper?.keepClasses.includes("gl") === true, "0/15/15 wooper should KEEP via GL at ≤500");
+must(wooper?.keepClasses.includes("gl") === true, "0/15/15 wooper should KEEP via GL (GL before LC)");
+must(wooper?.pvpJob?.kind === "gl", "0/15/15 wooper's job is Great League, not Little Cup");
+must(wooper?.pvpJob?.speciesId === "quagsire", "wooper GL job is Quagsire (on PvPoke GL), not unevolved Wooper");
 must(wooper?.gl != null && wooper.gl.rank <= 500, "wooper GL rank should be ≤500");
 
 const dumps = result.dump.map((g) => g.mon.speciesId);
@@ -313,7 +319,8 @@ const tight = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 1 });
 must(tight.pvpRankKeep === 1, "echo pvpRankKeep 1");
 const wooperTight = [...tight.keep, ...tight.look, ...tight.dump].find((g) => g.mon.speciesId === "wooper");
 must(wooperTight?.keepClasses.includes("gl") !== true, "rank-1 floor must drop wooper GL keep");
-must(wooperTight?.verdict !== "DUMP", "only wooper still never DUMP");
+must(wooperTight?.keepClasses.includes("lc") === true, "0/15/15 wooper is LC rank 1 so LC still KEEPs at floor 1");
+must(wooperTight?.verdict === "KEEP", "LC rank-1 wooper KEEPs at PvP floor 1");
 
 const extraWoopers: Mon[] = [1, 2, 3].map((i) => ({
   ...wooperMon!,
@@ -330,16 +337,14 @@ const wooperRows = [...wooperFamily.keep, ...wooperFamily.look, ...wooperFamily.
   (g) => g.mon.speciesId === "wooper",
 );
 must(wooperRows.length === 4, "four woopers in family test");
-if (wooperRows.every((g) => g.verdict !== "KEEP")) {
-  must(
-    wooperRows.filter((g) => g.verdict === "LOOK").length === 2,
-    "no-keeper wooper family LOOKs 2 best",
-  );
-  must(
-    wooperRows.filter((g) => g.verdict === "DUMP").length === 2,
-    "no-keeper wooper family dumps extras beyond 2",
-  );
-}
+must(
+  wooperRows.filter((g) => g.verdict === "KEEP").length === 1,
+  "rank-1 LC wooper KEEPs; junk IVs do not",
+);
+must(
+  wooperRows.filter((g) => g.verdict === "DUMP").length === 3,
+  "junk woopers dump when a LC keeper exists",
+);
 const wooperZero = gradeBox([wooperMon!, ...extraWoopers], { ...meta, pvpRankKeep: 1, familyKeep: 0 });
 const wooperZeroRows = [...wooperZero.keep, ...wooperZero.look, ...wooperZero.dump].filter(
   (g) => g.mon.speciesId === "wooper",
@@ -433,12 +438,12 @@ const bulbGrade = gradeBox(bulbs, bulbMeta);
 const bulbKeep = bulbGrade.keep.filter((g) => g.mon.speciesId === "bulbasaur");
 must(bulbKeep.length === 1, `only 15/15/15 bulbasaur raid KEEP at 90% IV, got ${bulbKeep.length}`);
 must(
-  bulbKeep.every((g) => g.keepClasses.includes("raid") && g.reasons.some((r) => /as Venusaur/i.test(r))),
+  bulbKeep.every((g) => g.keepClasses.includes("raid") && g.reasons.some((r) => /venusaur/i.test(r))),
   "bulbasaur KEEP reason names Venusaur",
 );
 const ivy = gradeBox([hundoAt("ivysaur", "Ivysaur", 413, 14)], bulbMeta);
 must(ivy.keep[0]?.keepClasses.includes("raid") === true, "ivysaur KEEP as raid");
-must(ivy.keep[0]?.reasons.some((r) => /as Venusaur/i.test(r)) === true, "ivysaur reason names Venusaur");
+must(ivy.keep[0]?.reasons.some((r) => /venusaur/i.test(r)) === true, "ivysaur reason names Venusaur");
 const eightBulbs = Array.from({ length: 8 }, (_, i) =>
   hundoAt("bulbasaur", "Bulbasaur", 420 + i, i < 6 ? 15 : 10),
 );
@@ -473,7 +478,7 @@ function ivMon(
     speciesId,
     form: "Normal",
     gender: "male",
-    cp: 600,
+    cp: 400,
     hp: 90,
     atk,
     def,
@@ -526,9 +531,26 @@ must(
     bulkyGraded?.glAs?.some((r) => r.evoSpeciesId === "machamp") === true,
   "machop is ranked as both Machoke and Machamp",
 );
+must(bulkyGraded?.pvpJob?.kind === "gl" && attackGraded?.pvpJob?.kind === "gl", "both machops get a GL job");
+const machokeRow = meta.glRankings?.find((row) => row.speciesId === "machoke");
+const machampRow = meta.glRankings?.find((row) => row.speciesId === "machamp");
+must(machokeRow != null && machampRow != null, "Machoke and Machamp are both on GL");
+const betterMachStage = (machokeRow!.rank <= machampRow!.rank ? "machoke" : "machamp") as string;
 must(
-  bulkyGraded?.reasons.some((r) => /better as machoke/i.test(r) || /better as machamp/i.test(r)) === true,
-  `machop better-as reason, got ${bulkyGraded?.reasons.join(" | ")}`,
+  bulkyGraded?.pvpJob?.speciesId === betterMachStage && attackGraded?.pvpJob?.speciesId === betterMachStage,
+  `2 machops exhaust the higher-meta GL stage (${betterMachStage} #${Math.min(machokeRow!.rank, machampRow!.rank)}) before the worse evo`,
+);
+const worseMachStage = betterMachStage === "machoke" ? "machamp" : "machoke";
+const thirdMachop = ivMon("machop", "Machop", 502, 8, 8, 8);
+const tripleMachops = gradeBox([bulkyMachop, attackMachop, thirdMachop], pvpOnly);
+const tripleJobs = [...tripleMachops.keep, ...tripleMachops.look, ...tripleMachops.dump].map((g) => g.pvpJob?.speciesId);
+must(
+  tripleJobs.filter((id) => id === betterMachStage).length === 2,
+  "higher-meta GL stage takes both seats before the worse evo",
+);
+must(
+  tripleJobs.filter((id) => id === worseMachStage).length === 1,
+  "third machop fills the worse GL evo after the better stage is exhausted",
 );
 must(
   bulkyGraded &&
@@ -545,9 +567,198 @@ const threeMachamp = [0, 1, 2].map((i) => ivMon("machamp", "Machamp", 520 + i, i
 const champOnly = gradeBox(threeMachamp, pvpOnly);
 must(champOnly.keep.length === 2, `machamp-only fills 2 Machamp GL slots, got ${champOnly.keep.length}`);
 must(champOnly.dump.length === 1, "extra machamp dumps; cannot fill Machoke slots");
+must(champOnly.pvpKeep === 2, "default pvpKeep is 2");
 must(
   champOnly.keep.every((g) => g.glAs?.every((r) => r.evoSpeciesId === "machamp")),
   "fully evolved machamp is not ranked as Machoke",
+);
+const champOne = gradeBox(threeMachamp, { ...pvpOnly, pvpKeep: 1 });
+must(champOne.pvpKeep === 1, "echo pvpKeep 1");
+must(champOne.keep.length === 1, "pvpKeep 1 fills one Machamp GL slot");
+must(champOne.dump.length === 2, "pvpKeep 1 dumps the other two machamps");
+const champThree = gradeBox(threeMachamp, { ...pvpOnly, pvpKeep: 3 });
+must(champThree.keep.length === 3 && champThree.dump.length === 0, "pvpKeep 3 keeps all three machamps");
+const splitMachops = gradeBox([bulkyMachop, attackMachop], { ...pvpOnly, pvpKeep: 1 });
+const splitJobs = [...splitMachops.keep, ...splitMachops.look, ...splitMachops.dump].map((g) => g.pvpJob?.speciesId);
+must(
+  splitJobs.filter((id) => id === betterMachStage).length === 1,
+  "pvpKeep 1 takes one seat of the higher-meta GL stage",
+);
+must(
+  splitJobs.filter((id) => id === worseMachStage).length === 1,
+  "pvpKeep 1 leftover machop fills the worse GL evo",
+);
+
+const dratiniLine: Mon[] = [
+  ivMon("dratini", "Dratini", 700, 15, 15, 15),
+  ivMon("dratini", "Dratini", 701, 14, 15, 14),
+  ivMon("dratini", "Dratini", 702, 1, 4, 15),
+  ivMon("dratini", "Dratini", 703, 6, 14, 15),
+  ivMon("dratini", "Dratini", 704, 15, 12, 14),
+  { ...ivMon("dratini_shadow", "Dratini Shadow", 710, 1, 11, 13), shadow: true },
+  { ...ivMon("dratini_shadow", "Dratini Shadow", 711, 5, 15, 15), shadow: true },
+  { ...ivMon("dratini_shadow", "Dratini Shadow", 712, 12, 15, 11), shadow: true },
+  { ...ivMon("dratini_shadow", "Dratini Shadow", 713, 4, 10, 14), shadow: true },
+];
+const dratiniGrade = gradeBox(dratiniLine, {
+  ...meta,
+  keepAllGood: false,
+  keepShadow: false,
+  keepLucky: false,
+  keepFavorite: false,
+  pvpRankKeep: 500,
+});
+const dratiniAll = [...dratiniGrade.keep, ...dratiniGrade.look, ...dratiniGrade.dump];
+const jobOf = (row: number) => dratiniAll.find((g) => g.mon.sourceRow === row)?.pvpJob;
+must(
+  dratiniAll.every((g) => !(g.keepClasses.includes("gl") && g.keepClasses.includes("lc"))),
+  "no copy is KEEP for both GL and LC",
+);
+must(
+  dratiniAll.every((g) => g.pvpJob?.kind !== "gl" || !/^dratini(_shadow)?$/.test(g.pvpJob.speciesId)),
+  "Dratini is not on PvPoke GL, so it never gets a stay-Dratini GL job",
+);
+must(
+  dratiniAll
+    .filter((g) => g.mon.speciesId === "dratini" || g.mon.speciesId === "dratini_shadow")
+    .every((g) => !g.glAs?.some((r) => r.evoSpeciesId === "dratini" || r.evoSpeciesId === "dratini_shadow")),
+  "do not show a GL IV rank as unlisted Dratini",
+);
+must(jobOf(700)?.kind === "raid" && jobOf(700)?.speciesId === "dragonite", "hundo leftover is raid Dragonite");
+must(jobOf(701)?.kind === "raid" && jobOf(701)?.speciesId === "dragonite", "14/15/14 leftover is raid Dragonite");
+must(jobOf(702)?.kind === "gl" && jobOf(702)?.speciesId === "dragonair", "1/4/15 is GL Dragonair (GL before LC)");
+must(jobOf(703)?.kind === "gl" && jobOf(703)?.speciesId === "dragonair", "6/14/15 fills the second Dragonair seat");
+must(jobOf(704)?.kind === "raid", "15/12/14 high-IV leftover is raid Dragonite");
+must(
+  jobOf(710)?.kind === "gl" && jobOf(710)?.speciesId === "dragonair_shadow",
+  "1/11/13 shadow is GL Dragonair (GL before LC)",
+);
+must(
+  jobOf(711)?.kind === "gl" && jobOf(711)?.speciesId === "dragonair_shadow",
+  "5/15/15 shadow is the other Dragonair Shadow seat",
+);
+must(jobOf(712) == null, "12/15/11 shadow misses listed GL, LC, and raid floors");
+must(
+  jobOf(713)?.kind === "gl" && jobOf(713)?.speciesId === "dragonite_shadow",
+  "4/10/14 shadow is GL Dragonite after Dragonair seats are full",
+);
+
+const dratiniOne = gradeBox(dratiniLine, {
+  ...meta,
+  keepAllGood: false,
+  keepShadow: false,
+  keepLucky: false,
+  keepFavorite: false,
+  pvpRankKeep: 500,
+  pvpKeep: 1,
+});
+must(dratiniOne.pvpKeep === 1, "echo pvpKeep 1 on crowded Dratini line");
+const jobOneOf = (row: number) =>
+  [...dratiniOne.keep, ...dratiniOne.look, ...dratiniOne.dump].find((g) => g.mon.sourceRow === row)?.pvpJob;
+must(jobOneOf(702)?.kind === "gl" && jobOneOf(702)?.speciesId === "dragonair", "pvpKeep 1 keeps the better Dragonair");
+must(jobOneOf(703)?.kind === "lc" && jobOneOf(703)?.speciesId === "dratini", "pvpKeep 1 leftover Dragonair becomes LC");
+must(
+  jobOneOf(711)?.kind === "gl" && jobOneOf(711)?.speciesId === "dragonair_shadow",
+  "pvpKeep 1 keeps the better Dragonair Shadow (5/15/15)",
+);
+must(
+  jobOneOf(710)?.kind === "lc" && jobOneOf(710)?.speciesId === "dratini_shadow",
+  "pvpKeep 1 sends the second Dragonair Shadow (LC #11) to Little Cup",
+);
+must(
+  jobOneOf(713)?.kind === "gl" && jobOneOf(713)?.speciesId === "dragonite_shadow",
+  "pvpKeep 1 still fills the Dragonite Shadow seat after one Dragonair",
+);
+
+const capGm = getRankGm(meta.glEvolution);
+const ninetales = parsed.mons.find((m) => m.speciesId === "ninetales_alolan_shadow");
+must(Boolean(ninetales), "fixture alolan ninetales");
+must(ninetales!.cp === 1500, "fixture ninetales is exactly 1500 CP");
+must(
+  fitsLeagueCap(ninetales!, ninetales!.speciesId, GREAT_LEAGUE_CAP, capGm).fits,
+  "1500 CP still fits Great League",
+);
+must(
+  wooperMon?.level === 20 && wooperMon.cp === 500,
+  "fixture wooper is level 20 / 500 CP",
+);
+const quagFromWooper = cpAsSpecies(wooperMon!, "quagsire", capGm);
+must(
+  quagFromWooper != null && quagFromWooper <= GREAT_LEAGUE_CAP,
+  `level-20 wooper as Quagsire should fit GL, got ${quagFromWooper}`,
+);
+
+const highWooper: Mon = {
+  ...wooperMon!,
+  sourceRow: 801,
+  level: 40,
+  cp: 900,
+  favorite: false,
+  nickname: "xl-wooper",
+};
+const highQuag = cpAsSpecies(highWooper, "quagsire", capGm);
+must(highQuag != null && highQuag > GREAT_LEAGUE_CAP, `level-40 wooper as Quagsire should exceed 1500, got ${highQuag}`);
+const highWooperGrade = gradeBox([highWooper], {
+  ...meta,
+  pvpRankKeep: 500,
+  keepLucky: false,
+  keepFavorite: false,
+  keepShadow: false,
+});
+const highWooperRow = [...highWooperGrade.keep, ...highWooperGrade.look, ...highWooperGrade.dump][0];
+must(highWooperRow?.pvpJob?.kind !== "gl", "level-40 wooper is not a Great League Quagsire job");
+must(
+  highWooperRow?.reasons.some((r) => /over Great League 1500/.test(r)) === true,
+  `level-40 wooper should explain GL overshoot, got ${highWooperRow?.reasons.join(" | ")}`,
+);
+
+const legalToad: Mon = {
+  ...parsed.mons.find((m) => m.speciesId === "seismitoad" && m.favorite === true)!,
+  sourceRow: 810,
+  favorite: false,
+  lucky: false,
+};
+const stuffedToad: Mon = {
+  ...legalToad,
+  sourceRow: 811,
+  cp: 2500,
+  level: 40,
+  nickname: "raid-toad",
+};
+must(legalToad.cp <= GREAT_LEAGUE_CAP, "favorite fixture toad is GL-legal CP");
+const toadCap = gradeBox([stuffedToad, legalToad], {
+  ...pvpOnly,
+  pvpRankKeep: 500,
+  pvpKeep: 1,
+});
+const stuffedG = [...toadCap.keep, ...toadCap.look, ...toadCap.dump].find((g) => g.mon.sourceRow === 811);
+const legalG = [...toadCap.keep, ...toadCap.look, ...toadCap.dump].find((g) => g.mon.sourceRow === 810);
+must(legalG?.pvpJob?.kind === "gl", "1498 CP seismitoad gets the GL job");
+must(stuffedG?.pvpJob?.kind !== "gl", "2500 CP seismitoad does not take a GL seat");
+must(
+  stuffedG?.reasons.some((r) => r.includes(`CP 2500 over Great League ${GREAT_LEAGUE_CAP}`)) === true,
+  `2500 CP toad should explain over-cap, got ${stuffedG?.reasons.join(" | ")}`,
+);
+
+const lcGate: typeof meta = {
+  ...meta,
+  glTop500: new Set(),
+  glRankings: [],
+  keepLucky: false,
+  keepFavorite: false,
+  keepShadow: false,
+  keepAllGood: false,
+  raidAttackers: new Set(),
+  raidEvolution: {},
+};
+const lcLegal = gradeBox([{ ...ivMon("wooper", "Wooper", 821, 0, 15, 15), cp: 500, level: 20 }], lcGate);
+must(lcLegal.keep[0]?.pvpJob?.kind === "lc", "500 CP wooper is Little Cup when GL is gated off");
+const lcOver = gradeBox([{ ...ivMon("wooper", "Wooper", 822, 0, 15, 15), cp: 501, level: 20 }], lcGate);
+const lcOverRow = [...lcOver.keep, ...lcOver.look, ...lcOver.dump][0];
+must(lcOverRow?.pvpJob?.kind !== "lc", "501 CP wooper cannot Little Cup");
+must(
+  lcOverRow?.reasons.some((r) => r.includes(`CP 501 over Little Cup ${LITTLE_CUP_CAP}`)) === true,
+  `501 CP wooper should explain LC over-cap, got ${lcOverRow?.reasons.join(" | ")}`,
 );
 
 const junkShadow: Mon = {
@@ -658,6 +869,7 @@ console.log(
       toadGlMeta: favoriteToad?.glMeta,
       extraWooperDump: withExtraWooper.dump.filter((g) => g.mon.speciesId === "wooper").length,
       noFavTightToads: tightToads.map((g) => `${g.verdict}:${g.gl?.rank ?? "?"}`),
+      pvpKeep: result.pvpKeep,
       familyKeep: result.familyKeep,
       raidMachamp,
       dupeMachampKeep: dupeHundos.keep.length,

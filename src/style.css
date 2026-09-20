@@ -753,6 +753,32 @@ input[type="file"] {
   vertical-align: middle;
 }
 
+.badge-job {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  vertical-align: middle;
+  letter-spacing: 0.01em;
+}
+
+.badge-job--gl {
+  background: #152838;
+  color: var(--gl);
+}
+
+.badge-job--lc {
+  background: #163028;
+  color: var(--lc);
+}
+
+.badge-job--raid {
+  background: #3a2014;
+  color: var(--raid);
+}
+
 .rankings-card {
   margin-bottom: 12px;
 }
