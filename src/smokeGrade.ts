@@ -31,8 +31,14 @@ must(result.pvpListKeep === 500, "default pvpListKeep 500");
 must(result.familyKeep === 2, "default familyKeep 2");
 must(clampFamilyKeep(0) === 0 && FAMILY_KEEP_MIN === 0, "familyKeep 0 is a valid clamp");
 must(result.keepAllGood === false, "default extras as dupes");
+must(result.keepShadow === true, "default KEEP every shadow");
 must(Array.isArray(meta.glRankings) && meta.glRankings.length === 500, "bundled GL rankings 500");
 must(Array.isArray(meta.lcRankings) && meta.lcRankings.length === 100, "bundled LC rankings 100");
+must(
+  Array.isArray(meta.raidRankings) && meta.raidRankings.length === meta.raidAttackers.size,
+  "raid table rows match KEEP set",
+);
+must(meta.raidRankings?.some((row) => row.speciesId === "machamp") === true, "machamp on raid table");
 
 const fox = all.find((g) => g.mon.speciesId === "ninetales_alolan_shadow");
 must(fox?.verdict === "KEEP", "alolan shadow ninetales must KEEP");
@@ -291,6 +297,45 @@ const dupeBidoof = gradeBox(twoBidoofHundos, { ...meta, keepAllGood: false });
 const allBidoof = gradeBox(twoBidoofHundos, { ...meta, keepAllGood: true });
 must(dupeBidoof.keep.length === 1 && dupeBidoof.dump.length === 1, "one 4* Bidoof kept as dupe");
 must(allBidoof.keep.length === 2, "keepAllGood keeps both 4* Bidoofs");
+
+const junkShadow: Mon = {
+  ...hundoAt("bidoof", "Bidoof", 500, 0),
+  speciesId: "bidoof_shadow",
+  shadow: true,
+  ivPercent: 33.3,
+  atk: 0,
+  def: 0,
+  sta: 0,
+};
+const keepShadowOn = gradeBox([junkShadow], { ...meta, keepShadow: true });
+must(keepShadowOn.keepShadow === true, "echo keepShadow true");
+must(keepShadowOn.keep.length === 1, "KEEP shadow keeps a junk shadow");
+must(keepShadowOn.keep[0].keepClasses.includes("shadow"), "KEEP shadow uses shadow keep class");
+must(keepShadowOn.dump.length === 0, "KEEP shadow does not dump the junk shadow");
+
+const keepShadowOff = gradeBox([junkShadow], { ...meta, keepShadow: false });
+must(keepShadowOff.keepShadow === false, "echo keepShadow false");
+must(keepShadowOff.keep.length === 0, "LOOK shadow drops the junk shadow keep class");
+must(keepShadowOff.look.length === 1 && keepShadowOff.dump.length === 0, "LOOK shadow never dumps");
+must(
+  keepShadowOff.look[0].keepClasses.includes("shadow") !== true,
+  "LOOK shadow does not attach shadow keep class",
+);
+must(
+  keepShadowOff.look[0].reasons.some((r) => /shadow/i.test(r)),
+  "LOOK shadow still explains never-dump",
+);
+
+const sampleNoShadowKeep = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, keepShadow: false });
+must(
+  sampleNoShadowKeep.dump.every((g) => !g.mon.shadow),
+  "LOOK shadow still never dumps sample shadows",
+);
+const foxOff = [...sampleNoShadowKeep.keep, ...sampleNoShadowKeep.look, ...sampleNoShadowKeep.dump].find(
+  (g) => g.mon.speciesId === "ninetales_alolan_shadow",
+);
+must(foxOff?.keepClasses.includes("shadow") !== true, "LOOK shadow drops ninetales shadow class");
+must(foxOff?.verdict !== "DUMP", "alolan shadow ninetales still never DUMP");
 
 console.log(
   JSON.stringify(

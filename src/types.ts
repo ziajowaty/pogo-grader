@@ -66,6 +66,13 @@ export interface PvpokeRankRow {
   score?: number;
 }
 
+/** Vendored raid KEEP list row (not a DPS ranking). */
+export interface RaidAttackerRow {
+  speciesId: string;
+  speciesName: string;
+  tags: string[];
+}
+
 export interface MetaLeagueRank {
   rank: number;
   of: number;
@@ -102,6 +109,8 @@ export interface GradeResult {
   familyKeep: number;
   /** When true, every eligible 4* / raid / PvP-floor copy KEEPs. When false, extras are dupes. */
   keepAllGood: boolean;
+  /** When true, every shadow KEEPs. When false, shadows LOOK unless another keep class fires — still never DUMP. */
+  keepShadow: boolean;
   groups: Array<{
     key: string;
     size: number;
@@ -117,6 +126,8 @@ export interface Meta {
   /** Ordered PvPoke Little Cup overall list (up to 100 unique species). */
   lcRankings?: PvpokeRankRow[];
   raidAttackers: Set<string>;
+  /** Ordered raid KEEP list for the rankings table (name sort). */
+  raidRankings?: RaidAttackerRow[];
   limited: Set<string>;
   legendary: Set<string>;
   mythical: Set<string>;
@@ -139,6 +150,11 @@ export interface Meta {
    * Off = treat extra good copies as dupes (2 GL, 2 LC, 6 raid, 1 hundo per species).
    */
   keepAllGood?: boolean;
+  /**
+   * Keep every shadow. Off = shadows LOOK unless another keep class fires.
+   * Shadows still never DUMP. Default true.
+   */
+  keepShadow?: boolean;
   /** How KEEP PvP species lists were loaded. */
   pvpokeSource?: "live" | "cache" | "bundled";
   pvpokeFetchedAt?: number;
@@ -155,6 +171,7 @@ export const DEFAULT_PVP_LIST_KEEP = 500;
 
 /** Best copies to LOOK in a PvP/raid family that has no KEEP. 0 dumps junk too. */
 export const DEFAULT_FAMILY_KEEP = 2;
+export const DEFAULT_KEEP_SHADOW = true;
 export const FAMILY_KEEP_MIN = 0;
 export const FAMILY_KEEP_MAX = 99;
 

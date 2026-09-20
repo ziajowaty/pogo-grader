@@ -1,4 +1,4 @@
-import type { Meta, PvpokeRankRow } from "./types";
+import type { Meta, PvpokeRankRow, RaidAttackerRow } from "./types";
 import { GL_LIST_CAP, LC_LIST_CAP, prettySpeciesId } from "./types";
 // @ts-ignore Vite JSON snapshots
 import glTop500Json from "../data/gl-top500.json";
@@ -45,6 +45,53 @@ export function canonId(id: string): string {
 
 function toSet(ids: string[]): Set<string> {
   return new Set(ids.map(canonId));
+}
+
+function coreSpeciesId(id: string): string {
+  return id
+    .replace(/_shadow$/, "")
+    .replace(/_mega_[xy]$/, "")
+    .replace(/_mega$/, "")
+    .replace(/_primal$/, "");
+}
+
+function setHasId(set: Set<string>, id: string): boolean {
+  if (set.has(id)) return true;
+  const core = coreSpeciesId(id);
+  return core !== id && set.has(core);
+}
+
+function raidTags(id: string, limited: Set<string>, legendary: Set<string>, mythical: Set<string>): string[] {
+  const tags: string[] = [];
+  if (id.includes("_mega")) tags.push("Mega");
+  if (id.includes("primal")) tags.push("Primal");
+  if (id.endsWith("_shadow")) tags.push("Shadow");
+  if (setHasId(legendary, id)) tags.push("Legendary");
+  else if (setHasId(mythical, id)) tags.push("Mythical");
+  else if (setHasId(limited, id)) tags.push("Limited");
+  return tags;
+}
+
+function buildRaidRankings(
+  ids: string[],
+  limited: Set<string>,
+  legendary: Set<string>,
+  mythical: Set<string>,
+): RaidAttackerRow[] {
+  const seen = new Set<string>();
+  const rows: RaidAttackerRow[] = [];
+  for (const raw of ids) {
+    const speciesId = canonId(raw);
+    if (!speciesId || seen.has(speciesId)) continue;
+    seen.add(speciesId);
+    rows.push({
+      speciesId,
+      speciesName: prettySpeciesId(speciesId),
+      tags: raidTags(speciesId, limited, legendary, mythical),
+    });
+  }
+  rows.sort((a, b) => a.speciesName.localeCompare(b.speciesName) || a.speciesId.localeCompare(b.speciesId));
+  return rows;
 }
 
 function listFile(data: unknown): string[] {
@@ -194,17 +241,21 @@ async function loadPvpokeLists(): Promise<PvpokeLists> {
 
 /** PvPoke GL/LC lists (24h browser cache) plus vendored rank/raid gates. */
 export async function loadMeta(): Promise<Meta> {
-  const limited = limitedJson as NamedListFile;
+  const limited = toSet(listFile(limitedJson as NamedListFile));
+  const legendary = toSet(legendaryJson as string[]);
+  const mythical = toSet(mythicalJson as string[]);
+  const raidIds = listFile(raidAttackersJson);
   const lists = await loadPvpokeLists();
   return {
     glTop500: toSet(lists.gl.map((row) => row.speciesId)),
     lcTop100: toSet(lists.lc.map((row) => row.speciesId)),
     glRankings: lists.gl,
     lcRankings: lists.lc,
-    raidAttackers: toSet(listFile(raidAttackersJson)),
-    limited: toSet(listFile(limited)),
-    legendary: toSet(legendaryJson as string[]),
-    mythical: toSet(mythicalJson as string[]),
+    raidAttackers: toSet(raidIds),
+    raidRankings: buildRaidRankings(raidIds, limited, legendary, mythical),
+    limited,
+    legendary,
+    mythical,
     glEvolution: Object.fromEntries(
       Object.entries(glEvolutionJson as Record<string, string>).map(([k, v]) => [
         canonId(k),

@@ -127,7 +127,11 @@ function isMaxForm(mon: Mon): boolean {
   return /dynamax|gigantamax|giganta|\bdmax\b|\bgmax\b/i.test(blob);
 }
 
-function idKeepClasses(mon: Mon, meta: Meta): string[] {
+function keepShadowOn(meta: Meta): boolean {
+  return meta.keepShadow !== false;
+}
+
+function idKeepClasses(mon: Mon, meta: Meta, keepShadow: boolean): string[] {
   const classes: string[] = [];
   if (mon.shiny) classes.push("shiny");
   if (mon.lucky) classes.push("lucky");
@@ -135,7 +139,7 @@ function idKeepClasses(mon: Mon, meta: Meta): string[] {
   if (mon.background) classes.push("background");
   if (mon.favorite) classes.push("favorite");
   if (mon.hasSpecialMove) classes.push("special-move");
-  if (mon.shadow) classes.push("shadow");
+  if (keepShadow && mon.shadow) classes.push("shadow");
   if (isMaxForm(mon)) classes.push("max");
   if (mon.legendary || hasId(meta.legendary, mon.speciesId)) classes.push("legendary");
   else if (mon.mythical || hasId(meta.mythical, mon.speciesId)) classes.push("mythical");
@@ -264,6 +268,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const listKeep = pvpListCutoff(meta);
   const familyKeep = familyKeepCap(meta);
   const keepAllGood = Boolean(meta.keepAllGood);
+  const keepShadow = keepShadowOn(meta);
   const glSlots = keepAllGood ? Number.POSITIVE_INFINITY : GL_KEEP;
   const lcSlots = keepAllGood ? Number.POSITIVE_INFINITY : LC_KEEP;
   const raidSlots = keepAllGood ? Number.POSITIVE_INFINITY : RAID_KEEP;
@@ -327,7 +332,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       .sort((a, b) => a - b);
 
     for (const g of rows) {
-      const classes = idKeepClasses(g.mon, meta);
+      const classes = idKeepClasses(g.mon, meta, keepShadow);
       if (glKeep.has(g)) classes.push("gl");
       if (lcKeep.has(g)) classes.push("lc");
       const limited = isLimitedMon(g.mon, meta);
@@ -506,6 +511,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     pvpListKeep: listKeep,
     familyKeep,
     keepAllGood,
+    keepShadow,
     groups: groupSummaries,
   };
 }

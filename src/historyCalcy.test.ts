@@ -145,6 +145,22 @@ must(
   "every history shadow KEEPs with keep class shadow",
 );
 
+const lookShadow = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, keepShadow: false });
+must(lookShadow.keepShadow === false, "echo keepShadow false");
+must(
+  lookShadow.dump.every((g) => !g.mon.shadow),
+  "LOOK shadow still never dumps history shadows",
+);
+must(
+  shadows.every((m) => {
+    const g = [...lookShadow.keep, ...lookShadow.look, ...lookShadow.dump].find(
+      (row) => row.mon.sourceRow === m.sourceRow,
+    );
+    return g != null && g.verdict !== "DUMP" && !g.keepClasses.includes("shadow");
+  }),
+  "LOOK shadow drops the shadow keep class and still never dumps",
+);
+
 for (const lucky of luckies) {
   const g = all.find((row) => row.mon.sourceRow === lucky.sourceRow);
   must(g?.verdict === "KEEP" && g.keepClasses.includes("lucky"), `${lucky.speciesId} lucky KEEP`);
