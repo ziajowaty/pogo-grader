@@ -128,6 +128,8 @@ export interface GradeResult {
   keepAllGood: boolean;
   /** When true, lucky KEEPs. When false, luckies must earn KEEP another way and extras can DUMP. */
   keepLucky: boolean;
+  /** When true, favorite KEEPs. When false, favorites LOOK unless another keep class fires — still never DUMP. */
+  keepFavorite: boolean;
   /** When true, every shadow KEEPs. When false, shadows LOOK unless another keep class fires — still never DUMP. */
   keepShadow: boolean;
   groups: Array<{
@@ -188,6 +190,11 @@ export interface Meta {
    */
   keepLucky?: boolean;
   /**
+   * Keep favorites. Off = favorites LOOK unless another keep class fires.
+   * Favorites still never DUMP. Default true.
+   */
+  keepFavorite?: boolean;
+  /**
    * Keep every shadow. Off = shadows LOOK unless another keep class fires.
    * Shadows still never DUMP. Default true.
    */
@@ -209,6 +216,7 @@ export const DEFAULT_PVP_LIST_KEEP = 500;
 /** Best copies to LOOK in a PvP/raid family that has no KEEP. 0 dumps junk too. */
 export const DEFAULT_FAMILY_KEEP = 2;
 export const DEFAULT_KEEP_LUCKY = true;
+export const DEFAULT_KEEP_FAVORITE = true;
 export const DEFAULT_KEEP_SHADOW = true;
 export const FAMILY_KEEP_MIN = 0;
 export const FAMILY_KEEP_MAX = 99;

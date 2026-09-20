@@ -221,17 +221,27 @@ function keepLuckyOn(meta: Meta): boolean {
   return meta.keepLucky !== false;
 }
 
+function keepFavoriteOn(meta: Meta): boolean {
+  return meta.keepFavorite !== false;
+}
+
 function keepShadowOn(meta: Meta): boolean {
   return meta.keepShadow !== false;
 }
 
-function idKeepClasses(mon: Mon, meta: Meta, keepShadow: boolean, keepLucky: boolean): string[] {
+function idKeepClasses(
+  mon: Mon,
+  meta: Meta,
+  keepShadow: boolean,
+  keepLucky: boolean,
+  keepFavorite: boolean,
+): string[] {
   const classes: string[] = [];
   if (mon.shiny) classes.push("shiny");
   if (keepLucky && mon.lucky) classes.push("lucky");
   if (mon.costume) classes.push("costume");
   if (mon.background) classes.push("background");
-  if (mon.favorite) classes.push("favorite");
+  if (keepFavorite && mon.favorite) classes.push("favorite");
   if (mon.hasSpecialMove) classes.push("special-move");
   if (keepShadow && mon.shadow) classes.push("shadow");
   if (isMaxForm(mon)) classes.push("max");
@@ -402,6 +412,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const raidIvKeep = raidIvFloor(meta);
   const keepAllGood = Boolean(meta.keepAllGood);
   const keepLucky = keepLuckyOn(meta);
+  const keepFavorite = keepFavoriteOn(meta);
   const keepShadow = keepShadowOn(meta);
   const glSlots = keepAllGood ? Number.POSITIVE_INFINITY : GL_KEEP;
   const lcSlots = keepAllGood ? Number.POSITIVE_INFINITY : LC_KEEP;
@@ -541,7 +552,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       .sort((a, b) => a - b);
 
     for (const g of rows) {
-      const classes = idKeepClasses(g.mon, meta, keepShadow, keepLucky);
+      const classes = idKeepClasses(g.mon, meta, keepShadow, keepLucky, keepFavorite);
       if (glKeep.has(g)) classes.push("gl");
       if (lcKeep.has(g)) classes.push("lc");
       const limited = isLimitedMon(g.mon, meta);
@@ -651,11 +662,13 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
 
     const hardNeverDump =
       g.mon.shadow ||
+      g.mon.favorite === true ||
       isLimitedMon(g.mon, meta) ||
       g.mon.hasSpecialMove === true ||
       g.mon.ivUnique === false;
 
     if (g.mon.shadow) pushReason(g, "Shadow — never dump in v1");
+    if (g.mon.favorite === true) pushReason(g, "Favorite — never dump");
     if (g.mon.ivUnique === false) pushReason(g, "IVs not unique; cannot dump");
     if (g.mon.hasSpecialMove === true) pushReason(g, "Special / legacy move — never dump");
 
@@ -753,6 +766,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     raidIvKeep,
     keepAllGood,
     keepLucky,
+    keepFavorite,
     keepShadow,
     groups: groupSummaries,
   };

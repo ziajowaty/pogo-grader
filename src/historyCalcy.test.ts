@@ -323,6 +323,19 @@ must(
   "favorite Machop still KEEP with Lucky off",
 );
 must(!favMachop?.keepClasses.includes("lucky"), "Lucky off drops lucky class even on favorite Machop");
+
+const noFavChip = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, keepFavorite: false });
+must(noFavChip.keepFavorite === false, "echo keepFavorite false");
+must(
+  noFavChip.dump.every((g) => !g.mon.favorite),
+  "LOOK favorite still never dumps history favorites",
+);
+const machopFavOff = [...noFavChip.keep, ...noFavChip.look, ...noFavChip.dump].find((g) => g.mon.favorite);
+must(
+  machopFavOff != null && !machopFavOff.keepClasses.includes("favorite"),
+  "Favorite off drops favorite class on Machop",
+);
+must(machopFavOff?.verdict === "KEEP", "lucky Machop still KEEP with Favorite off");
 for (const lucky of luckies) {
   const g = [...noLucky.keep, ...noLucky.look, ...noLucky.dump].find(
     (row) => row.mon.sourceRow === lucky.sourceRow,

@@ -35,6 +35,7 @@ must(clampRaidIvKeep(0) === 0 && RAID_IV_KEEP_MIN === 0, "raid IV keep 0 is a va
 must(clampRaidIvKeep(108) === 100, "raid IV keep clamps to 100");
 must(result.keepAllGood === false, "default extras as dupes");
 must(result.keepLucky === true, "default KEEP luckies");
+must(result.keepFavorite === true, "default KEEP favorites");
 must(result.keepShadow === true, "default KEEP every shadow");
 must(Array.isArray(meta.glRankings) && meta.glRankings.length === 500, "bundled GL rankings 500");
 must(Array.isArray(meta.lcRankings) && meta.lcRankings.length === 100, "bundled LC rankings 100");
@@ -520,6 +521,31 @@ const luckyFav = gradeBox([{ ...junkLucky, favorite: true }], { ...meta, keepLuc
 must(luckyFav.keep.length === 1, "favorite still KEEPs when Lucky is off");
 must(luckyFav.keep[0].keepClasses.includes("favorite"), "favorite keep class still fires");
 must(luckyFav.keep[0].keepClasses.includes("lucky") !== true, "Lucky off drops lucky class on a favorite");
+
+const junkFav: Mon = {
+  ...ivMon("bidoof", "Bidoof", 503, 0, 0, 0),
+  favorite: true,
+};
+const keepFavOn = gradeBox([junkFav], { ...meta, keepFavorite: true });
+must(keepFavOn.keepFavorite === true, "echo keepFavorite true");
+must(keepFavOn.keep.length === 1, "KEEP favorite keeps a junk favorite");
+must(keepFavOn.keep[0].keepClasses.includes("favorite"), "KEEP favorite uses favorite keep class");
+
+const keepFavOff = gradeBox([junkFav], { ...meta, keepFavorite: false });
+must(keepFavOff.keepFavorite === false, "echo keepFavorite false");
+must(keepFavOff.keep.length === 0, "Favorite off drops the junk favorite keep class");
+must(keepFavOff.look.length === 1 && keepFavOff.dump.length === 0, "LOOK favorite never dumps");
+must(
+  keepFavOff.look[0].keepClasses.includes("favorite") !== true,
+  "LOOK favorite does not attach favorite keep class",
+);
+must(
+  keepFavOff.look[0].reasons.some((r) => /favorite/i.test(r)),
+  "LOOK favorite still explains never-dump",
+);
+
+const keepFavZero = gradeBox([junkFav], { ...meta, keepFavorite: false, familyKeep: 0 });
+must(keepFavZero.dump.length === 0 && keepFavZero.look.length === 1, "familyKeep 0 still never dumps favorites");
 
 console.log(
   JSON.stringify(
