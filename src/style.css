@@ -325,6 +325,43 @@ body {
   }
 }
 
+.rules-block--chips {
+  grid-column: 1 / -1;
+}
+
+.keep-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.keep-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.keep-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.keep-chip.is-off {
+  opacity: 0.48;
+  filter: grayscale(0.25) saturate(0.55);
+}
+
+.keep-chip.is-off:hover,
+.keep-chip.is-off:focus-visible {
+  opacity: 0.7;
+}
+
 .btn--preset {
   width: auto;
   min-height: 38px;

@@ -3,9 +3,6 @@ import type { Mon } from "./types";
 /** English GO client. Keep this list short enough to paste on a phone. */
 export const DUMP_SPECIES_CAP = 24;
 
-const EXECUTE_CLOAK =
-  "#DUMP&!favorite&!shiny&!lucky&!legendary&!mythical&!shadow&!4*&!costume";
-
 const CAPPED_INSTRUCTION = "Too many DUMP species — tag #DUMP on the DUMP track instead";
 
 const EYEBALL_NOTE =
@@ -19,6 +16,27 @@ export interface DumpSearchPlan {
   instruction: string;
   speciesCapped: boolean;
   speciesCount: number;
+}
+
+/** Knobs that change the Transfer cloak. Omitted keys keep the conservative defaults. */
+export interface DumpSearchOptions {
+  /** When false, Transfer does not AND `!lucky` (Lucky chip faded). Default true. */
+  keepLucky?: boolean;
+}
+
+function executeCloak(opts?: DumpSearchOptions): string {
+  const bits = [
+    "#DUMP",
+    "!favorite",
+    "!shiny",
+    opts?.keepLucky === false ? "" : "!lucky",
+    "!legendary",
+    "!mythical",
+    "!shadow",
+    "!4*",
+    "!costume",
+  ].filter(Boolean);
+  return bits.join("&");
 }
 
 function sanitizeToken(raw: string): string {
@@ -71,7 +89,7 @@ function orList(tokens: string[]): string {
  * Conservative dump-card strings for the English GO client.
  * Never emits whole-box `!#keep`. Does not AND `0*` (dump IVs are mixed).
  */
-export function dumpSearchPlan(mons: Mon[]): DumpSearchPlan {
+export function dumpSearchPlan(mons: Mon[], opts?: DumpSearchOptions): DumpSearchPlan {
   if (mons.length === 0) {
     return {
       preview: "No DUMP. Nothing to Transfer.",
@@ -98,7 +116,7 @@ export function dumpSearchPlan(mons: Mon[]): DumpSearchPlan {
   }
 
   const preview = orList(tokens);
-  const execute = `${preview}&${EXECUTE_CLOAK}`;
+  const execute = `${preview}&${executeCloak(opts)}`;
   return {
     preview,
     execute,
@@ -109,18 +127,18 @@ export function dumpSearchPlan(mons: Mon[]): DumpSearchPlan {
 }
 
 /** Copyable preview (no #DUMP). Capped sets return the tag-instead instruction. */
-export function dumpPreviewString(mons: Mon[]): string {
-  return dumpSearchPlan(mons).preview;
+export function dumpPreviewString(mons: Mon[], opts?: DumpSearchOptions): string {
+  return dumpSearchPlan(mons, opts).preview;
 }
 
 /** Preview plus &#DUMP and the safety cloak. Same cap behavior as preview. */
-export function dumpExecuteString(mons: Mon[]): string {
-  return dumpSearchPlan(mons).execute;
+export function dumpExecuteString(mons: Mon[], opts?: DumpSearchOptions): string {
+  return dumpSearchPlan(mons, opts).execute;
 }
 
 /** Full clipboard payload: instruction + preview + execute. */
-export function dumpPreviewBundle(mons: Mon[]): string {
-  const plan = dumpSearchPlan(mons);
+export function dumpPreviewBundle(mons: Mon[], opts?: DumpSearchOptions): string {
+  const plan = dumpSearchPlan(mons, opts);
   return [
     plan.instruction,
     "",

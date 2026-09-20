@@ -217,14 +217,18 @@ function isMaxForm(mon: Mon): boolean {
   return /dynamax|gigantamax|giganta|\bdmax\b|\bgmax\b/i.test(blob);
 }
 
+function keepLuckyOn(meta: Meta): boolean {
+  return meta.keepLucky !== false;
+}
+
 function keepShadowOn(meta: Meta): boolean {
   return meta.keepShadow !== false;
 }
 
-function idKeepClasses(mon: Mon, meta: Meta, keepShadow: boolean): string[] {
+function idKeepClasses(mon: Mon, meta: Meta, keepShadow: boolean, keepLucky: boolean): string[] {
   const classes: string[] = [];
   if (mon.shiny) classes.push("shiny");
-  if (mon.lucky) classes.push("lucky");
+  if (keepLucky && mon.lucky) classes.push("lucky");
   if (mon.costume) classes.push("costume");
   if (mon.background) classes.push("background");
   if (mon.favorite) classes.push("favorite");
@@ -351,9 +355,44 @@ function missRankReason(kind: "GL" | "LC", g: GradedMon, cutoff: number, n: numb
   return `${n} copies; keep ${kind} ${kept} (≤${cutoff}/4096)`;
 }
 
+/** Calcy History is last-scan-first; tables follow first-scanned-first (scan time, then CSV line). */
+export function compareScanStream(a: Mon, b: Mon): number {
+  const ta = scanTimeMs(a.scanDate);
+  const tb = scanTimeMs(b.scanDate);
+  if (ta != null && tb != null && ta !== tb) return ta - tb;
+  return a.sourceRow - b.sourceRow;
+}
+
+function scanTimeMs(raw?: string): number | null {
+  if (!raw) return null;
+  const s = raw.trim();
+  if (!s || s === "-" || s === "?") return null;
+  const m = s.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
+  );
+  if (m) {
+    let year = Number(m[3]);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+    return Date.UTC(
+      year,
+      Number(m[1]) - 1,
+      Number(m[2]),
+      Number(m[4] ?? 0),
+      Number(m[5] ?? 0),
+      Number(m[6] ?? 0),
+    );
+  }
+  const iso = Date.parse(s);
+  return Number.isFinite(iso) ? iso : null;
+}
+
+function byScanStream(a: GradedMon, b: GradedMon): number {
+  return compareScanStream(a.mon, b.mon);
+}
+
 /**
  * Wide-minmax box grader. KEEP if any keep class fires.
- * DUMP extras in CSV order, capped at meta.dumpCap (rest LOOK with dump-cap).
+ * DUMP extras in scan order (first scanned at top), capped at meta.dumpCap (rest LOOK with dump-cap).
  */
 export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const gm: RankGm = getRankGm(meta.glEvolution);
@@ -362,6 +401,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const familyKeep = familyKeepCap(meta);
   const raidIvKeep = raidIvFloor(meta);
   const keepAllGood = Boolean(meta.keepAllGood);
+  const keepLucky = keepLuckyOn(meta);
   const keepShadow = keepShadowOn(meta);
   const glSlots = keepAllGood ? Number.POSITIVE_INFINITY : GL_KEEP;
   const lcSlots = keepAllGood ? Number.POSITIVE_INFINITY : LC_KEEP;
@@ -501,7 +541,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       .sort((a, b) => a - b);
 
     for (const g of rows) {
-      const classes = idKeepClasses(g.mon, meta, keepShadow);
+      const classes = idKeepClasses(g.mon, meta, keepShadow, keepLucky);
       if (glKeep.has(g)) classes.push("gl");
       if (lcKeep.has(g)) classes.push("lc");
       const limited = isLimitedMon(g.mon, meta);
@@ -587,6 +627,9 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
 
     groupSummaries.push({ key, size: n, kept: 0 });
   }
+
+  // Family ranking sorts per-group copies; tracks follow first-scanned-first.
+  graded.sort(byScanStream);
 
   const dumpCap = meta.dumpCap ?? 100;
   const dumpFuel: GradedMon[] = [];
@@ -694,6 +737,9 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     row.kept = keptByKey.get(row.key) ?? 0;
   }
   groupSummaries.sort((a, b) => b.size - a.size || a.key.localeCompare(b.key));
+  keep.sort(byScanStream);
+  look.sort(byScanStream);
+  dump.sort(byScanStream);
 
   return {
     keep,
@@ -706,6 +752,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     familyKeep,
     raidIvKeep,
     keepAllGood,
+    keepLucky,
     keepShadow,
     groups: groupSummaries,
   };

@@ -13,6 +13,7 @@ import {
   clampPvpRankKeep,
   clampRaidIvKeep,
   DEFAULT_FAMILY_KEEP,
+  DEFAULT_KEEP_LUCKY,
   DEFAULT_KEEP_SHADOW,
   DEFAULT_PVP_LIST_KEEP,
   DEFAULT_PVP_RANK_KEEP,
@@ -32,9 +33,24 @@ import {
   dumpSearchPlan,
 } from "./search";
 
-const SKIP_SCAN =
-  "!shiny&!legendary&!mythical&!ultrabeast&!lucky&!costume&!background&!4*&!dynamax&!gigantamax&!favorite&!#";
+function skipScanString(keepLucky: boolean): string {
+  return [
+    "!shiny",
+    "!legendary",
+    "!mythical",
+    "!ultrabeast",
+    ...(keepLucky ? ["!lucky"] : []),
+    "!costume",
+    "!background",
+    "!4*",
+    "!dynamax",
+    "!gigantamax",
+    "!favorite",
+    "!#",
+  ].join("&");
+}
 
+const SKIP_SCAN = skipScanString(true);
 const DUMP_LIST_MAX = 100;
 const LIST_PAINT_MAX = 200;
 const RANK_PRESETS = [50, 150, 500, 4096] as const;
@@ -47,6 +63,7 @@ const FAMILY_KEEP_KEY = "pogo-grader.familyKeep";
 const RAID_IV_KEEP_KEY = "pogo-grader.raidIvKeep";
 const RAID_IV_KEEP_KEY_LEGACY = "pogo-grader.raidSpKeep";
 const KEEP_ALL_GOOD_KEY = "pogo-grader.keepAllGood";
+const KEEP_LUCKY_KEY = "pogo-grader.keepLucky";
 const KEEP_SHADOW_KEY = "pogo-grader.keepShadow";
 
 type Tab = Verdict;
@@ -72,6 +89,7 @@ interface AppState {
   familyKeep: number;
   raidIvKeep: number;
   keepAllGood: boolean;
+  keepLucky: boolean;
   keepShadow: boolean;
   rankingsTab: RankingsTab;
   rankingsFilter: string;
@@ -125,6 +143,16 @@ function readStoredKeepAllGood(): boolean {
   }
 }
 
+function readStoredKeepLucky(): boolean {
+  try {
+    const raw = localStorage.getItem(KEEP_LUCKY_KEY);
+    if (raw == null) return DEFAULT_KEEP_LUCKY;
+    return raw !== "0";
+  } catch {
+    return DEFAULT_KEEP_LUCKY;
+  }
+}
+
 function readStoredKeepShadow(): boolean {
   try {
     const raw = localStorage.getItem(KEEP_SHADOW_KEY);
@@ -149,6 +177,7 @@ const state: AppState = {
   familyKeep: readStoredFamilyKeep(),
   raidIvKeep: readStoredRaidIvKeep(),
   keepAllGood: readStoredKeepAllGood(),
+  keepLucky: readStoredKeepLucky(),
   keepShadow: readStoredKeepShadow(),
   rankingsTab: "gl",
   rankingsFilter: "",
@@ -358,14 +387,18 @@ function renderRow(item: GradedMon, verdict: Tab): string {
   ]
     .filter(Boolean)
     .join(" · ");
+  const nick = mon.nickname?.trim();
+  const species = mon.speciesName || mon.speciesId;
+  const title = nick || species;
+  const speciesBit = nick && species && nick !== species ? species : "";
   const crowdBadge = crowd
-    ? `<span class="badge-crowd">${copyRankInGroup}/${copiesInGroup}</span>`
+    ? `<span class="badge-crowd" title="Family copy rank (best first). Rows stay in scan order (first scanned at top).">${copyRankInGroup}/${copiesInGroup}</span>`
     : "";
-  const line = [`IVs ${formatIvs(mon)}`, flags, formatRanks(item)].filter(Boolean).join(" · ");
+  const line = [speciesBit, `IVs ${formatIvs(mon)}`, flags, formatRanks(item)].filter(Boolean).join(" · ");
 
   return `<article class="row row--${verdict.toLowerCase()}${crowd ? " row--crowd" : ""}">
     <div class="row-top">
-      <div class="species">${escapeHtml(mon.speciesName || mon.speciesId)}${crowdBadge}</div>
+      <div class="species">${escapeHtml(title)}${crowdBadge}</div>
       <div class="cp">${mon.cp}</div>
     </div>
     <div class="meta">${escapeHtml(line)}</div>
@@ -382,7 +415,7 @@ function paintTrack(listEl: HTMLElement, rows: GradedMon[], verdict: Tab, cap: n
   const extra = rows.length - shown.length;
   listEl.innerHTML =
     shown.map((row) => renderRow(row, verdict)).join("") +
-    (extra > 0 ? `<p class="list-more">${extra} more in CSV order</p>` : "");
+    (extra > 0 ? `<p class="list-more">${extra} more in scan order</p>` : "");
 }
 
 function pvpokeStatus(meta: Meta | null): string {
@@ -422,7 +455,7 @@ export function mountApp(root: HTMLElement): void {
           <h2 id="skip-title">Skip-scan in GO</h2>
           <pre class="search-block" id="skip-scan">${escapeHtml(SKIP_SCAN)}</pre>
           <button type="button" class="btn btn--primary" data-copy="skip">Copy search</button>
-          <p class="note">Hides KEEP museum so you scan the rest. Do not add <code>!shadow</code>.</p>
+          <p class="note">Hides KEEP museum so you scan the rest. Do not add <code>!shadow</code>. Fade Lucky and luckies stay in this search.</p>
         </section>
       </div>
 
@@ -499,6 +532,14 @@ export function mountApp(root: HTMLElement): void {
       <section class="card card--rules" aria-labelledby="rank-title">
         <h2 id="rank-title">KEEP rules</h2>
         <div class="rules-grid">
+          <div class="rules-block rules-block--chips">
+            <p class="file-label" id="keep-chips-label">KEEP tags</p>
+            <div class="keep-chips" role="group" aria-labelledby="keep-chips-label">
+              <button type="button" class="chip chip--lucky keep-chip" data-keep-chip="lucky" aria-pressed="true" title="KEEP luckies. Click to fade — luckies must earn KEEP another way.">Lucky</button>
+              <button type="button" class="chip chip--shadow keep-chip" data-keep-chip="shadow" aria-pressed="true" title="KEEP every shadow. Click to fade — shadows LOOK, never dump.">Shadow</button>
+            </div>
+            <p class="note">Same colors as KEEP-table chips. Bright = that tag KEEPs. Fade Lucky to dump junk luckies. Fade Shadow to LOOK shadows (never dump).</p>
+          </div>
           <div class="rules-block">
             <div class="rank-row">
               <label class="file-label" for="rank-keep">KEEP PvP ≤</label>
@@ -560,11 +601,7 @@ export function mountApp(root: HTMLElement): void {
               <button type="button" class="btn btn--preset" data-keep-all="0">DUMP extras</button>
               <button type="button" class="btn btn--preset" data-keep-all="1">KEEP all good</button>
             </div>
-            <div class="mode-row" role="group" aria-label="KEEP shadow">
-              <button type="button" class="btn btn--preset" data-keep-shadow="1">KEEP shadow</button>
-              <button type="button" class="btn btn--preset" data-keep-shadow="0">LOOK shadow</button>
-            </div>
-            <p class="note">KEEP shadow KEEPs every shadow. LOOK shadow still never dumps them.</p>
+            <p class="note">KEEP all good keeps every 4* / raid / PvP-floor copy. DUMP extras still never dumps shadows.</p>
           </div>
         </div>
       </section>
@@ -612,6 +649,7 @@ export function mountApp(root: HTMLElement): void {
   const listKeepInput = root.querySelector("#pvp-list-keep") as HTMLInputElement;
   const familyKeepInput = root.querySelector("#family-keep") as HTMLInputElement;
   const raidIvKeepInput = root.querySelector("#raid-iv-keep") as HTMLInputElement;
+  const skipScanEl = root.querySelector("#skip-scan") as HTMLElement;
   const rankingsStatusEl = root.querySelector("#rankings-status") as HTMLElement;
   const rankingsGlEl = root.querySelector("#rankings-gl") as HTMLElement;
   const rankingsLcEl = root.querySelector("#rankings-lc") as HTMLElement;
@@ -628,6 +666,7 @@ export function mountApp(root: HTMLElement): void {
       familyKeep: state.familyKeep,
       raidIvKeep: state.raidIvKeep,
       keepAllGood: state.keepAllGood,
+      keepLucky: state.keepLucky,
       keepShadow: state.keepShadow,
     };
   }
@@ -672,6 +711,14 @@ export function mountApp(root: HTMLElement): void {
     }
   }
 
+  function persistKeepLucky(on: boolean): void {
+    try {
+      localStorage.setItem(KEEP_LUCKY_KEY, on ? "1" : "0");
+    } catch {
+      /* private mode */
+    }
+  }
+
   function persistKeepShadow(on: boolean): void {
     try {
       localStorage.setItem(KEEP_SHADOW_KEY, on ? "1" : "0");
@@ -705,10 +752,13 @@ export function mountApp(root: HTMLElement): void {
       const on = btn.getAttribute("data-keep-all") === "1";
       btn.classList.toggle("is-active", on === state.keepAllGood);
     });
-    root.querySelectorAll("[data-keep-shadow]").forEach((btn) => {
-      const on = btn.getAttribute("data-keep-shadow") === "1";
-      btn.classList.toggle("is-active", on === state.keepShadow);
+    root.querySelectorAll("[data-keep-chip]").forEach((btn) => {
+      const chip = btn.getAttribute("data-keep-chip");
+      const on = chip === "lucky" ? state.keepLucky : chip === "shadow" ? state.keepShadow : true;
+      btn.classList.toggle("is-off", !on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    skipScanEl.textContent = skipScanString(state.keepLucky);
     rankingsFilterInputs.forEach((input) => {
       if (input.value !== state.rankingsFilter) input.value = state.rankingsFilter;
     });
@@ -871,7 +921,7 @@ export function mountApp(root: HTMLElement): void {
     }
     resultsEl.classList.remove("hidden");
     gradeTablesEl.classList.remove("hidden");
-    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP} · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)}`;
+    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP} · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)}`;
     const counts: Array<[string, number]> = [
       ["keep", result.keep.length],
       ["look", result.look.length],
@@ -910,7 +960,7 @@ export function mountApp(root: HTMLElement): void {
     }
 
     const dumpMons = result.dump.map((row) => row.mon);
-    const plan = dumpSearchPlan(dumpMons);
+    const plan = dumpSearchPlan(dumpMons, { keepLucky: state.keepLucky });
     dumpPreviewEl.textContent = plan.preview;
     dumpExecuteEl.textContent = plan.execute;
     dumpNoteEl.textContent = plan.instruction;
@@ -1032,6 +1082,13 @@ export function mountApp(root: HTMLElement): void {
     regradeLive();
   }
 
+  function applyKeepLucky(on: boolean): void {
+    state.keepLucky = on;
+    persistKeepLucky(on);
+    paintRankControls();
+    regradeLive();
+  }
+
   function applyKeepShadow(on: boolean): void {
     state.keepShadow = on;
     persistKeepShadow(on);
@@ -1129,9 +1186,13 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
 
-    const keepShadowBtn = target.closest("[data-keep-shadow]") as HTMLElement | null;
-    if (keepShadowBtn?.dataset.keepShadow != null) {
-      applyKeepShadow(keepShadowBtn.dataset.keepShadow === "1");
+    const keepChipBtn = target.closest("[data-keep-chip]") as HTMLElement | null;
+    if (keepChipBtn?.dataset.keepChip === "lucky") {
+      applyKeepLucky(!state.keepLucky);
+      return;
+    }
+    if (keepChipBtn?.dataset.keepChip === "shadow") {
+      applyKeepShadow(!state.keepShadow);
       return;
     }
 
@@ -1149,10 +1210,11 @@ export function mountApp(root: HTMLElement): void {
     if (!copyBtn) return;
     const kind = copyBtn.dataset.copy;
     const dumpMons = state.result?.dump.map((row) => row.mon) ?? [];
+    const dumpOpts = { keepLucky: state.keepLucky };
     let payload = "";
-    if (kind === "skip") payload = SKIP_SCAN;
-    else if (kind === "dump-preview") payload = dumpPreviewString(dumpMons);
-    else if (kind === "dump-execute") payload = dumpExecuteString(dumpMons);
+    if (kind === "skip") payload = skipScanString(state.keepLucky);
+    else if (kind === "dump-preview") payload = dumpPreviewString(dumpMons, dumpOpts);
+    else if (kind === "dump-execute") payload = dumpExecuteString(dumpMons, dumpOpts);
     if (!payload) return;
     void copyText(payload).then((ok) => {
       if (ok) markCopied(copyBtn);

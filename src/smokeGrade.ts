@@ -1,18 +1,18 @@
 import { readFileSync } from "node:fs";
 import { parseInventoryCsv } from "./parseCsv";
 import { loadMeta } from "./meta";
-import { gradeBox } from "./grade";
+import { gradeBox, compareScanStream } from "./grade";
 import { clampFamilyKeep, clampRaidIvKeep, FAMILY_KEEP_MIN, RAID_IV_KEEP_MIN, type Mon } from "./types";
 
 function must(cond: boolean, message: string): void {
   if (!cond) throw new Error(message);
 }
 
-function streamOrder(rows: { mon: { sourceRow: number } }[], label: string): void {
+function streamOrder(rows: { mon: Mon }[], label: string): void {
   for (let i = 1; i < rows.length; i++) {
     must(
-      rows[i].mon.sourceRow >= rows[i - 1].mon.sourceRow,
-      `${label} must stay in CSV order (${rows[i - 1].mon.sourceRow} then ${rows[i].mon.sourceRow})`,
+      compareScanStream(rows[i - 1].mon, rows[i].mon) <= 0,
+      `${label} must stay in scan order (${rows[i - 1].mon.sourceRow} then ${rows[i].mon.sourceRow})`,
     );
   }
 }
@@ -34,6 +34,7 @@ must(result.raidIvKeep === 90, "default raid IV keep 90");
 must(clampRaidIvKeep(0) === 0 && RAID_IV_KEEP_MIN === 0, "raid IV keep 0 is a valid clamp");
 must(clampRaidIvKeep(108) === 100, "raid IV keep clamps to 100");
 must(result.keepAllGood === false, "default extras as dupes");
+must(result.keepLucky === true, "default KEEP luckies");
 must(result.keepShadow === true, "default KEEP every shadow");
 must(Array.isArray(meta.glRankings) && meta.glRankings.length === 500, "bundled GL rankings 500");
 must(Array.isArray(meta.lcRankings) && meta.lcRankings.length === 100, "bundled LC rankings 100");
@@ -83,7 +84,7 @@ must(wooper?.gl != null && wooper.gl.rank <= 500, "wooper GL rank should be ≤5
 const dumps = result.dump.map((g) => g.mon.speciesId);
 must(
   dumps[0] === "seismitoad" && dumps[1] === "seismitoad" && dumps[2] === "bidoof",
-  `DUMP should follow CSV order, got ${dumps.join(",")}`,
+  `DUMP should follow scan/CSV order, got ${dumps.join(",")}`,
 );
 streamOrder(result.keep, "KEEP");
 streamOrder(result.look, "LOOK");
@@ -491,6 +492,34 @@ const foxOff = [...sampleNoShadowKeep.keep, ...sampleNoShadowKeep.look, ...sampl
 );
 must(foxOff?.keepClasses.includes("shadow") !== true, "LOOK shadow drops ninetales shadow class");
 must(foxOff?.verdict !== "DUMP", "alolan shadow ninetales still never DUMP");
+
+const junkLucky: Mon = {
+  ...ivMon("bidoof", "Bidoof", 502, 0, 0, 0),
+  lucky: true,
+};
+const keepLuckyOn = gradeBox([junkLucky], { ...meta, keepLucky: true });
+must(keepLuckyOn.keepLucky === true, "echo keepLucky true");
+must(keepLuckyOn.keep.length === 1, "KEEP lucky keeps a junk lucky");
+must(keepLuckyOn.keep[0].keepClasses.includes("lucky"), "KEEP lucky uses lucky keep class");
+must(keepLuckyOn.dump.length === 0, "KEEP lucky does not dump the junk lucky");
+
+const keepLuckyOff = gradeBox([junkLucky], { ...meta, keepLucky: false });
+must(keepLuckyOff.keepLucky === false, "echo keepLucky false");
+must(keepLuckyOff.keep.length === 0, "Lucky off drops the junk lucky keep class");
+must(keepLuckyOff.look.length === 1 && keepLuckyOff.dump.length === 0, "lone junk lucky LOOKs at default familyKeep");
+must(
+  keepLuckyOff.look[0].keepClasses.includes("lucky") !== true,
+  "Lucky off does not attach lucky keep class",
+);
+
+const keepLuckyDump = gradeBox([junkLucky], { ...meta, keepLucky: false, familyKeep: 0 });
+must(keepLuckyDump.dump.length === 1, "Lucky off + familyKeep 0 dumps a junk lucky");
+must(keepLuckyDump.dump[0].keepClasses.includes("lucky") !== true, "dumped lucky has no lucky class");
+
+const luckyFav = gradeBox([{ ...junkLucky, favorite: true }], { ...meta, keepLucky: false });
+must(luckyFav.keep.length === 1, "favorite still KEEPs when Lucky is off");
+must(luckyFav.keep[0].keepClasses.includes("favorite"), "favorite keep class still fires");
+must(luckyFav.keep[0].keepClasses.includes("lucky") !== true, "Lucky off drops lucky class on a favorite");
 
 console.log(
   JSON.stringify(
