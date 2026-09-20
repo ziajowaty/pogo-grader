@@ -181,8 +181,12 @@ function rankAt(
 
 /** Great League 1500 CP rank for unique IVs, as the family GL evo when mapped. */
 export function rankGreatLeague(mon: Mon, gm: RankGm): LeagueRank | null {
-  const evo = resolveGlSpeciesId(mon.speciesId, gm);
-  return rankAt(mon, gm, evo, GREAT_LEAGUE_CAP);
+  return rankGreatLeagueAs(mon, gm, resolveGlSpeciesId(mon.speciesId, gm));
+}
+
+/** Rank this copy as an explicit species (pre-evo scored as each listed family stage). */
+export function rankGreatLeagueAs(mon: Mon, gm: RankGm, speciesId: string): LeagueRank | null {
+  return rankAt(mon, gm, canonId(speciesId), GREAT_LEAGUE_CAP);
 }
 
 /** Little Cup 500 CP rank for the unevolved form (no evo remap). */

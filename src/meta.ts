@@ -131,6 +131,54 @@ function reachableRaidHits(from: string, edges: Record<string, string[]>, raid: 
   return hits;
 }
 
+function buildFamilyIndex(edges: Record<string, string[]>): {
+  familyOf: Record<string, string>;
+  evoReach: Record<string, string[]>;
+} {
+  const parent: Record<string, string> = {};
+  const find = (x: string): string => {
+    if (parent[x] == null) parent[x] = x;
+    if (parent[x] !== x) parent[x] = find(parent[x]);
+    return parent[x];
+  };
+  const union = (a: string, b: string): void => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra === rb) return;
+    if (ra < rb) parent[rb] = ra;
+    else parent[ra] = rb;
+  };
+
+  const nodes = new Set<string>();
+  for (const [from, tos] of Object.entries(edges)) {
+    nodes.add(from);
+    find(from);
+    for (const to of tos) {
+      nodes.add(to);
+      find(to);
+      union(from, to);
+    }
+  }
+
+  const familyOf: Record<string, string> = {};
+  for (const n of nodes) familyOf[n] = find(n);
+
+  const evoReach: Record<string, string[]> = {};
+  for (const n of nodes) {
+    const seen = new Set<string>([n]);
+    const stack = [...(edges[n] ?? [])];
+    while (stack.length) {
+      const cur = stack.pop();
+      if (!cur || seen.has(cur)) continue;
+      seen.add(cur);
+      const next = edges[cur];
+      if (next) stack.push(...next);
+    }
+    evoReach[n] = [...seen];
+  }
+  return { familyOf, evoReach };
+}
+
 function buildRaidEvolution(raid: Set<string>, edges: Record<string, string[]>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const from of Object.keys(edges)) {
@@ -327,7 +375,9 @@ export async function loadMeta(): Promise<Meta> {
   const mythical = toSet(mythicalJson as string[]);
   const raidIds = listFile(raidAttackersJson);
   const raidAttackers = toSet(raidIds);
-  const raidEvolution = buildRaidEvolution(raidAttackers, loadEvolutionEdges(evolutionsJson));
+  const evoEdges = loadEvolutionEdges(evolutionsJson);
+  const raidEvolution = buildRaidEvolution(raidAttackers, evoEdges);
+  const { familyOf, evoReach } = buildFamilyIndex(evoEdges);
   const lists = await loadPvpokeLists();
   return {
     glTop500: toSet(lists.gl.map((row) => row.speciesId)),
@@ -337,6 +387,8 @@ export async function loadMeta(): Promise<Meta> {
     raidAttackers,
     raidRankings: buildRaidRankings(raidIds, raidEvolution, limited, legendary, mythical),
     raidEvolution,
+    familyOf,
+    evoReach,
     limited,
     legendary,
     mythical,

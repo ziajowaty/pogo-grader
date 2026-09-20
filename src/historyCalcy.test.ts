@@ -125,8 +125,8 @@ must(result.keep.length + result.look.length + result.dump.length === 134, "no d
 must(result.dump.length <= result.dumpCap, "dump cap respected");
 must(result.dumpCapped === false, "134-row box should not hit dump-cap 100");
 must(
-  result.keep.length === 85 && result.look.length === 24 && result.dump.length === 25,
-  `verdict snapshot keep/look/dump 85/24/25, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
+  result.keep.length === 86 && result.look.length === 21 && result.dump.length === 27,
+  `verdict snapshot keep/look/dump 86/21/27, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
 );
 
 streamOrder(result.keep, "KEEP");

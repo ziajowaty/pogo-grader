@@ -90,10 +90,14 @@ export interface GradedMon {
   keepClasses: string[];
   gl?: LeagueRank | null;
   lc?: LeagueRank | null;
+  /** Every independent GL stage this copy can become, best IV-rank first. */
+  glAs?: LeagueRank[];
   /** PvPoke Great League overall placement (1 = best), even if outside the species cutoff. */
   glMeta?: MetaLeagueRank | null;
   /** PvPoke Little Cup overall placement (1 = best), even if outside the species cutoff. */
   lcMeta?: MetaLeagueRank | null;
+  /** PvPoke GL placement for each independent stage in `glAs`. */
+  glMetaAs?: MetaLeagueRank[];
   copiesInGroup: number;
   copyRankInGroup: number;
 }
@@ -138,6 +142,10 @@ export interface Meta {
   mythical: Set<string>;
   /** unevolved -> family GL evo id */
   glEvolution: Record<string, string>;
+  /** Evolution-graph family id (min member). Shadows are their own family. */
+  familyOf?: Record<string, string>;
+  /** Forward-reachable evo ids including self. */
+  evoReach?: Record<string, string[]>;
   dumpCap: number;
   /** Keep GL/LC IVs at this rank or better. Rank 1 is best. Default 500. */
   pvpRankKeep?: number;
@@ -147,12 +155,14 @@ export interface Meta {
    * When a PvP/raid family has no KEEP, LOOK this many best copies and DUMP the rest.
    * 0 DUMPs those copies and ungated junk (not useful for PvP or raids), still
    * never dumping shadows / limited / special / non-unique IVs.
-   * Default 2. Does not change KEEP slot caps (2 GL, 2 LC, 6 raid).
+   * Default 2. Does not change KEEP slot caps (2 GL and 2 LC per independently
+   * listed stage, 6 raid per evolution family).
    */
   familyKeep?: number;
   /**
    * Keep every eligible good copy (all 4*, all raid attackers, all PvP-floor IVs).
-   * Off = treat extra good copies as dupes (2 GL, 2 LC, 6 raid, 1 hundo per species).
+   * Off = treat extra good copies as dupes (2 GL and 2 LC per independently listed
+   * stage, 6 raid and 1 hundo per evolution family).
    */
   keepAllGood?: boolean;
   /**

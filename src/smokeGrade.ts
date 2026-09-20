@@ -334,6 +334,93 @@ const bulbDupes = gradeBox(eightBulbs, bulbMeta);
 must(bulbDupes.keep.length === 6, `dupe mode keeps 6 raid pre-evo copies, got ${bulbDupes.keep.length}`);
 must(bulbDupes.dump.length === 2, `dupe mode dumps extra raid pre-evos, got ${bulbDupes.dump.length}`);
 
+const mixedLine = [
+  ...Array.from({ length: 4 }, (_, i) => hundoAt("bulbasaur", "Bulbasaur", 430 + i, 15)),
+  ...Array.from({ length: 4 }, (_, i) => hundoAt("venusaur", "Venusaur", 440 + i, 15)),
+];
+const mixedDupes = gradeBox(mixedLine, bulbMeta);
+must(mixedDupes.keep.length === 6, `family raid pool keeps 6 across Bulbasaur/Venusaur, got ${mixedDupes.keep.length}`);
+must(mixedDupes.dump.length === 2, `family raid pool dumps extras across stages, got ${mixedDupes.dump.length}`);
+must(
+  mixedDupes.keep.concat(mixedDupes.dump).every((g) => g.copiesInGroup === 8),
+  "Bulbasaur and Venusaur share one family copy count",
+);
+
+function ivMon(
+  speciesId: string,
+  speciesName: string,
+  row: number,
+  atk: number,
+  def: number,
+  sta: number,
+): Mon {
+  return {
+    source: "pokegenie",
+    sourceRow: row,
+    speciesName,
+    speciesId,
+    form: "Normal",
+    gender: "male",
+    cp: 600,
+    hp: 90,
+    atk,
+    def,
+    sta,
+    ivUnique: true,
+    ivPercent: ((atk + def + sta) / 45) * 100,
+    shadow: false,
+    purified: false,
+  };
+}
+
+must(meta.glTop500.has("machoke"), "machoke is independently on GL");
+must(meta.glTop500.has("machamp"), "machamp is independently on GL");
+const pvpOnly: typeof meta = {
+  ...meta,
+  keepAllGood: false,
+  raidAttackers: new Set(),
+  raidEvolution: {},
+  pvpRankKeep: 4096,
+  pvpListKeep: 500,
+};
+const bulkyMachop = ivMon("machop", "Machop", 500, 0, 15, 15);
+const attackMachop = ivMon("machop", "Machop", 501, 15, 0, 0);
+const dualMachops = gradeBox([bulkyMachop, attackMachop], pvpOnly);
+const bulkyGraded = [...dualMachops.keep, ...dualMachops.look, ...dualMachops.dump].find(
+  (g) => g.mon.sourceRow === 500,
+);
+const attackGraded = [...dualMachops.keep, ...dualMachops.look, ...dualMachops.dump].find(
+  (g) => g.mon.sourceRow === 501,
+);
+must(
+  bulkyGraded?.glAs?.some((r) => r.evoSpeciesId === "machoke") === true &&
+    bulkyGraded?.glAs?.some((r) => r.evoSpeciesId === "machamp") === true,
+  "machop is ranked as both Machoke and Machamp",
+);
+must(
+  bulkyGraded?.reasons.some((r) => /better as machoke/i.test(r) || /better as machamp/i.test(r)) === true,
+  `machop better-as reason, got ${bulkyGraded?.reasons.join(" | ")}`,
+);
+must(
+  bulkyGraded &&
+    attackGraded &&
+    bulkyGraded.glAs &&
+    attackGraded.glAs &&
+    (bulkyGraded.copyRankInGroup < attackGraded.copyRankInGroup
+      ? (bulkyGraded.gl?.rank ?? 9999) <= (attackGraded.gl?.rank ?? 9999)
+      : (attackGraded.gl?.rank ?? 9999) <= (bulkyGraded.gl?.rank ?? 9999)),
+  "family sort puts the better-as copy first",
+);
+
+const threeMachamp = [0, 1, 2].map((i) => ivMon("machamp", "Machamp", 520 + i, i, 15, 15));
+const champOnly = gradeBox(threeMachamp, pvpOnly);
+must(champOnly.keep.length === 2, `machamp-only fills 2 Machamp GL slots, got ${champOnly.keep.length}`);
+must(champOnly.dump.length === 1, "extra machamp dumps; cannot fill Machoke slots");
+must(
+  champOnly.keep.every((g) => g.glAs?.every((r) => r.evoSpeciesId === "machamp")),
+  "fully evolved machamp is not ranked as Machoke",
+);
+
 const junkShadow: Mon = {
   ...hundoAt("bidoof", "Bidoof", 500, 0),
   speciesId: "bidoof_shadow",

@@ -20,7 +20,7 @@ import {
   prettySpeciesId,
 } from "./types";
 import { canonId } from "./meta";
-import { getRankGm, rankGreatLeague, rankLittleCup, type RankGm } from "./rank";
+import { getRankGm, rankGreatLeagueAs, rankLittleCup, type RankGm } from "./rank";
 
 const GL_KEEP = 2;
 const LC_KEEP = 2;
@@ -58,51 +58,12 @@ function lookupRank(speciesId: string, index: Map<string, PvpokeRankRow>): Pvpok
   return null;
 }
 
-function glMetaRow(
-  speciesId: string,
-  meta: Meta,
-  index: Map<string, PvpokeRankRow>,
-): PvpokeRankRow | null {
-  const id = canonId(speciesId);
-  const direct = index.get(id);
-  if (direct) return direct;
-  const mapped = meta.glEvolution[id];
-  if (mapped) {
-    const row = index.get(mapped);
-    if (row) return row;
-  }
-  if (id.endsWith("_shadow")) {
-    const inner = glMetaRow(id.slice(0, -7), meta, index);
-    if (!inner) return null;
-    const shadowEvo = inner.speciesId.endsWith("_shadow")
-      ? inner.speciesId
-      : `${inner.speciesId}_shadow`;
-    return index.get(shadowEvo) ?? inner;
-  }
-  return null;
-}
-
 function gatedGlSet(meta: Meta, listKeep: number): Set<string> {
   const rows = meta.glRankings;
   if (rows && rows.length > 0) {
     return new Set(rows.filter((row) => row.rank <= listKeep).map((row) => row.speciesId));
   }
   return meta.glTop500;
-}
-
-function glGateId(speciesId: string, meta: Meta): string | null {
-  const id = canonId(speciesId);
-  if (meta.glTop500.has(id)) return id;
-  const mapped = meta.glEvolution[id];
-  if (mapped && meta.glTop500.has(mapped)) return mapped;
-  if (id.endsWith("_shadow")) {
-    const inner = glGateId(id.slice(0, -7), meta);
-    if (!inner) return null;
-    const shadowEvo = inner.endsWith("_shadow") ? inner : `${inner}_shadow`;
-    if (meta.glTop500.has(shadowEvo)) return shadowEvo;
-    return inner;
-  }
-  return null;
 }
 
 function raidGateId(speciesId: string, meta: Meta): string | null {
@@ -126,6 +87,109 @@ function raidAsName(speciesId: string, meta: Meta): string | null {
   if (!asId) return null;
   if (asId === canonId(speciesId)) return null;
   return prettySpeciesId(asId);
+}
+
+function uniqueIds(ids: string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+function familyKey(speciesId: string, meta: Meta): string {
+  const id = canonId(speciesId);
+  return meta.familyOf?.[id] ?? id;
+}
+
+function membersByFamily(meta: Meta): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  if (!meta.familyOf) return map;
+  for (const [id, fid] of Object.entries(meta.familyOf)) {
+    const list = map.get(fid);
+    if (list) list.push(id);
+    else map.set(fid, [id]);
+  }
+  return map;
+}
+
+function familyMembers(
+  speciesId: string,
+  meta: Meta,
+  byFamily: Map<string, string[]>,
+): string[] {
+  const members = byFamily.get(familyKey(speciesId, meta));
+  if (members && members.length) return members;
+  return [canonId(speciesId)];
+}
+
+function canBecome(from: string, target: string, meta: Meta): boolean {
+  const a = canonId(from);
+  const b = canonId(target);
+  if (a === b) return true;
+  if (meta.evoReach?.[a]?.includes(b)) return true;
+  if (meta.glEvolution[a] === b) return true;
+  if (meta.raidEvolution?.[a] === b) return true;
+  return false;
+}
+
+function independentGlIds(members: string[], gateSet: Set<string>, meta: Meta): string[] {
+  const direct = members.filter((id) => gateSet.has(id));
+  if (direct.length) return uniqueIds(direct);
+  const mapped: string[] = [];
+  for (const id of members) {
+    const evo = meta.glEvolution[id];
+    if (evo && gateSet.has(evo)) mapped.push(evo);
+  }
+  return uniqueIds(mapped);
+}
+
+function independentLcIds(members: string[], meta: Meta): string[] {
+  return uniqueIds(members.filter((id) => hasId(meta.lcTop100, id)));
+}
+
+function independentRaidIds(members: string[], meta: Meta): string[] {
+  const direct = members.filter((id) => meta.raidAttackers.has(id) || hasId(meta.raidAttackers, id));
+  if (direct.length) return uniqueIds(direct);
+  const mapped: string[] = [];
+  for (const id of members) {
+    const evo = meta.raidEvolution?.[id];
+    if (evo) mapped.push(evo);
+  }
+  return uniqueIds(mapped);
+}
+
+function rankAs(g: GradedMon, speciesId: string): LeagueRank | null {
+  return g.glAs?.find((r) => r.evoSpeciesId === speciesId) ?? null;
+}
+
+function metaAs(g: GradedMon, speciesId: string): MetaLeagueRank | null {
+  return g.glMetaAs?.find((m) => m.speciesId === speciesId) ?? (g.glMeta?.speciesId === speciesId ? g.glMeta : null);
+}
+
+function glOrderAs(a: GradedMon, b: GradedMon, speciesId: string): number {
+  const ar = rankAs(a, speciesId)?.rank ?? 10_000;
+  const br = rankAs(b, speciesId)?.rank ?? 10_000;
+  if (ar !== br) return ar - br;
+  const asp = rankAs(a, speciesId)?.statProduct ?? -1;
+  const bsp = rankAs(b, speciesId)?.statProduct ?? -1;
+  if (asp !== bsp) return bsp - asp;
+  const aiv = a.mon.ivPercent ?? -1;
+  const biv = b.mon.ivPercent ?? -1;
+  if (aiv !== biv) return biv - aiv;
+  return a.mon.sourceRow - b.mon.sourceRow;
+}
+
+function betterAsReason(g: GradedMon): string | null {
+  const ranks = g.glAs;
+  if (!ranks || ranks.length < 2) return null;
+  const sorted = [...ranks].sort((a, b) => a.rank - b.rank || b.statProduct - a.statProduct);
+  if (sorted[0].evoSpeciesId === sorted[1].evoSpeciesId) return null;
+  if (sorted[0].rank === sorted[1].rank) return null;
+  return `Better as ${prettySpeciesId(sorted[0].evoSpeciesId)} (${sorted[0].rank}/${sorted[0].of}) than ${prettySpeciesId(sorted[1].evoSpeciesId)} (${sorted[1].rank}/${sorted[1].of})`;
 }
 
 function isLcSpecies(speciesId: string, meta: Meta): boolean {
@@ -209,18 +273,6 @@ function raidOrder(a: GradedMon, b: GradedMon): number {
   return a.mon.sourceRow - b.mon.sourceRow;
 }
 
-function leaderboardOrder(a: GradedMon, b: GradedMon, meta: Meta): number {
-  const gl = Boolean(glGateId(a.mon.speciesId, meta) || glGateId(b.mon.speciesId, meta));
-  if (gl) return glOrder(a, b);
-  if (isLcSpecies(a.mon.speciesId, meta) || isLcSpecies(b.mon.speciesId, meta)) {
-    return lcOrder(a, b);
-  }
-  if (raidGateId(a.mon.speciesId, meta) || raidGateId(b.mon.speciesId, meta)) {
-    return raidOrder(a, b);
-  }
-  return raidOrder(a, b);
-}
-
 function topSet(rows: GradedMon[], n: number, cmp: (a: GradedMon, b: GradedMon) => number): Set<GradedMon> {
   return new Set([...rows].sort(cmp).slice(0, n));
 }
@@ -252,21 +304,27 @@ function pushReason(g: GradedMon, reason: string): void {
   if (!g.reasons.includes(reason)) g.reasons.push(reason);
 }
 
-function rankLabel(kind: "GL" | "LC", g: GradedMon, cutoff: number): string {
-  const block = kind === "GL" ? g.gl : g.lc;
-  const metaRank = kind === "GL" ? g.glMeta : g.lcMeta;
-  const metaBit = metaRank ? ` #${metaRank.rank}/${metaRank.of}` : "";
-  if (!block) {
+function rankLabel(
+  kind: "GL" | "LC",
+  g: GradedMon,
+  cutoff: number,
+  block?: LeagueRank | null,
+  metaRank?: MetaLeagueRank | null,
+): string {
+  const iv = block ?? (kind === "GL" ? g.gl : g.lc);
+  const meta = metaRank ?? (kind === "GL" ? g.glMeta : g.lcMeta) ?? null;
+  const metaBit = meta ? ` #${meta.rank}/${meta.of}` : "";
+  if (!iv) {
     return kind === "GL"
       ? `Great League${metaBit} (IV rank unavailable)`
       : `Little Cup${metaBit} (IV rank unavailable)`;
   }
   const evo =
-    kind === "GL" && block.evoSpeciesId && block.evoSpeciesId !== canonId(g.mon.speciesId)
-      ? ` as ${block.evoSpeciesId}`
+    kind === "GL" && iv.evoSpeciesId && iv.evoSpeciesId !== canonId(g.mon.speciesId)
+      ? ` as ${prettySpeciesId(iv.evoSpeciesId)}`
       : "";
   const league = kind === "GL" ? "Great League" : "Little Cup";
-  return `${league}${metaBit}: ${block.rank}/${block.of} (keep ≤${cutoff})${evo}`;
+  return `${league}${metaBit}: ${iv.rank}/${iv.of} (keep ≤${cutoff})${evo}`;
 }
 
 function missRankReason(kind: "GL" | "LC", g: GradedMon, cutoff: number, n: number, keptCopyRanks: number[]): string {
@@ -301,20 +359,63 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const glOf = meta.glRankings?.length || GL_LIST_CAP;
   const lcOf = meta.lcRankings?.length || LC_LIST_CAP;
   const gateMeta: Meta = { ...meta, glTop500: gatedGlSet(meta, listKeep) };
+  const families = membersByFamily(meta);
+  const independentGlCache = new Map<string, string[]>();
+  const listedGlCache = new Map<string, string[]>();
+  const independentLcCache = new Map<string, string[]>();
+  const independentRaidCache = new Map<string, string[]>();
+
+  const independentsOf = (speciesId: string) => {
+    const key = familyKey(speciesId, meta);
+    if (!independentGlCache.has(key)) {
+      const members = familyMembers(speciesId, meta, families);
+      const listed = independentGlIds(members, meta.glTop500, meta);
+      listedGlCache.set(key, listed);
+      independentGlCache.set(
+        key,
+        listed.filter((id) => gateMeta.glTop500.has(id)),
+      );
+      independentLcCache.set(key, independentLcIds(members, meta));
+      independentRaidCache.set(key, independentRaidIds(members, meta));
+    }
+    return {
+      key,
+      gl: independentGlCache.get(key)!,
+      listedGl: listedGlCache.get(key)!,
+      lc: independentLcCache.get(key)!,
+      raid: independentRaidCache.get(key)!,
+    };
+  };
+
   const graded: GradedMon[] = mons.map((mon) => {
-    const glSpecies = glGateId(mon.speciesId, gateMeta);
+    const ind = independentsOf(mon.speciesId);
+    const glTargets = ind.listedGl.filter((t) => canBecome(mon.speciesId, t, meta));
+    const glAs = glTargets
+      .map((t) => rankGreatLeagueAs(mon, gm, t))
+      .filter((r): r is LeagueRank => r != null)
+      .sort((a, b) => a.rank - b.rank || b.statProduct - a.statProduct);
+    const glMetaAs = glTargets
+      .map((t) => {
+        const row = lookupRank(t, glIndex);
+        return row ? toMetaRank(row, glOf) : null;
+      })
+      .filter((r): r is MetaLeagueRank => r != null);
+    const primary = glAs[0] ?? null;
+    const primaryMeta =
+      (primary && glMetaAs.find((m) => m.speciesId === primary.evoSpeciesId)) || glMetaAs[0] || null;
     const lc = isLcSpecies(mon.speciesId, meta);
-    const glRow = glMetaRow(mon.speciesId, meta, glIndex);
     const lcRow = lookupRank(mon.speciesId, lcIndex);
     return {
       mon,
       verdict: "LOOK" as Verdict,
       reasons: [],
       keepClasses: [],
-      gl: glSpecies ? rankGreatLeague(mon, gm) : null,
+      gl: primary,
       lc: lc ? rankLittleCup(mon, gm) : null,
-      glMeta: glRow ? toMetaRank(glRow, glOf) : null,
+      glAs,
+      glMeta: primaryMeta,
       lcMeta: lcRow ? toMetaRank(lcRow, lcOf) : null,
+      glMetaAs,
       copiesInGroup: 1,
       copyRankInGroup: 1,
     };
@@ -322,7 +423,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
 
   const groups = new Map<string, GradedMon[]>();
   for (const g of graded) {
-    const key = canonId(g.mon.speciesId) || g.mon.speciesId;
+    const key = familyKey(g.mon.speciesId, meta);
     const list = groups.get(key);
     if (list) list.push(g);
     else groups.set(key, [g]);
@@ -332,20 +433,48 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
 
   for (const [key, rows] of groups) {
     const n = rows.length;
-    rows.sort((a, b) => leaderboardOrder(a, b, gateMeta));
+    const ind = independentsOf(rows[0].mon.speciesId);
+    const glIds = ind.gl;
+    const listedGl = ind.listedGl;
+    const lcIds = ind.lc;
+    const raidIds = ind.raid;
+    rows.sort((a, b) => {
+      if (listedGl.length) return glOrder(a, b);
+      if (lcIds.length) return lcOrder(a, b);
+      return raidOrder(a, b);
+    });
     rows.forEach((g, i) => {
       g.copiesInGroup = n;
       g.copyRankInGroup = i + 1;
     });
 
-    const glRows = glGateId(rows[0].mon.speciesId, gateMeta) ? rows : [];
-    const lcRows = isLcSpecies(rows[0].mon.speciesId, meta) ? rows : [];
-    const raidRows = raidGateId(rows[0].mon.speciesId, meta) ? rows : [];
-    const glEligible = glRows.filter((g) => rankMeets(g.gl, cutoff));
-    const lcEligible = lcRows.filter((g) => rankMeets(g.lc, cutoff));
-    const glKeep = glEligible.length ? topSet(glEligible, glSlots, glOrder) : new Set<GradedMon>();
-    const lcKeep = lcEligible.length ? topSet(lcEligible, lcSlots, lcOrder) : new Set<GradedMon>();
+    const glKeep = new Set<GradedMon>();
+    const glKeptAs = new Map<GradedMon, string[]>();
+    for (const t of glIds) {
+      const eligible = rows.filter(
+        (g) => canBecome(g.mon.speciesId, t, meta) && rankMeets(rankAs(g, t), cutoff),
+      );
+      for (const g of topSet(eligible, glSlots, (a, b) => glOrderAs(a, b, t))) {
+        glKeep.add(g);
+        const list = glKeptAs.get(g) ?? [];
+        list.push(t);
+        glKeptAs.set(g, list);
+      }
+    }
+
+    const lcKeep = new Set<GradedMon>();
+    for (const t of lcIds) {
+      const eligible = rows.filter(
+        (g) => canonId(g.mon.speciesId) === t && rankMeets(g.lc, cutoff),
+      );
+      for (const g of topSet(eligible, lcSlots, lcOrder)) lcKeep.add(g);
+    }
+
+    const raidRows = raidIds.length
+      ? rows.filter((g) => raidIds.some((t) => canBecome(g.mon.speciesId, t, meta)))
+      : [];
     const raidKeep = raidRows.length ? topSet(raidRows, raidSlots, raidOrder) : new Set<GradedMon>();
+    const raidOrdered = [...raidRows].sort(raidOrder);
     const hundoSlot = keepAllGood ? null : bestHundo(rows);
 
     const glKeptRanks = [...glKeep]
@@ -361,7 +490,13 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (lcKeep.has(g)) classes.push("lc");
       const limited = isLimitedMon(g.mon, meta);
       if (raidKeep.has(g) && !limited) classes.push("raid");
-      if (limited && raidGateId(g.mon.speciesId, meta) && !classes.includes("raid")) {
+      if (
+        limited &&
+        (raidKeep.has(g) ||
+          raidIds.some((t) => canBecome(g.mon.speciesId, t, meta)) ||
+          Boolean(raidGateId(g.mon.speciesId, meta))) &&
+        !classes.includes("raid")
+      ) {
         classes.push("raid");
       }
       if (
@@ -384,33 +519,42 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (classes.includes("legendary")) pushReason(g, "Legendary");
       if (classes.includes("mythical")) pushReason(g, "Mythical");
       if (classes.includes("limited")) pushReason(g, "Limited (UB / Dialgadex-style)");
-      if (classes.includes("gl")) pushReason(g, rankLabel("GL", g, cutoff));
+      if (classes.includes("gl")) {
+        const targets = glKeptAs.get(g) ?? [];
+        for (const t of targets) {
+          pushReason(g, rankLabel("GL", g, cutoff, rankAs(g, t), metaAs(g, t)));
+        }
+      }
+      const better = betterAsReason(g);
+      if (better) pushReason(g, better);
       if (classes.includes("lc")) pushReason(g, rankLabel("LC", g, cutoff));
       if (classes.includes("raid")) {
         const asName = raidAsName(g.mon.speciesId, meta);
         const asBit = asName ? ` as ${asName}` : "";
+        const raidCopy = raidOrdered.indexOf(g) + 1;
+        const raidN = raidRows.length || n;
         pushReason(
           g,
           limited
             ? `Raid attacker${asBit} (limited — keep all)`
             : keepAllGood
               ? `Raid attacker${asBit} (keep all eligible)`
-              : `Raid attacker${asBit} (copy ${g.copyRankInGroup} of ${n}, keep ${Math.min(RAID_KEEP, n)})`,
+              : `Raid attacker${asBit} (copy ${raidCopy || g.copyRankInGroup} of ${raidN}, keep ${Math.min(RAID_KEEP, raidN)})`,
         );
       }
 
-      if (glRows.length && !glKeep.has(g)) {
+      if (glIds.length && !glKeep.has(g)) {
         pushReason(g, missRankReason("GL", g, cutoff, n, glKeptRanks));
       }
-      if (lcRows.length && !lcKeep.has(g)) {
+      if (lcIds.length && !lcKeep.has(g) && isLcSpecies(g.mon.speciesId, meta)) {
         pushReason(g, missRankReason("LC", g, cutoff, n, lcKeptRanks));
       }
-      if (raidRows.length && !raidKeep.has(g) && !limited) {
+      if (raidRows.includes(g) && !raidKeep.has(g) && !limited) {
         pushReason(
           g,
           keepAllGood
-            ? `Raid copies: ${n}`
-            : `Raid copies: ${n}, keeping ${Math.min(RAID_KEEP, n)}`,
+            ? `Raid copies: ${raidRows.length}`
+            : `Raid copies: ${raidRows.length}, keeping ${Math.min(RAID_KEEP, raidRows.length)}`,
         );
       }
     }
@@ -451,12 +595,10 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       continue;
     }
 
-    const key = canonId(g.mon.speciesId) || g.mon.speciesId;
+    const key = familyKey(g.mon.speciesId, meta);
     const anchored = groupAnchor.get(key) === true;
-    const pvpOrRaidFamily =
-      Boolean(glGateId(g.mon.speciesId, gateMeta)) ||
-      isLcSpecies(g.mon.speciesId, meta) ||
-      Boolean(raidGateId(g.mon.speciesId, meta));
+    const ind = independentsOf(g.mon.speciesId);
+    const pvpOrRaidFamily = ind.gl.length + ind.lc.length + ind.raid.length > 0;
 
     if (pvpOrRaidFamily && !anchored) {
       if (familyKeep > 0 && g.copyRankInGroup <= familyKeep) {
@@ -492,7 +634,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       pushReason(
         g,
         extraOfKeeper.has(g)
-          ? "Extra copy — species already has a keeper"
+          ? "Extra copy — family already has a keeper"
           : extraOfFamily.has(g)
             ? familyKeep === 0
               ? "Useless for PvP/raids — keep 0 per family"
@@ -516,7 +658,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   for (const g of graded) {
     if (g.verdict === "KEEP") {
       keep.push(g);
-      const key = canonId(g.mon.speciesId) || g.mon.speciesId;
+      const key = familyKey(g.mon.speciesId, meta);
       keptByKey.set(key, (keptByKey.get(key) ?? 0) + 1);
     } else if (g.verdict === "DUMP") dump.push(g);
     else look.push(g);

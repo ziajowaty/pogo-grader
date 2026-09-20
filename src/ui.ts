@@ -233,19 +233,34 @@ function formatLeagueBits(
   kind: "GL" | "LC",
   metaRank: GradedMon["glMeta"],
   iv: GradedMon["gl"],
+  asSpeciesId?: string,
 ): string {
+  const as =
+    asSpeciesId && asSpeciesId !== ""
+      ? ` as ${prettySpeciesId(asSpeciesId)}`
+      : "";
   if (metaRank && iv) {
-    return `${kind} #${metaRank.rank}/${metaRank.of} (${iv.rank}/${iv.of})`;
+    return `${kind}${as} #${metaRank.rank}/${metaRank.of} (${iv.rank}/${iv.of})`;
   }
-  if (metaRank) return `${kind} #${metaRank.rank}/${metaRank.of}`;
-  if (iv) return `${kind} ${iv.rank}/${iv.of}`;
+  if (metaRank) return `${kind}${as} #${metaRank.rank}/${metaRank.of}`;
+  if (iv) return `${kind}${as} ${iv.rank}/${iv.of}`;
   return "";
 }
 
 function formatRanks(item: GradedMon): string {
-  return [formatLeagueBits("GL", item.glMeta, item.gl), formatLeagueBits("LC", item.lcMeta, item.lc)]
-    .filter(Boolean)
-    .join(" · ");
+  const glRanks = item.glAs?.length ? item.glAs : item.gl ? [item.gl] : [];
+  const glBits =
+    glRanks.length > 0
+      ? glRanks.map((iv) => {
+          const metaRank =
+            item.glMetaAs?.find((m) => m.speciesId === iv.evoSpeciesId) ??
+            (item.glMeta?.speciesId === iv.evoSpeciesId ? item.glMeta : null);
+          const as =
+            iv.evoSpeciesId && iv.evoSpeciesId !== item.mon.speciesId ? iv.evoSpeciesId : "";
+          return formatLeagueBits("GL", metaRank, iv, as);
+        })
+      : [formatLeagueBits("GL", item.glMeta, item.gl)];
+  return [...glBits, formatLeagueBits("LC", item.lcMeta, item.lc)].filter(Boolean).join(" · ");
 }
 
 function reasonClass(reason: string): string {
@@ -265,7 +280,7 @@ function reasonClass(reason: string): string {
   if (r.includes("raid attacker")) return "chip chip--raid";
   if (r.includes("not gl/lc/raid")) return "chip chip--junk";
   if (r.includes("limited")) return "chip chip--limited";
-  if (r.includes("great league")) return "chip chip--gl";
+  if (r.includes("great league") || r.includes("better as")) return "chip chip--gl";
   if (r.includes("little cup")) return "chip chip--lc";
   if (r.includes("rank unknown") || r.includes("ivs not unique") || r.includes("unavailable")) {
     return "chip chip--unknown";
@@ -406,7 +421,7 @@ export function mountApp(root: HTMLElement): void {
               <label class="file-label rankings-filter-label" for="rankings-filter-raid">Filter</label>
               <input id="rankings-filter-raid" class="rankings-filter" type="search" placeholder="Species, id, or tag" autocomplete="off" aria-label="Filter raid attackers" data-rankings-filter />
             </div>
-            <p class="note rankings-raid-note">KEEP list the grader uses, including pre-evolutions (Bulbasaur as Venusaur). Not a DPS ranking.</p>
+            <p class="note rankings-raid-note">KEEP list the grader uses. Pre-evolutions count toward the same family cap unless a stage is independently listed. Not a DPS ranking.</p>
             <div id="rankings-raid" class="rankings-table-wrap"></div>
           </div>
         </div>
