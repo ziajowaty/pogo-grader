@@ -325,10 +325,25 @@ function reasonClass(reason: string): string {
   return "chip chip--loud";
 }
 
-function reasonChips(reasons: string[], loud: boolean): string {
-  if (reasons.length === 0) return "";
+function isNegativeReason(reason: string): boolean {
+  const cls = reasonClass(reason);
+  if (
+    cls.includes("chip--miss") ||
+    cls.includes("chip--dupe") ||
+    cls.includes("chip--junk") ||
+    cls.includes("chip--halt")
+  ) {
+    return true;
+  }
+  const r = reason.toLowerCase();
+  return /^(gl|lc) rank unknown/.test(r);
+}
+
+function reasonChips(reasons: string[], loud: boolean, hideNegative = false): string {
+  const shown = hideNegative ? reasons.filter((reason) => !isNegativeReason(reason)) : reasons;
+  if (shown.length === 0) return "";
   const extra = loud ? " look-lead" : "";
-  return `<div class="reasons${extra}">${reasons
+  return `<div class="reasons${extra}">${shown
     .map((reason) => `<span class="${reasonClass(reason)}">${escapeHtml(reason)}</span>`)
     .join("")}</div>`;
 }
@@ -354,7 +369,7 @@ function renderRow(item: GradedMon, verdict: Tab): string {
       <div class="cp">${mon.cp}</div>
     </div>
     <div class="meta">${escapeHtml(line)}</div>
-    ${reasonChips(reasons, false)}
+    ${reasonChips(reasons, false, verdict === "KEEP")}
   </article>`;
 }
 
