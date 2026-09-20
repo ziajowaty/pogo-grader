@@ -125,8 +125,8 @@ must(result.keep.length + result.look.length + result.dump.length === 134, "no d
 must(result.dump.length <= result.dumpCap, "dump cap respected");
 must(result.dumpCapped === false, "134-row box should not hit dump-cap 100");
 must(
-  result.keep.length === 69 && result.look.length === 29 && result.dump.length === 36,
-  `verdict snapshot keep/look/dump 69/29/36, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
+  result.keep.length === 44 && result.look.length === 39 && result.dump.length === 51,
+  `verdict snapshot keep/look/dump 44/39/51, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
 );
 
 streamOrder(result.keep, "KEEP");
@@ -194,8 +194,12 @@ if (gibleKeep.length === 0) {
 const froakies = all.filter((g) => g.mon.speciesId === "froakie");
 must(froakies.length > 0, "fixture has Froakie");
 must(
-  froakies.some((g) => g.verdict === "KEEP" && g.keepClasses.includes("raid") && g.reasons.some((r) => /as Greninja/i.test(r))),
-  "Froakie KEEPs as Greninja raid pre-evo",
+  froakies.every((g) => g.raidIv?.evoSpeciesId === "greninja" || g.raidIv?.evoSpeciesId === "greninja_mega"),
+  "Froakie is scored as Greninja for raid IV%",
+);
+must(
+  froakies.every((g) => !g.keepClasses.includes("raid") || (g.raidIv != null && g.raidIv.percent >= 90)),
+  "Froakie raid KEEP only at 90%+ IV",
 );
 
 const zero = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, familyKeep: 0 });

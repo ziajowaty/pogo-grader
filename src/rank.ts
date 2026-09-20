@@ -1,4 +1,4 @@
-import type { LeagueRank, Mon, RaidSpRank } from "./types";
+import type { LeagueRank, Mon, RaidIvRank } from "./types";
 // @ts-ignore Vite JSON snapshots
 import baseStatsJson from "../data/base-stats.json";
 // @ts-ignore Vite JSON snapshots
@@ -194,23 +194,12 @@ export function rankLittleCup(mon: Mon, gm: RankGm): LeagueRank | null {
   return rankAt(mon, gm, canonId(mon.speciesId), LITTLE_CUP_CAP);
 }
 
-/** Uncapped raid stat product vs a hundo. Falls back to IV% when base stats are missing. */
-export function raidStatProduct(mon: Mon, gm: RankGm, speciesId: string): RaidSpRank | null {
+/** IV% ((atk+def+sta)/45) for a copy counted as this raid attacker. */
+export function raidIvPercent(mon: Mon, speciesId: string): RaidIvRank | null {
   const ivs = ivsOf(mon);
   if (!ivs) return null;
-  const id = canonId(speciesId);
-  const stats = lookupBaseStats(id, gm);
-  const statProduct = stats
-    ? (stats.atk + ivs.atk) * (stats.def + ivs.def) * (stats.hp + ivs.sta)
-    : ivs.atk + ivs.def + ivs.sta;
-  const maxStatProduct = stats
-    ? (stats.atk + 15) * (stats.def + 15) * (stats.hp + 15)
-    : 45;
-  if (maxStatProduct <= 0) return null;
   return {
-    percent: Math.round((statProduct / maxStatProduct) * 1000) / 10,
-    statProduct,
-    maxStatProduct,
-    evoSpeciesId: id,
+    percent: Math.round(((ivs.atk + ivs.def + ivs.sta) / 45) * 1000) / 10,
+    evoSpeciesId: canonId(speciesId),
   };
 }

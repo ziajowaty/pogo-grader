@@ -12,17 +12,17 @@ import {
   clampFamilyKeep,
   clampPvpListKeep,
   clampPvpRankKeep,
-  clampRaidSpKeep,
+  clampRaidIvKeep,
   DEFAULT_FAMILY_KEEP,
   DEFAULT_PVP_LIST_KEEP,
   DEFAULT_PVP_RANK_KEEP,
-  DEFAULT_RAID_SP_KEEP,
+  DEFAULT_RAID_IV_KEEP,
   GL_LIST_CAP,
   LC_LIST_CAP,
   prettySpeciesId,
 } from "./types";
 import { canonId } from "./meta";
-import { getRankGm, rankGreatLeagueAs, rankLittleCup, raidStatProduct, type RankGm } from "./rank";
+import { getRankGm, rankGreatLeagueAs, rankLittleCup, raidIvPercent, type RankGm } from "./rank";
 
 const GL_KEEP = 2;
 const LC_KEEP = 2;
@@ -297,13 +297,13 @@ function familyKeepCap(meta: Meta): number {
   return clampFamilyKeep(meta.familyKeep ?? DEFAULT_FAMILY_KEEP);
 }
 
-function raidSpFloor(meta: Meta): number {
-  return clampRaidSpKeep(meta.raidSpKeep ?? DEFAULT_RAID_SP_KEEP);
+function raidIvFloor(meta: Meta): number {
+  return clampRaidIvKeep(meta.raidIvKeep ?? DEFAULT_RAID_IV_KEEP);
 }
 
-function raidSpMeets(g: GradedMon, floor: number): boolean {
+function raidIvMeets(g: GradedMon, floor: number): boolean {
   if (floor <= 0) return true;
-  return g.raidSp != null && g.raidSp.percent >= floor;
+  return g.raidIv != null && g.raidIv.percent >= floor;
 }
 
 function rankMeets(rank: LeagueRank | null | undefined, cutoff: number): boolean {
@@ -360,7 +360,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const cutoff = pvpCutoff(meta);
   const listKeep = pvpListCutoff(meta);
   const familyKeep = familyKeepCap(meta);
-  const raidSpKeep = raidSpFloor(meta);
+  const raidIvKeep = raidIvFloor(meta);
   const keepAllGood = Boolean(meta.keepAllGood);
   const keepShadow = keepShadowOn(meta);
   const glSlots = keepAllGood ? Number.POSITIVE_INFINITY : GL_KEEP;
@@ -430,7 +430,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       glMeta: primaryMeta,
       lcMeta: lcRow ? toMetaRank(lcRow, lcOf) : null,
       glMetaAs,
-      raidSp: raidTarget ? raidStatProduct(mon, gm, raidTarget) : null,
+      raidIv: raidTarget ? raidIvPercent(mon, raidTarget) : null,
       copiesInGroup: 1,
       copyRankInGroup: 1,
     };
@@ -488,7 +488,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     const raidRows = raidIds.length
       ? rows.filter((g) => raidIds.some((t) => canBecome(g.mon.speciesId, t, meta)))
       : [];
-    const raidEligible = raidRows.filter((g) => raidSpMeets(g, raidSpKeep));
+    const raidEligible = raidRows.filter((g) => raidIvMeets(g, raidIvKeep));
     const raidKeep = raidEligible.length ? topSet(raidEligible, raidSlots, raidOrder) : new Set<GradedMon>();
     const raidOrdered = [...raidEligible].sort(raidOrder);
     const hundoSlot = keepAllGood ? null : bestHundo(rows);
@@ -547,16 +547,16 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (classes.includes("raid")) {
         const asName = raidAsName(g.mon.speciesId, meta);
         const asBit = asName ? ` as ${asName}` : "";
-        const spBit = g.raidSp ? ` ${g.raidSp.percent}% SP` : "";
+        const ivBit = g.raidIv ? ` ${g.raidIv.percent}% IV` : "";
         const raidCopy = raidOrdered.indexOf(g) + 1;
         const raidN = raidEligible.length || n;
         pushReason(
           g,
           limited
-            ? `Raid attacker${asBit}${spBit} (limited — keep all)`
+            ? `Raid attacker${asBit}${ivBit} (limited — keep all)`
             : keepAllGood
-              ? `Raid attacker${asBit}${spBit} (keep all eligible)`
-              : `Raid attacker${asBit}${spBit} (copy ${raidCopy || g.copyRankInGroup} of ${raidN}, keep ${Math.min(RAID_KEEP, raidN)} ≥${raidSpKeep}%)`,
+              ? `Raid attacker${asBit}${ivBit} (keep all eligible)`
+              : `Raid attacker${asBit}${ivBit} (copy ${raidCopy || g.copyRankInGroup} of ${raidN}, keep ${Math.min(RAID_KEEP, raidN)} ≥${raidIvKeep}%)`,
         );
       }
 
@@ -567,12 +567,12 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
         pushReason(g, missRankReason("LC", g, cutoff, n, lcKeptRanks));
       }
       if (raidRows.includes(g) && !raidKeep.has(g) && !limited) {
-        if (raidSpKeep > 0 && !raidSpMeets(g, raidSpKeep)) {
+        if (raidIvKeep > 0 && !raidIvMeets(g, raidIvKeep)) {
           pushReason(
             g,
-            g.raidSp
-              ? `Raid ${g.raidSp.percent}% SP worse than keep ≥${raidSpKeep}%`
-              : "Raid SP unavailable — IVs not unique",
+            g.raidIv
+              ? `Raid ${g.raidIv.percent}% IV worse than keep ≥${raidIvKeep}%`
+              : "Raid IV unavailable — IVs not unique",
           );
         } else {
           pushReason(
@@ -704,7 +704,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     pvpRankKeep: cutoff,
     pvpListKeep: listKeep,
     familyKeep,
-    raidSpKeep,
+    raidIvKeep,
     keepAllGood,
     keepShadow,
     groups: groupSummaries,

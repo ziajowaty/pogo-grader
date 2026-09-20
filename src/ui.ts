@@ -11,20 +11,20 @@ import {
   clampFamilyKeep,
   clampPvpListKeep,
   clampPvpRankKeep,
-  clampRaidSpKeep,
+  clampRaidIvKeep,
   DEFAULT_FAMILY_KEEP,
   DEFAULT_KEEP_SHADOW,
   DEFAULT_PVP_LIST_KEEP,
   DEFAULT_PVP_RANK_KEEP,
-  DEFAULT_RAID_SP_KEEP,
+  DEFAULT_RAID_IV_KEEP,
   FAMILY_KEEP_MAX,
   FAMILY_KEEP_MIN,
   GL_LIST_CAP,
   LC_LIST_CAP,
   prettySpeciesId,
   PVP_RANK_OF,
-  RAID_SP_KEEP_MAX,
-  RAID_SP_KEEP_MIN,
+  RAID_IV_KEEP_MAX,
+  RAID_IV_KEEP_MIN,
 } from "./types";
 import {
   dumpExecuteString,
@@ -40,11 +40,12 @@ const LIST_PAINT_MAX = 200;
 const RANK_PRESETS = [50, 150, 500, 4096] as const;
 const LIST_KEEP_PRESETS = [100, 200, 300, 500] as const;
 const FAMILY_KEEP_PRESETS = [FAMILY_KEEP_MIN, 1, 2, 6, FAMILY_KEEP_MAX] as const;
-const RAID_SP_PRESETS = [RAID_SP_KEEP_MIN, 80, 90, 95, RAID_SP_KEEP_MAX] as const;
+const RAID_IV_PRESETS = [RAID_IV_KEEP_MIN, 80, 90, 95, RAID_IV_KEEP_MAX] as const;
 const RANK_KEEP_KEY = "pogo-grader.pvpRankKeep";
 const LIST_KEEP_KEY = "pogo-grader.pvpListKeep";
 const FAMILY_KEEP_KEY = "pogo-grader.familyKeep";
-const RAID_SP_KEEP_KEY = "pogo-grader.raidSpKeep";
+const RAID_IV_KEEP_KEY = "pogo-grader.raidIvKeep";
+const RAID_IV_KEEP_KEY_LEGACY = "pogo-grader.raidSpKeep";
 const KEEP_ALL_GOOD_KEY = "pogo-grader.keepAllGood";
 const KEEP_SHADOW_KEY = "pogo-grader.keepShadow";
 
@@ -69,7 +70,7 @@ interface AppState {
   pvpRankKeep: number;
   pvpListKeep: number;
   familyKeep: number;
-  raidSpKeep: number;
+  raidIvKeep: number;
   keepAllGood: boolean;
   keepShadow: boolean;
   rankingsTab: RankingsTab;
@@ -106,13 +107,13 @@ function readStoredFamilyKeep(): number {
   }
 }
 
-function readStoredRaidSpKeep(): number {
+function readStoredRaidIvKeep(): number {
   try {
-    const raw = localStorage.getItem(RAID_SP_KEEP_KEY);
-    if (raw == null || raw === "") return DEFAULT_RAID_SP_KEEP;
-    return clampRaidSpKeep(Number(raw));
+    const raw = localStorage.getItem(RAID_IV_KEEP_KEY) ?? localStorage.getItem(RAID_IV_KEEP_KEY_LEGACY);
+    if (raw == null || raw === "") return DEFAULT_RAID_IV_KEEP;
+    return clampRaidIvKeep(Number(raw));
   } catch {
-    return DEFAULT_RAID_SP_KEEP;
+    return DEFAULT_RAID_IV_KEEP;
   }
 }
 
@@ -146,7 +147,7 @@ const state: AppState = {
   pvpRankKeep: readStoredRankKeep(),
   pvpListKeep: readStoredListKeep(),
   familyKeep: readStoredFamilyKeep(),
-  raidSpKeep: readStoredRaidSpKeep(),
+  raidIvKeep: readStoredRaidIvKeep(),
   keepAllGood: readStoredKeepAllGood(),
   keepShadow: readStoredKeepShadow(),
   rankingsTab: "gl",
@@ -278,8 +279,8 @@ function formatRanks(item: GradedMon): string {
           return formatLeagueBits("GL", metaRank, iv, as);
         })
       : [formatLeagueBits("GL", item.glMeta, item.gl)];
-  const raid = item.raidSp
-    ? `Raid${item.raidSp.evoSpeciesId !== item.mon.speciesId ? ` as ${prettySpeciesId(item.raidSp.evoSpeciesId)}` : ""} ${item.raidSp.percent}%`
+  const raid = item.raidIv
+    ? `Raid${item.raidIv.evoSpeciesId !== item.mon.speciesId ? ` as ${prettySpeciesId(item.raidIv.evoSpeciesId)}` : ""} ${item.raidIv.percent}% IV`
     : "";
   return [...glBits, formatLeagueBits("LC", item.lcMeta, item.lc), raid].filter(Boolean).join(" · ");
 }
@@ -299,7 +300,7 @@ function reasonClass(reason: string): string {
   if (r.includes("legendary")) return "chip chip--legendary";
   if (r.includes("mythical")) return "chip chip--mythical";
   if (r.includes("raid attacker")) return "chip chip--raid";
-  if (r.includes("% sp worse") || r.includes("raid sp unavailable")) return "chip chip--miss";
+  if (r.includes("% iv worse") || r.includes("raid iv unavailable")) return "chip chip--miss";
   if (r.includes("not gl/lc/raid")) return "chip chip--junk";
   if (r.includes("limited")) return "chip chip--limited";
   if (r.includes("great league") || r.includes("better as")) return "chip chip--gl";
@@ -527,17 +528,17 @@ export function mountApp(root: HTMLElement): void {
           </div>
           <div class="rules-block">
             <div class="rank-row">
-              <label class="file-label" for="raid-sp-keep">KEEP raid ≥</label>
-              <input id="raid-sp-keep" type="number" inputmode="numeric" min="${RAID_SP_KEEP_MIN}" max="${RAID_SP_KEEP_MAX}" step="1" value="${state.raidSpKeep}" />
-              <span class="rank-suffix">% SP</span>
+              <label class="file-label" for="raid-iv-keep">KEEP raid ≥</label>
+              <input id="raid-iv-keep" type="number" inputmode="numeric" min="${RAID_IV_KEEP_MIN}" max="${RAID_IV_KEEP_MAX}" step="1" value="${state.raidIvKeep}" />
+              <span class="rank-suffix">% IV</span>
             </div>
-            <div class="rank-presets" role="group" aria-label="KEEP raid stat product">
-              ${RAID_SP_PRESETS.map(
+            <div class="rank-presets" role="group" aria-label="KEEP raid IV percent">
+              ${RAID_IV_PRESETS.map(
                 (n) =>
-                  `<button type="button" class="btn btn--preset" data-raid-sp="${n}">${n === RAID_SP_KEEP_MIN ? "any" : String(n)}</button>`,
+                  `<button type="button" class="btn btn--preset" data-raid-iv="${n}">${n === RAID_IV_KEEP_MIN ? "any" : String(n)}</button>`,
               ).join("")}
             </div>
-            <p class="note">Raid copies need this much of a hundo's stat product (as the raid attacker). 0 keeps any IV.</p>
+            <p class="note">Raid copies need this IV% (Atk+Def+Sta out of 45). 0 keeps any IV.</p>
           </div>
           <div class="rules-block">
             <div class="mode-row" role="group" aria-label="DUMP extras">
@@ -595,7 +596,7 @@ export function mountApp(root: HTMLElement): void {
   const rankInput = root.querySelector("#rank-keep") as HTMLInputElement;
   const listKeepInput = root.querySelector("#pvp-list-keep") as HTMLInputElement;
   const familyKeepInput = root.querySelector("#family-keep") as HTMLInputElement;
-  const raidSpKeepInput = root.querySelector("#raid-sp-keep") as HTMLInputElement;
+  const raidIvKeepInput = root.querySelector("#raid-iv-keep") as HTMLInputElement;
   const rankingsStatusEl = root.querySelector("#rankings-status") as HTMLElement;
   const rankingsGlEl = root.querySelector("#rankings-gl") as HTMLElement;
   const rankingsLcEl = root.querySelector("#rankings-lc") as HTMLElement;
@@ -610,7 +611,7 @@ export function mountApp(root: HTMLElement): void {
       pvpRankKeep: state.pvpRankKeep,
       pvpListKeep: state.pvpListKeep,
       familyKeep: state.familyKeep,
-      raidSpKeep: state.raidSpKeep,
+      raidIvKeep: state.raidIvKeep,
       keepAllGood: state.keepAllGood,
       keepShadow: state.keepShadow,
     };
@@ -640,9 +641,9 @@ export function mountApp(root: HTMLElement): void {
     }
   }
 
-  function persistRaidSpKeep(n: number): void {
+  function persistRaidIvKeep(n: number): void {
     try {
-      localStorage.setItem(RAID_SP_KEEP_KEY, String(n));
+      localStorage.setItem(RAID_IV_KEEP_KEY, String(n));
     } catch {
       /* private mode */
     }
@@ -668,7 +669,7 @@ export function mountApp(root: HTMLElement): void {
     rankInput.value = String(state.pvpRankKeep);
     listKeepInput.value = String(state.pvpListKeep);
     familyKeepInput.value = String(state.familyKeep);
-    raidSpKeepInput.value = String(state.raidSpKeep);
+    raidIvKeepInput.value = String(state.raidIvKeep);
     root.querySelectorAll("[data-rank]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-rank"));
       btn.classList.toggle("is-active", n === state.pvpRankKeep);
@@ -681,9 +682,9 @@ export function mountApp(root: HTMLElement): void {
       const n = Number(btn.getAttribute("data-family-keep"));
       btn.classList.toggle("is-active", n === state.familyKeep);
     });
-    root.querySelectorAll("[data-raid-sp]").forEach((btn) => {
-      const n = Number(btn.getAttribute("data-raid-sp"));
-      btn.classList.toggle("is-active", n === state.raidSpKeep);
+    root.querySelectorAll("[data-raid-iv]").forEach((btn) => {
+      const n = Number(btn.getAttribute("data-raid-iv"));
+      btn.classList.toggle("is-active", n === state.raidIvKeep);
     });
     root.querySelectorAll("[data-keep-all]").forEach((btn) => {
       const on = btn.getAttribute("data-keep-all") === "1";
@@ -855,7 +856,7 @@ export function mountApp(root: HTMLElement): void {
     }
     resultsEl.classList.remove("hidden");
     gradeTablesEl.classList.remove("hidden");
-    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP} · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidSpKeep}% SP · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)}`;
+    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP} · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)}`;
     const counts: Array<[string, number]> = [
       ["keep", result.keep.length],
       ["look", result.look.length],
@@ -1001,10 +1002,10 @@ export function mountApp(root: HTMLElement): void {
     regradeLive();
   }
 
-  function applyRaidSpKeep(raw: unknown): void {
-    const next = clampRaidSpKeep(raw);
-    state.raidSpKeep = next;
-    persistRaidSpKeep(next);
+  function applyRaidIvKeep(raw: unknown): void {
+    const next = clampRaidIvKeep(raw);
+    state.raidIvKeep = next;
+    persistRaidIvKeep(next);
     paintRankControls();
     regradeLive();
   }
@@ -1043,11 +1044,11 @@ export function mountApp(root: HTMLElement): void {
   familyKeepInput.addEventListener("blur", () => {
     applyFamilyKeep(familyKeepInput.value);
   });
-  raidSpKeepInput.addEventListener("change", () => {
-    applyRaidSpKeep(raidSpKeepInput.value);
+  raidIvKeepInput.addEventListener("change", () => {
+    applyRaidIvKeep(raidIvKeepInput.value);
   });
-  raidSpKeepInput.addEventListener("blur", () => {
-    applyRaidSpKeep(raidSpKeepInput.value);
+  raidIvKeepInput.addEventListener("blur", () => {
+    applyRaidIvKeep(raidIvKeepInput.value);
   });
   rankingsFilterInputs.forEach((input) => {
     input.addEventListener("input", () => {
@@ -1101,9 +1102,9 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
 
-    const raidSpBtn = target.closest("[data-raid-sp]") as HTMLElement | null;
-    if (raidSpBtn?.dataset.raidSp) {
-      applyRaidSpKeep(raidSpBtn.dataset.raidSp);
+    const raidIvBtn = target.closest("[data-raid-iv]") as HTMLElement | null;
+    if (raidIvBtn?.dataset.raidIv) {
+      applyRaidIvKeep(raidIvBtn.dataset.raidIv);
       return;
     }
 
