@@ -35,10 +35,17 @@ must(result.keepShadow === true, "default KEEP every shadow");
 must(Array.isArray(meta.glRankings) && meta.glRankings.length === 500, "bundled GL rankings 500");
 must(Array.isArray(meta.lcRankings) && meta.lcRankings.length === 100, "bundled LC rankings 100");
 must(
-  Array.isArray(meta.raidRankings) && meta.raidRankings.length === meta.raidAttackers.size,
-  "raid table rows match KEEP set",
+  Array.isArray(meta.raidRankings) &&
+    meta.raidRankings.filter((row) => !row.asSpeciesId).length === meta.raidAttackers.size,
+  "raid table finals match KEEP set",
 );
 must(meta.raidRankings?.some((row) => row.speciesId === "machamp") === true, "machamp on raid table");
+must(meta.raidEvolution?.bulbasaur === "venusaur", "bulbasaur maps to venusaur for raids");
+must(meta.raidEvolution?.ivysaur === "venusaur", "ivysaur maps to venusaur for raids");
+must(
+  meta.raidRankings?.some((row) => row.speciesId === "bulbasaur" && row.asSpeciesId === "venusaur") === true,
+  "bulbasaur listed as Venusaur pre-evo",
+);
 
 const fox = all.find((g) => g.mon.speciesId === "ninetales_alolan_shadow");
 must(fox?.verdict === "KEEP", "alolan shadow ninetales must KEEP");
@@ -169,11 +176,17 @@ if (zeroToads.every((g) => g.verdict !== "KEEP")) {
 const sampleZero = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, familyKeep: 0 });
 must(sampleZero.keep.length === result.keep.length, "familyKeep 0 does not drop KEEP");
 const junkZero = [...sampleZero.keep, ...sampleZero.look, ...sampleZero.dump].filter((g) =>
-  ["bidoof", "caterpie", "weedle"].includes(g.mon.speciesId),
+  ["bidoof", "caterpie"].includes(g.mon.speciesId),
 );
 must(
   junkZero.every((g) => g.verdict === "DUMP"),
   "familyKeep 0 dumps ungated junk including only copies",
+);
+must(
+  sampleZero.keep.some(
+    (g) => g.mon.speciesId === "weedle" && g.keepClasses.includes("raid") && g.reasons.some((r) => /as Beedrill/i.test(r)),
+  ),
+  "familyKeep 0 still KEEPs a raid pre-evo",
 );
 must(
   sampleZero.keep.some((g) => g.mon.speciesId === "wooper" && g.keepClasses.includes("gl")),
@@ -297,6 +310,29 @@ const dupeBidoof = gradeBox(twoBidoofHundos, { ...meta, keepAllGood: false });
 const allBidoof = gradeBox(twoBidoofHundos, { ...meta, keepAllGood: true });
 must(dupeBidoof.keep.length === 1 && dupeBidoof.dump.length === 1, "one 4* Bidoof kept as dupe");
 must(allBidoof.keep.length === 2, "keepAllGood keeps both 4* Bidoofs");
+
+const bulbs = [
+  hundoAt("bulbasaur", "Bulbasaur", 410, 15),
+  hundoAt("bulbasaur", "Bulbasaur", 411, 10),
+  hundoAt("bulbasaur", "Bulbasaur", 412, 0),
+];
+const bulbMeta = { ...meta, keepAllGood: false, pvpListKeep: 1, pvpRankKeep: 1 };
+const bulbGrade = gradeBox(bulbs, bulbMeta);
+const bulbKeep = bulbGrade.keep.filter((g) => g.mon.speciesId === "bulbasaur");
+must(bulbKeep.length === 3, `bulbasaur raid pre-evos KEEP, got ${bulbKeep.length}`);
+must(
+  bulbKeep.every((g) => g.keepClasses.includes("raid") && g.reasons.some((r) => /as Venusaur/i.test(r))),
+  "bulbasaur KEEP reason names Venusaur",
+);
+const ivy = gradeBox([hundoAt("ivysaur", "Ivysaur", 413, 14)], bulbMeta);
+must(ivy.keep[0]?.keepClasses.includes("raid") === true, "ivysaur KEEP as raid");
+must(ivy.keep[0]?.reasons.some((r) => /as Venusaur/i.test(r)) === true, "ivysaur reason names Venusaur");
+const eightBulbs = Array.from({ length: 8 }, (_, i) =>
+  hundoAt("bulbasaur", "Bulbasaur", 420 + i, i < 6 ? 15 : 10),
+);
+const bulbDupes = gradeBox(eightBulbs, bulbMeta);
+must(bulbDupes.keep.length === 6, `dupe mode keeps 6 raid pre-evo copies, got ${bulbDupes.keep.length}`);
+must(bulbDupes.dump.length === 2, `dupe mode dumps extra raid pre-evos, got ${bulbDupes.dump.length}`);
 
 const junkShadow: Mon = {
   ...hundoAt("bidoof", "Bidoof", 500, 0),

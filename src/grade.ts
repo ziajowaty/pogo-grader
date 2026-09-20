@@ -17,6 +17,7 @@ import {
   DEFAULT_PVP_RANK_KEEP,
   GL_LIST_CAP,
   LC_LIST_CAP,
+  prettySpeciesId,
 } from "./types";
 import { canonId } from "./meta";
 import { getRankGm, rankGreatLeague, rankLittleCup, type RankGm } from "./rank";
@@ -102,6 +103,29 @@ function glGateId(speciesId: string, meta: Meta): string | null {
     return inner;
   }
   return null;
+}
+
+function raidGateId(speciesId: string, meta: Meta): string | null {
+  const id = canonId(speciesId);
+  if (meta.raidAttackers.has(id)) return id;
+  if (id.endsWith("_shadow") && meta.raidAttackers.has(id.slice(0, -7))) return id.slice(0, -7);
+  const mapped = meta.raidEvolution?.[id];
+  if (mapped && (meta.raidAttackers.has(mapped) || hasId(meta.raidAttackers, mapped))) return mapped;
+  if (id.endsWith("_shadow")) {
+    const inner = raidGateId(id.slice(0, -7), meta);
+    if (!inner) return null;
+    const shadowEvo = inner.endsWith("_shadow") ? inner : `${inner}_shadow`;
+    if (meta.raidAttackers.has(shadowEvo)) return shadowEvo;
+    return inner;
+  }
+  return null;
+}
+
+function raidAsName(speciesId: string, meta: Meta): string | null {
+  const asId = raidGateId(speciesId, meta);
+  if (!asId) return null;
+  if (asId === canonId(speciesId)) return null;
+  return prettySpeciesId(asId);
 }
 
 function isLcSpecies(speciesId: string, meta: Meta): boolean {
@@ -191,7 +215,7 @@ function leaderboardOrder(a: GradedMon, b: GradedMon, meta: Meta): number {
   if (isLcSpecies(a.mon.speciesId, meta) || isLcSpecies(b.mon.speciesId, meta)) {
     return lcOrder(a, b);
   }
-  if (hasId(meta.raidAttackers, a.mon.speciesId) || hasId(meta.raidAttackers, b.mon.speciesId)) {
+  if (raidGateId(a.mon.speciesId, meta) || raidGateId(b.mon.speciesId, meta)) {
     return raidOrder(a, b);
   }
   return raidOrder(a, b);
@@ -316,7 +340,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
 
     const glRows = glGateId(rows[0].mon.speciesId, gateMeta) ? rows : [];
     const lcRows = isLcSpecies(rows[0].mon.speciesId, meta) ? rows : [];
-    const raidRows = hasId(meta.raidAttackers, rows[0].mon.speciesId) ? rows : [];
+    const raidRows = raidGateId(rows[0].mon.speciesId, meta) ? rows : [];
     const glEligible = glRows.filter((g) => rankMeets(g.gl, cutoff));
     const lcEligible = lcRows.filter((g) => rankMeets(g.lc, cutoff));
     const glKeep = glEligible.length ? topSet(glEligible, glSlots, glOrder) : new Set<GradedMon>();
@@ -337,7 +361,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (lcKeep.has(g)) classes.push("lc");
       const limited = isLimitedMon(g.mon, meta);
       if (raidKeep.has(g) && !limited) classes.push("raid");
-      if (limited && hasId(meta.raidAttackers, g.mon.speciesId) && !classes.includes("raid")) {
+      if (limited && raidGateId(g.mon.speciesId, meta) && !classes.includes("raid")) {
         classes.push("raid");
       }
       if (
@@ -363,13 +387,15 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (classes.includes("gl")) pushReason(g, rankLabel("GL", g, cutoff));
       if (classes.includes("lc")) pushReason(g, rankLabel("LC", g, cutoff));
       if (classes.includes("raid")) {
+        const asName = raidAsName(g.mon.speciesId, meta);
+        const asBit = asName ? ` as ${asName}` : "";
         pushReason(
           g,
           limited
-            ? "Raid attacker (limited — keep all)"
+            ? `Raid attacker${asBit} (limited — keep all)`
             : keepAllGood
-              ? "Raid attacker (keep all eligible)"
-              : `Raid attacker (copy ${g.copyRankInGroup} of ${n}, keep ${Math.min(RAID_KEEP, n)})`,
+              ? `Raid attacker${asBit} (keep all eligible)`
+              : `Raid attacker${asBit} (copy ${g.copyRankInGroup} of ${n}, keep ${Math.min(RAID_KEEP, n)})`,
         );
       }
 
@@ -430,7 +456,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     const pvpOrRaidFamily =
       Boolean(glGateId(g.mon.speciesId, gateMeta)) ||
       isLcSpecies(g.mon.speciesId, meta) ||
-      hasId(meta.raidAttackers, g.mon.speciesId);
+      Boolean(raidGateId(g.mon.speciesId, meta));
 
     if (pvpOrRaidFamily && !anchored) {
       if (familyKeep > 0 && g.copyRankInGroup <= familyKeep) {

@@ -125,8 +125,8 @@ must(result.keep.length + result.look.length + result.dump.length === 134, "no d
 must(result.dump.length <= result.dumpCap, "dump cap respected");
 must(result.dumpCapped === false, "134-row box should not hit dump-cap 100");
 must(
-  result.keep.length === 39 && result.look.length === 45 && result.dump.length === 50,
-  `verdict snapshot keep/look/dump 39/45/50, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
+  result.keep.length === 85 && result.look.length === 24 && result.dump.length === 25,
+  `verdict snapshot keep/look/dump 85/24/25, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
 );
 
 streamOrder(result.keep, "KEEP");
@@ -191,9 +191,11 @@ if (gibleKeep.length === 0) {
   );
 }
 
+const froakies = all.filter((g) => g.mon.speciesId === "froakie");
+must(froakies.length > 0, "fixture has Froakie");
 must(
-  result.dump.some((g) => g.mon.speciesId === "froakie"),
-  "Froakie extras DUMP once a GL keeper exists",
+  froakies.some((g) => g.verdict === "KEEP" && g.keepClasses.includes("raid") && g.reasons.some((r) => /as Greninja/i.test(r))),
+  "Froakie KEEPs as Greninja raid pre-evo",
 );
 
 const zero = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, familyKeep: 0 });

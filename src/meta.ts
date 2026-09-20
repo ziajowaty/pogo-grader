@@ -14,6 +14,8 @@ import mythicalJson from "../data/mythical.json";
 import limitedJson from "../data/limited.json";
 // @ts-ignore Vite JSON snapshots
 import raidAttackersJson from "../data/raid-attackers.json";
+// @ts-ignore Vite JSON snapshots
+import evolutionsJson from "../data/evolutions.json";
 
 const DUMP_CAP = 100;
 const PVPOKE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -26,6 +28,11 @@ const LC_RANKINGS_URL =
 interface NamedListFile {
   comment?: string;
   speciesIds: string[];
+}
+
+interface EvolutionFile {
+  comment?: string;
+  from?: Record<string, string[]>;
 }
 
 interface CachedLists {
@@ -72,8 +79,71 @@ function raidTags(id: string, limited: Set<string>, legendary: Set<string>, myth
   return tags;
 }
 
+function loadEvolutionEdges(data: unknown): Record<string, string[]> {
+  const raw = (data as EvolutionFile).from ?? {};
+  const out: Record<string, string[]> = {};
+  for (const [from, tos] of Object.entries(raw)) {
+    if (!Array.isArray(tos)) continue;
+    const key = canonId(from);
+    if (!key) continue;
+    const next = tos.map(canonId).filter(Boolean);
+    if (next.length === 0) continue;
+    out[key] = next;
+  }
+  return out;
+}
+
+function raidHit(id: string, raid: Set<string>): string | null {
+  if (raid.has(id)) return id;
+  if (id.endsWith("_shadow") && raid.has(id.slice(0, -7))) return id.slice(0, -7);
+  return null;
+}
+
+function pickRaidTarget(from: string, hits: string[]): string | null {
+  if (hits.length === 0) return null;
+  const wantShadow = from.endsWith("_shadow");
+  const unique = [...new Set(hits)];
+  unique.sort((a, b) => {
+    const as = a.endsWith("_shadow") === wantShadow ? 1 : 0;
+    const bs = b.endsWith("_shadow") === wantShadow ? 1 : 0;
+    if (as !== bs) return bs - as;
+    const am = a.includes("_mega") || a.includes("primal") ? 1 : 0;
+    const bm = b.includes("_mega") || b.includes("primal") ? 1 : 0;
+    if (am !== bm) return am - bm;
+    return a.localeCompare(b);
+  });
+  return unique[0];
+}
+
+function reachableRaidHits(from: string, edges: Record<string, string[]>, raid: Set<string>): string[] {
+  const seen = new Set<string>();
+  const stack = [...(edges[from] ?? [])];
+  const hits: string[] = [];
+  while (stack.length) {
+    const cur = stack.pop();
+    if (!cur || seen.has(cur)) continue;
+    seen.add(cur);
+    const hit = raidHit(cur, raid);
+    if (hit) hits.push(hit);
+    const next = edges[cur];
+    if (next) stack.push(...next);
+  }
+  return hits;
+}
+
+function buildRaidEvolution(raid: Set<string>, edges: Record<string, string[]>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const from of Object.keys(edges)) {
+    if (raidHit(from, raid)) continue;
+    const pick = pickRaidTarget(from, reachableRaidHits(from, edges, raid));
+    if (pick) out[from] = pick;
+  }
+  return out;
+}
+
 function buildRaidRankings(
   ids: string[],
+  raidEvolution: Record<string, string>,
   limited: Set<string>,
   legendary: Set<string>,
   mythical: Set<string>,
@@ -88,6 +158,17 @@ function buildRaidRankings(
       speciesId,
       speciesName: prettySpeciesId(speciesId),
       tags: raidTags(speciesId, limited, legendary, mythical),
+    });
+  }
+  for (const [from, to] of Object.entries(raidEvolution)) {
+    if (!from || seen.has(from)) continue;
+    seen.add(from);
+    rows.push({
+      speciesId: from,
+      speciesName: prettySpeciesId(from),
+      tags: raidTags(from, limited, legendary, mythical),
+      asSpeciesId: to,
+      asSpeciesName: prettySpeciesId(to),
     });
   }
   rows.sort((a, b) => a.speciesName.localeCompare(b.speciesName) || a.speciesId.localeCompare(b.speciesId));
@@ -245,14 +326,17 @@ export async function loadMeta(): Promise<Meta> {
   const legendary = toSet(legendaryJson as string[]);
   const mythical = toSet(mythicalJson as string[]);
   const raidIds = listFile(raidAttackersJson);
+  const raidAttackers = toSet(raidIds);
+  const raidEvolution = buildRaidEvolution(raidAttackers, loadEvolutionEdges(evolutionsJson));
   const lists = await loadPvpokeLists();
   return {
     glTop500: toSet(lists.gl.map((row) => row.speciesId)),
     lcTop100: toSet(lists.lc.map((row) => row.speciesId)),
     glRankings: lists.gl,
     lcRankings: lists.lc,
-    raidAttackers: toSet(raidIds),
-    raidRankings: buildRaidRankings(raidIds, limited, legendary, mythical),
+    raidAttackers,
+    raidRankings: buildRaidRankings(raidIds, raidEvolution, limited, legendary, mythical),
+    raidEvolution,
     limited,
     legendary,
     mythical,

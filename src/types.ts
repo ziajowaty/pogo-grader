@@ -71,6 +71,9 @@ export interface RaidAttackerRow {
   speciesId: string;
   speciesName: string;
   tags: string[];
+  /** Raid attacker this pre-evo KEEPs as, when different from speciesId. */
+  asSpeciesId?: string;
+  asSpeciesName?: string;
 }
 
 export interface MetaLeagueRank {
@@ -128,6 +131,8 @@ export interface Meta {
   raidAttackers: Set<string>;
   /** Ordered raid KEEP list for the rankings table (name sort). */
   raidRankings?: RaidAttackerRow[];
+  /** unevolved -> family raid attacker id */
+  raidEvolution?: Record<string, string>;
   limited: Set<string>;
   legendary: Set<string>;
   mythical: Set<string>;

@@ -29,7 +29,7 @@ import {
 } from "./search";
 
 const SKIP_SCAN =
-  "!shiny&!legendary&!mythical&!ultrabeast&!lucky&!costume&!background&!4*&!dynamax&!gigantamax&!favorite";
+  "!shiny&!legendary&!mythical&!ultrabeast&!lucky&!costume&!background&!4*&!dynamax&!gigantamax&!favorite&!#";
 
 const DUMP_LIST_MAX = 100;
 const LIST_PAINT_MAX = 200;
@@ -406,7 +406,7 @@ export function mountApp(root: HTMLElement): void {
               <label class="file-label rankings-filter-label" for="rankings-filter-raid">Filter</label>
               <input id="rankings-filter-raid" class="rankings-filter" type="search" placeholder="Species, id, or tag" autocomplete="off" aria-label="Filter raid attackers" data-rankings-filter />
             </div>
-            <p class="note rankings-raid-note">KEEP list the grader uses. Not a DPS ranking.</p>
+            <p class="note rankings-raid-note">KEEP list the grader uses, including pre-evolutions (Bulbasaur as Venusaur). Not a DPS ranking.</p>
             <div id="rankings-raid" class="rankings-table-wrap"></div>
           </div>
         </div>
@@ -640,7 +640,7 @@ export function mountApp(root: HTMLElement): void {
   }
 
   function rankingMatches(
-    row: { speciesId: string; speciesName: string; tags?: string[] },
+    row: { speciesId: string; speciesName: string; tags?: string[]; asSpeciesId?: string; asSpeciesName?: string },
     q: string,
   ): boolean {
     if (!q) return true;
@@ -651,6 +651,7 @@ export function mountApp(root: HTMLElement): void {
     ) {
       return true;
     }
+    if (row.asSpeciesId?.includes(q) || row.asSpeciesName?.toLowerCase().includes(q)) return true;
     return Boolean(row.tags?.some((tag) => tag.toLowerCase().includes(q)));
   }
 
@@ -708,12 +709,13 @@ export function mountApp(root: HTMLElement): void {
     }
     const body = shown
       .map((row) => {
-        const tags =
-          row.tags.length === 0
-            ? ""
-            : `<div class="rankings-tags">${row.tags
-                .map((tag) => `<span class="${raidTagClass(tag)}">${escapeHtml(tag)}</span>`)
-                .join("")}</div>`;
+        const chips = [
+          ...row.tags.map((tag) => `<span class="${raidTagClass(tag)}">${escapeHtml(tag)}</span>`),
+        ];
+        if (row.asSpeciesName) {
+          chips.push(`<span class="chip chip--raid">as ${escapeHtml(row.asSpeciesName)}</span>`);
+        }
+        const tags = chips.length === 0 ? "" : `<div class="rankings-tags">${chips.join("")}</div>`;
         return `<tr>
           <td>${escapeHtml(row.speciesName)}</td>
           <td>${tags}</td>
@@ -738,8 +740,10 @@ export function mountApp(root: HTMLElement): void {
     const gl = meta.glRankings ?? [];
     const lc = meta.lcRankings ?? [];
     const raid = meta.raidRankings ?? [];
+    const raidFinals = raid.filter((row) => !row.asSpeciesId).length;
+    const raidPre = raid.length - raidFinals;
     const glIn = gl.filter((row) => row.rank <= state.pvpListKeep).length;
-    rankingsStatusEl.textContent = `${pvpokeStatus(meta)} · GL ${glIn}/${gl.length || GL_LIST_CAP} in play · LC top ${lc.length || LC_LIST_CAP} · ${raid.length} raid attackers`;
+    rankingsStatusEl.textContent = `${pvpokeStatus(meta)} · GL ${glIn}/${gl.length || GL_LIST_CAP} in play · LC top ${lc.length || LC_LIST_CAP} · ${raidFinals} raid attackers · ${raidPre} pre-evos`;
     rankingsGlEl.innerHTML = renderRankingTable(
       gl,
       state.pvpListKeep,
