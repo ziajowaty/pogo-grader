@@ -700,6 +700,27 @@ input[type="file"] {
   color: var(--raid);
 }
 
+.chip.type-chip--normal,
+.chip.type-chip--fire,
+.chip.type-chip--water,
+.chip.type-chip--grass,
+.chip.type-chip--electric,
+.chip.type-chip--ice,
+.chip.type-chip--fighting,
+.chip.type-chip--poison,
+.chip.type-chip--ground,
+.chip.type-chip--flying,
+.chip.type-chip--psychic,
+.chip.type-chip--bug,
+.chip.type-chip--rock,
+.chip.type-chip--ghost,
+.chip.type-chip--dragon,
+.chip.type-chip--dark,
+.chip.type-chip--steel,
+.chip.type-chip--fairy {
+  font-variant-numeric: tabular-nums;
+}
+
 .chip--dupe {
   background: #3a2c14;
   color: #f0d090;

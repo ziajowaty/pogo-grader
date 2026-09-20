@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { parseInventoryCsv } from "./parseCsv";
-import { loadMeta } from "./meta";
+import { loadMeta, parsePokebattlerAttackers, pokebattlerToCanonId, unionUniqueIds } from "./meta";
 import { gradeBox, compareScanStream } from "./grade";
 import { clampFamilyKeep, clampRaidIvKeep, FAMILY_KEEP_MIN, RAID_IV_KEEP_MIN, type Mon } from "./types";
 
@@ -21,6 +21,35 @@ const csv = readFileSync(new URL("../fixtures/sample-pokegenie.csv", import.meta
 const parsed = parseInventoryCsv(csv);
 const meta = await loadMeta();
 must(meta.pvpokeSource === "bundled", "Node loadMeta must stay on vendored PvPoke lists");
+must(meta.raidSource === "bundled", "Node loadMeta must stay on vendored raid lists");
+must(pokebattlerToCanonId("MEWTWO_MEGA_Y") === "mewtwo_mega_y", "mega Y id");
+must(pokebattlerToCanonId("MACHAMP_SHADOW_FORM") === "machamp_shadow", "shadow form suffix");
+must(pokebattlerToCanonId("EXEGGUTOR_ALOLA_SHADOW_FORM") === "exeggutor_alolan_shadow", "alola → alolan + shadow");
+must(pokebattlerToCanonId("KYUREM_WHITE_FORM") === "kyurem_white", "strip _FORM");
+must(pokebattlerToCanonId("ZAMAZENTA_CROWNED_SHIELD_FORM") === "zamazenta_crowned_shield", "crowned shield");
+must(pokebattlerToCanonId("KELDEO") === "keldeo_ordinary", "keldeo default form");
+must(pokebattlerToCanonId("LANDORUS_SHADOW_FORM") === "landorus_incarnate_shadow", "landorus default + shadow");
+must(pokebattlerToCanonId("GIRATINA_ORIGIN_SHADOW_FORM") === "giratina_origin_shadow", "origin shadow keeps form");
+must(pokebattlerToCanonId("ENAMORUS") === "enamorus_incarnate", "enamorus default form");
+const parsedPb = parsePokebattlerAttackers([
+  {
+    pokemonId: "DELPHOX_MEGA",
+    type: "POKEMON_TYPE_FIRE",
+    type2: "POKEMON_TYPE_PSYCHIC",
+  },
+  { pokemonId: "DELPHOX_MEGA", type: "POKEMON_TYPE_FIRE" },
+  { pokemonId: "MACHAMP_SHADOW_FORM", type: "POKEMON_TYPE_FIGHTING" },
+]);
+must(parsedPb.ids.join(",") === "delphox_mega,machamp_shadow", "unique attackers first-wins");
+must(
+  parsedPb.types.delphox_mega?.join(",") === "fire,psychic" && parsedPb.types.machamp_shadow == null,
+  "types from first row; shadows inherit",
+);
+must(
+  unionUniqueIds(["raichu_mega_y", "machamp"], ["machamp", "venusaur"]).join(",") ===
+    "raichu_mega_y,machamp,venusaur",
+  "live raid rank order wins; bundled extras append without dropping Machamp",
+);
 const result = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500 });
 const all = [...result.keep, ...result.look, ...result.dump];
 
@@ -44,7 +73,19 @@ must(
     meta.raidRankings.filter((row) => !row.asSpeciesId).length === meta.raidAttackers.size,
   "raid table finals match KEEP set",
 );
+const raidFinals = meta.raidRankings?.filter((row) => !row.asSpeciesId) ?? [];
+must(raidFinals[0]?.rank === 1, "top raid attacker is rank 1");
+must(
+  raidFinals.every((row, i) => row.rank === i + 1),
+  "raid finals are Pokébattler rank order 1..n",
+);
+must(
+  (meta.raidRankings ?? []).every((row, i, rows) => i === 0 || rows[i - 1].rank <= row.rank),
+  "raid table including pre-evos stays in rank order",
+);
 must(meta.raidRankings?.some((row) => row.speciesId === "machamp") === true, "machamp on raid table");
+must(meta.raidAttackers.has("raichu_mega_y") === true, "Pokébattler union keeps Mega Raichu Y");
+must(meta.raidAttackers.has("chesnaught_mega") === true, "Pokébattler union keeps Mega Chesnaught");
 must(meta.raidEvolution?.bulbasaur === "venusaur", "bulbasaur maps to venusaur for raids");
 must(meta.raidEvolution?.ivysaur === "venusaur", "ivysaur maps to venusaur for raids");
 must(
@@ -61,6 +102,32 @@ must(raidMachampRow?.types.includes("fighting") === true && raidMachampRow?.type
 const raidBulba = meta.raidRankings?.find((row) => row.speciesId === "bulbasaur");
 must(raidBulba?.types.includes("grass") === true, "bulbasaur is Grass");
 must(raidBulba?.asTypes?.includes("grass") === true, "bulbasaur KEEP target Venusaur is Grass");
+const raidVenusaur = meta.raidRankings?.find((row) => row.speciesId === "venusaur");
+must(
+  raidBulba != null && raidVenusaur != null && raidBulba.rank === raidVenusaur.rank,
+  "bulbasaur shares Venusaur raid rank",
+);
+must(
+  raidVenusaur?.typeRanks.grass != null && raidBulba?.typeRanks.grass === raidVenusaur.typeRanks.grass,
+  "bulbasaur inherits Venusaur Grass type rank",
+);
+must(raidVenusaur?.typeRanks.poison != null, "Venusaur has a Poison type rank");
+const grassFinals = raidFinals.filter((row) => row.types.includes("grass"));
+must(grassFinals[0]?.typeRanks.grass === 1, "best Grass attacker is Grass #1");
+must(
+  grassFinals.every((row, i) => row.typeRanks.grass === i + 1),
+  "Grass type ranks are 1..n among Grass finals",
+);
+must(raidMachampRow?.typeRanks.fighting != null, "machamp has a Fighting type rank");
+must(raidMachampRow?.typeRanks.grass == null, "machamp has no Grass type rank");
+must(
+  raidCharizard?.typeRanks.fire != null && raidCharizard?.typeRanks.flying != null,
+  "charizard ranks as Fire and Flying",
+);
+must(
+  meta.raidRankings?.find((row) => row.speciesId === "raichu_mega_y")?.typeRanks.electric === 1,
+  "Mega Raichu Y is Electric #1",
+);
 const raidPrimalGroudon = meta.raidRankings?.find((row) => row.speciesId === "groudon_primal");
 must(
   raidPrimalGroudon?.types.includes("fire") === true && raidPrimalGroudon?.types.includes("ground") === true,

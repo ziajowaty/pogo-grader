@@ -21,7 +21,7 @@ Not an overlay. Not a game client. CalcyIV / Poke Genie scan; this app decides.
 | `src/types.ts` | orchestrator (locked) | shared types only |
 | `src/parseCsv.ts` | csv agent | `parseInventoryCsv(text: string): ParseResult` |
 | `src/rank.ts` | grade agent | `rankGreatLeague(mon, gm): { rank: number, of: number, statProduct: number } \| null` plus Little Cup |
-| `src/meta.ts` | grade agent | load PvPoke GL/LC lists (24h `localStorage`) + vendored rank/raid gates |
+| `src/meta.ts` | grade agent | load PvPoke GL/LC lists + Pokébattler raid attackers (24h `localStorage`) + vendored rank gates |
 | `src/grade.ts` | grade agent | `gradeBox(mons: Mon[], meta: Meta): GradeResult` |
 | `src/search.ts` | ui agent | `dumpPreviewString(mons: Mon[]): string` |
 | `src/ui.ts` | ui agent | `mountApp(root: HTMLElement): void` |
@@ -43,7 +43,7 @@ KEEP if any class fires. DUMP only if all fail **and** dump cap not reached.
 
 Dump cap: `100`. Remaining would-be dumps become LOOK with reason `dump-cap`.
 
-Fetch only the two PvPoke ranking JSON files (extract IDs, 24h browser cache). Keep `data/base-stats.json`, CPM, `gl-evolution.json`, raid attackers, and limited/legendary/mythical vendored. Fail closed: live → stale cache → bundled snapshot. Node tests skip fetch.
+Fetch the two PvPoke ranking JSON files (extract IDs) and Pokébattler aggregated attacker rankings (unique `speciesId`, union into the vendored raid KEEP set). 24h browser cache. Keep `data/base-stats.json`, CPM, `gl-evolution.json`, raid attackers snapshot, and limited/legendary/mythical vendored. Fail closed: live → stale cache → bundled snapshot. Node tests skip fetch. Vite `/pb-api` proxy for local CORS; GitHub Pages uses the CI-pinned snapshot.
 
 ## Forbidden
 

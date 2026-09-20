@@ -223,8 +223,29 @@ function raidRowHasType(row: RaidAttackerRow, type: PokemonType): boolean {
   return row.types.includes(type) || Boolean(row.asTypes?.includes(type));
 }
 
+function raidFinalRow(meta: Meta | null, speciesId: string, evoSpeciesId?: string): RaidAttackerRow | undefined {
+  if (!meta) return undefined;
+  const target =
+    evoSpeciesId ||
+    (meta.raidAttackers.has(speciesId) ? speciesId : meta.raidEvolution?.[speciesId]);
+  if (!target) return undefined;
+  return meta.raidRankings?.find((row) => row.speciesId === target && !row.asSpeciesId);
+}
+
+function raidTypeRankEntries(row: RaidAttackerRow | undefined): Array<{ type: PokemonType; rank: number }> {
+  if (!row) return [];
+  return POKEMON_TYPES.flatMap((type) => {
+    const rank = row.typeRanks[type];
+    return rank != null ? [{ type, rank }] : [];
+  }).sort((a, b) => a.rank - b.rank || a.type.localeCompare(b.type));
+}
+
 function typeChipMarkup(type: PokemonType): string {
   return `<span class="type-chip type-chip--tag type-chip--${type}">${prettyPokemonType(type)}</span>`;
+}
+
+function raidTypeRankChipMarkup(type: PokemonType, rank: number): string {
+  return `<span class="chip type-chip--${type}">#${rank} attacker ${prettyPokemonType(type).toUpperCase()}</span>`;
 }
 
 function escapeHtml(value: string): string {
@@ -411,21 +432,29 @@ function isBetterAsReason(reason: string): boolean {
   return reason.toLowerCase().includes("better as");
 }
 
-function reasonChips(reasons: string[], loud: boolean, hideNegative = false, hideBetterAs = false): string {
-  const shown = reasons.filter((reason) => {
-    if (hideNegative && isNegativeReason(reason)) return false;
-    if (hideBetterAs && isBetterAsReason(reason)) return false;
-    return true;
-  });
-  if (shown.length === 0) return "";
-  const extra = loud ? " look-lead" : "";
-  return `<div class="reasons${extra}">${shown
-    .map((reason) => `<span class="${reasonClass(reason)}">${escapeHtml(reason)}</span>`)
-    .join("")}</div>`;
+function rowChips(item: GradedMon, verdict: Tab, meta: Meta | null): string {
+  const hideNegative = verdict === "KEEP";
+  const hideBetterAs = verdict === "DUMP";
+  const reasonSpans = item.reasons
+    .filter((reason) => {
+      if (hideNegative && isNegativeReason(reason)) return false;
+      if (hideBetterAs && isBetterAsReason(reason)) return false;
+      return true;
+    })
+    .map((reason) => `<span class="${reasonClass(reason)}">${escapeHtml(reason)}</span>`);
+  const typeSpans =
+    verdict === "KEEP" || verdict === "DUMP"
+      ? raidTypeRankEntries(raidFinalRow(meta, item.mon.speciesId, item.raidIv?.evoSpeciesId)).map((entry) =>
+          raidTypeRankChipMarkup(entry.type, entry.rank),
+        )
+      : [];
+  const spans = [...reasonSpans, ...typeSpans];
+  if (spans.length === 0) return "";
+  return `<div class="reasons">${spans.join("")}</div>`;
 }
 
-function renderRow(item: GradedMon, verdict: Tab): string {
-  const { mon, reasons, copiesInGroup, copyRankInGroup } = item;
+function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null): string {
+  const { mon, copiesInGroup, copyRankInGroup } = item;
   const crowd = copiesInGroup > 2;
   const flags = [
     mon.shadow ? "shadow" : "",
@@ -449,11 +478,17 @@ function renderRow(item: GradedMon, verdict: Tab): string {
       <div class="cp">${mon.cp}</div>
     </div>
     <div class="meta">${escapeHtml(line)}</div>
-    ${reasonChips(reasons, false, verdict === "KEEP", verdict === "DUMP")}
+    ${rowChips(item, verdict, meta)}
   </article>`;
 }
 
-function paintTrack(listEl: HTMLElement, rows: GradedMon[], verdict: Tab, cap: number): void {
+function paintTrack(
+  listEl: HTMLElement,
+  rows: GradedMon[],
+  verdict: Tab,
+  cap: number,
+  meta: Meta | null,
+): void {
   if (rows.length === 0) {
     listEl.innerHTML = `<p class="empty">None</p>`;
     return;
@@ -461,7 +496,7 @@ function paintTrack(listEl: HTMLElement, rows: GradedMon[], verdict: Tab, cap: n
   const shown = rows.slice(0, cap);
   const extra = rows.length - shown.length;
   listEl.innerHTML =
-    shown.map((row) => renderRow(row, verdict)).join("") +
+    shown.map((row) => renderRow(row, verdict, meta)).join("") +
     (extra > 0 ? `<p class="list-more">${extra} more in scan order</p>` : "");
 }
 
@@ -471,6 +506,14 @@ function pvpokeStatus(meta: Meta | null): string {
   const hours = Math.max(0, Math.floor((Date.now() - at) / 3_600_000));
   const age = hours < 1 ? "<1h" : `${hours}h`;
   return meta.pvpokeSource === "live" ? "PvPoke live" : `PvPoke ${age}`;
+}
+
+function raidListStatus(meta: Meta | null): string {
+  if (!meta?.raidSource || meta.raidSource === "bundled") return "Pokébattler bundled";
+  const at = meta.raidFetchedAt ?? 0;
+  const hours = Math.max(0, Math.floor((Date.now() - at) / 3_600_000));
+  const age = hours < 1 ? "<1h" : `${hours}h`;
+  return meta.raidSource === "live" ? "Pokébattler live" : `Pokébattler ${age}`;
 }
 
 function pickDefaultTab(result: GradeResult): Tab {
@@ -540,7 +583,7 @@ export function mountApp(root: HTMLElement): void {
               <input id="rankings-filter-raid" class="rankings-filter" type="search" placeholder="Species, id, or tag" autocomplete="off" aria-label="Filter raid attackers" data-rankings-filter />
             </div>
             <nav class="rankings-types" aria-label="Filter raid attackers by type">${raidTypeFilterButtons()}</nav>
-            <p class="note rankings-raid-note" id="rankings-raid-note">KEEP list the grader uses. Pre-evolutions count toward the same family cap unless a stage is independently listed. Not a DPS ranking.</p>
+            <p class="note rankings-raid-note" id="rankings-raid-note">KEEP list sorted by Pokébattler aggregated rank (1 = best). Pre-evolutions sit with the attacker they count as.</p>
             <div id="rankings-raid" class="rankings-table-wrap"></div>
           </div>
         </div>
@@ -942,14 +985,16 @@ export function mountApp(root: HTMLElement): void {
           chips.push(`<span class="chip chip--raid">as ${escapeHtml(row.asSpeciesName)}</span>`);
         }
         const tags = chips.length === 0 ? "" : `<div class="rankings-tags">${chips.join("")}</div>`;
+        const displayRank = type ? (row.typeRanks[type] ?? row.rank) : row.rank;
         return `<tr>
+          <td class="rankings-num">${displayRank}</td>
           <td>${escapeHtml(row.speciesName)}</td>
           <td>${tags}</td>
         </tr>`;
       })
       .join("");
     return `<table class="rankings-table">
-      <thead><tr><th>Species</th><th>Types / tags</th></tr></thead>
+      <thead><tr><th>#</th><th>Species</th><th>Types / tags</th></tr></thead>
       <tbody>${body}</tbody>
     </table>`;
   }
@@ -973,11 +1018,11 @@ export function mountApp(root: HTMLElement): void {
     const raidTypeLabel = raidType ? prettyPokemonType(raidType) : "";
     const raidTyped = raidType ? raid.filter((row) => raidRowHasType(row, raidType)).length : 0;
     const typeStatus = raidType ? ` · ${raidTyped} ${raidTypeLabel}` : "";
-    rankingsStatusEl.textContent = `${pvpokeStatus(meta)} · GL ${glIn}/${gl.length || GL_LIST_CAP} in play · LC top ${lc.length || LC_LIST_CAP} · ${raidFinals} raid attackers · ${raidPre} pre-evos${typeStatus}`;
+    rankingsStatusEl.textContent = `${pvpokeStatus(meta)} · ${raidListStatus(meta)} · GL ${glIn}/${gl.length || GL_LIST_CAP} in play · LC top ${lc.length || LC_LIST_CAP} · ${raidFinals} raid attackers · ${raidPre} pre-evos${typeStatus}`;
     rankingsRaidTitleEl.textContent = raidType ? `${raidTypeLabel} raid attackers` : "Raid attackers";
     rankingsRaidNoteEl.textContent = raidType
-      ? `${raidTypeLabel}-type KEEP attackers, including pre-evos that become ${raidTypeLabel}. Not a DPS ranking.`
-      : "KEEP list the grader uses. Pre-evolutions count toward the same family cap unless a stage is independently listed. Not a DPS ranking.";
+      ? `${raidTypeLabel}-type KEEP attackers numbered 1 = best ${raidTypeLabel}. Pre-evos share that attacker’s type rank.`
+      : "KEEP list sorted by Pokébattler aggregated rank (1 = best). Pre-evolutions sit with the attacker they count as.";
     rankingsGlEl.innerHTML = renderRankingTable(
       gl,
       state.pvpListKeep,
@@ -1008,9 +1053,9 @@ export function mountApp(root: HTMLElement): void {
     root.querySelectorAll(".track").forEach((track) => {
       track.classList.toggle("is-active", track.getAttribute("data-track") === state.tab);
     });
-    paintTrack(listKeepEl, result.keep, "KEEP", LIST_PAINT_MAX);
-    paintTrack(listLookEl, result.look, "LOOK", LIST_PAINT_MAX);
-    paintTrack(listDumpEl, result.dump, "DUMP", DUMP_LIST_MAX);
+    paintTrack(listKeepEl, result.keep, "KEEP", LIST_PAINT_MAX, state.meta);
+    paintTrack(listLookEl, result.look, "LOOK", LIST_PAINT_MAX, state.meta);
+    paintTrack(listDumpEl, result.dump, "DUMP", DUMP_LIST_MAX, state.meta);
   }
 
   function paintResults(): void {
@@ -1023,7 +1068,7 @@ export function mountApp(root: HTMLElement): void {
     }
     resultsEl.classList.remove("hidden");
     gradeTablesEl.classList.remove("hidden");
-    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP} · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "LOOK favorite"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)}`;
+    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP} · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "LOOK favorite"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}`;
     const counts: Array<[string, number]> = [
       ["keep", result.keep.length],
       ["look", result.look.length],

@@ -26,6 +26,9 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npx --yes tsx src/smokeGrade.ts
+      - name: Refresh raid attackers from Pokébattler
+        continue-on-error: true
+        run: npm run pin:raid
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

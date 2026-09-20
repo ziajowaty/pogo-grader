@@ -99,8 +99,11 @@ export function prettyPokemonType(type: PokemonType): string {
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
-/** Vendored raid KEEP list row (not a DPS ranking). */
+/** Raid KEEP list row. `rank` is Pokébattler unique-species order (1 = best). */
 export interface RaidAttackerRow {
+  rank: number;
+  /** 1 = best among KEEP attackers of that type. Pre-evos inherit the target's ranks. */
+  typeRanks: Partial<Record<PokemonType, number>>;
   speciesId: string;
   speciesName: string;
   tags: string[];
@@ -182,7 +185,7 @@ export interface Meta {
   /** Ordered PvPoke Little Cup overall list (up to 100 unique species). */
   lcRankings?: PvpokeRankRow[];
   raidAttackers: Set<string>;
-  /** Ordered raid KEEP list for the rankings table (name sort). */
+  /** Ordered raid KEEP list for the rankings table (Pokébattler rank, then pre-evos). */
   raidRankings?: RaidAttackerRow[];
   /** unevolved -> family raid attacker id */
   raidEvolution?: Record<string, string>;
@@ -237,6 +240,9 @@ export interface Meta {
   /** How KEEP PvP species lists were loaded. */
   pvpokeSource?: "live" | "cache" | "bundled";
   pvpokeFetchedAt?: number;
+  /** How the raid KEEP set was loaded (Pokébattler union, then vendored). */
+  raidSource?: "live" | "cache" | "bundled";
+  raidFetchedAt?: number;
 }
 
 /** Rank 1 is best. Keep GL/LC copies at this rank or better. */

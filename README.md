@@ -33,6 +33,6 @@ This app never talks to Scopely/Niantic and never taps Transfer.
 
 ## Data
 
-Only **PvPoke ranking lists** are fetched in the browser: Great League overall 1500 (top 500 unique `speciesId`) and Little Cup overall 500 (top 100). Those IDs are stored in `localStorage` for **24 hours**. Offline or a failed fetch uses a stale cache, then the vendored files under `data/`.
+The browser fetches **PvPoke ranking lists** (Great League overall 1500 → top 500 unique `speciesId`, Little Cup overall 500 → top 100) and **Pokébattler aggregated raid attacker rankings** (`/api/attackers.json`, unique species, unioned into the vendored KEEP set so new megas land without dropping Machamp). Those IDs are stored in `localStorage` for **24 hours**. Offline or a failed fetch uses a stale cache, then the vendored files under `data/`. Refresh the vendored raid snapshot with `npm run pin:raid`. GitHub Pages cannot fetch Pokébattler (no CORS); local `npm run dev` proxies `/pb-api`, and Pages deploys re-pin before build.
 
-IV rank math, CPM, evolution remaps, raid attackers, and legendary / mythical / limited lists stay vendored. They do not move with weekly ranking churn, and we do not pull PvPoke's full gamemaster.
+IV rank math, CPM, evolution remaps, and legendary / mythical / limited lists stay vendored. They do not move with weekly ranking churn, and we do not pull PvPoke's full gamemaster.

@@ -168,6 +168,7 @@ must(gibleMons.length === 17, `expected 17 Gible, got ${gibleMons.length}`);
 
 const meta = await loadMeta();
 must(meta.pvpokeSource === "bundled", "Node loadMeta must stay on vendored PvPoke lists");
+must(meta.raidSource === "bundled", "Node loadMeta must stay on vendored raid lists");
 must(meta.glTop500.has("sandshrew_alolan_shadow"), "PvPoke GL list uses sandshrew_alolan_shadow");
 must(meta.glTop500.has("qwilfish_shadow"), "PvPoke GL list uses qwilfish_shadow");
 must(meta.lcTop100.has("onix_shadow"), "PvPoke LC list uses onix_shadow");
