@@ -1,4 +1,4 @@
-import type { LeagueRank, Mon } from "./types";
+import type { LeagueRank, Mon, RaidSpRank } from "./types";
 // @ts-ignore Vite JSON snapshots
 import baseStatsJson from "../data/base-stats.json";
 // @ts-ignore Vite JSON snapshots
@@ -192,4 +192,25 @@ export function rankGreatLeagueAs(mon: Mon, gm: RankGm, speciesId: string): Leag
 /** Little Cup 500 CP rank for the unevolved form (no evo remap). */
 export function rankLittleCup(mon: Mon, gm: RankGm): LeagueRank | null {
   return rankAt(mon, gm, canonId(mon.speciesId), LITTLE_CUP_CAP);
+}
+
+/** Uncapped raid stat product vs a hundo. Falls back to IV% when base stats are missing. */
+export function raidStatProduct(mon: Mon, gm: RankGm, speciesId: string): RaidSpRank | null {
+  const ivs = ivsOf(mon);
+  if (!ivs) return null;
+  const id = canonId(speciesId);
+  const stats = lookupBaseStats(id, gm);
+  const statProduct = stats
+    ? (stats.atk + ivs.atk) * (stats.def + ivs.def) * (stats.hp + ivs.sta)
+    : ivs.atk + ivs.def + ivs.sta;
+  const maxStatProduct = stats
+    ? (stats.atk + 15) * (stats.def + 15) * (stats.hp + 15)
+    : 45;
+  if (maxStatProduct <= 0) return null;
+  return {
+    percent: Math.round((statProduct / maxStatProduct) * 1000) / 10,
+    statProduct,
+    maxStatProduct,
+    evoSpeciesId: id,
+  };
 }

@@ -320,7 +320,7 @@ body {
 
 @media (min-width: 840px) {
   .rules-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
     align-items: start;
   }
 }

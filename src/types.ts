@@ -83,6 +83,14 @@ export interface MetaLeagueRank {
   speciesName: string;
 }
 
+/** Uncapped raid stat product vs 15/15/15 of the raid attacker. */
+export interface RaidSpRank {
+  percent: number;
+  statProduct: number;
+  maxStatProduct: number;
+  evoSpeciesId: string;
+}
+
 export interface GradedMon {
   mon: Mon;
   verdict: Verdict;
@@ -98,6 +106,8 @@ export interface GradedMon {
   lcMeta?: MetaLeagueRank | null;
   /** PvPoke GL placement for each independent stage in `glAs`. */
   glMetaAs?: MetaLeagueRank[];
+  /** Level-50 raid stat product vs a hundo of the raid attacker. */
+  raidSp?: RaidSpRank | null;
   copiesInGroup: number;
   copyRankInGroup: number;
 }
@@ -114,6 +124,8 @@ export interface GradeResult {
   pvpListKeep: number;
   /** LOOK this many best copies of a PvP/raid family with no KEEP; extras DUMP. 0 dumps junk too. */
   familyKeep: number;
+  /** Raid KEEP only if stat product is this % of a hundo or better. 0 keeps any IV. */
+  raidSpKeep: number;
   /** When true, every eligible 4* / raid / PvP-floor copy KEEPs. When false, extras are dupes. */
   keepAllGood: boolean;
   /** When true, every shadow KEEPs. When false, shadows LOOK unless another keep class fires — still never DUMP. */
@@ -160,6 +172,12 @@ export interface Meta {
    */
   familyKeep?: number;
   /**
+   * Raid KEEP only if this copy's stat product is at least this % of a 15/15/15
+   * of the raid attacker (pre-evos counted as that attacker). 0 keeps any IV.
+   * Default 90. Missing base stats fall back to IV%.
+   */
+  raidSpKeep?: number;
+  /**
    * Keep every eligible good copy (all 4*, all raid attackers, all PvP-floor IVs).
    * Off = treat extra good copies as dupes (2 GL and 2 LC per independently listed
    * stage, 6 raid and 1 hundo per evolution family).
@@ -189,6 +207,9 @@ export const DEFAULT_FAMILY_KEEP = 2;
 export const DEFAULT_KEEP_SHADOW = true;
 export const FAMILY_KEEP_MIN = 0;
 export const FAMILY_KEEP_MAX = 99;
+export const DEFAULT_RAID_SP_KEEP = 90;
+export const RAID_SP_KEEP_MIN = 0;
+export const RAID_SP_KEEP_MAX = 100;
 
 export function clampPvpRankKeep(n: unknown): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -214,4 +235,10 @@ export function clampFamilyKeep(n: unknown): number {
   const v = typeof n === "number" ? n : Number(n);
   if (!Number.isFinite(v)) return DEFAULT_FAMILY_KEEP;
   return Math.min(FAMILY_KEEP_MAX, Math.max(FAMILY_KEEP_MIN, Math.round(v)));
+}
+
+export function clampRaidSpKeep(n: unknown): number {
+  const v = typeof n === "number" ? n : Number(n);
+  if (!Number.isFinite(v)) return DEFAULT_RAID_SP_KEEP;
+  return Math.min(RAID_SP_KEEP_MAX, Math.max(RAID_SP_KEEP_MIN, Math.round(v)));
 }

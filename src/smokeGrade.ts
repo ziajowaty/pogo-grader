@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { parseInventoryCsv } from "./parseCsv";
 import { loadMeta } from "./meta";
 import { gradeBox } from "./grade";
-import { clampFamilyKeep, FAMILY_KEEP_MIN, type Mon } from "./types";
+import { clampFamilyKeep, clampRaidSpKeep, FAMILY_KEEP_MIN, RAID_SP_KEEP_MIN, type Mon } from "./types";
 
 function must(cond: boolean, message: string): void {
   if (!cond) throw new Error(message);
@@ -30,6 +30,9 @@ must(result.pvpRankKeep === 500, "echo pvpRankKeep 500");
 must(result.pvpListKeep === 500, "default pvpListKeep 500");
 must(result.familyKeep === 2, "default familyKeep 2");
 must(clampFamilyKeep(0) === 0 && FAMILY_KEEP_MIN === 0, "familyKeep 0 is a valid clamp");
+must(result.raidSpKeep === 90, "default raid SP keep 90");
+must(clampRaidSpKeep(0) === 0 && RAID_SP_KEEP_MIN === 0, "raid SP keep 0 is a valid clamp");
+must(clampRaidSpKeep(108) === 100, "raid SP keep clamps to 100");
 must(result.keepAllGood === false, "default extras as dupes");
 must(result.keepShadow === true, "default KEEP every shadow");
 must(Array.isArray(meta.glRankings) && meta.glRankings.length === 500, "bundled GL rankings 500");
@@ -63,6 +66,14 @@ must(
 must(
   extraToads.every((g) => g.reasons.some((r) => r.includes("Extra copy"))),
   "extra dump reason",
+);
+
+const weedle = all.find((g) => g.mon.speciesId === "weedle");
+must(weedle?.keepClasses.includes("raid") !== true, "low-SP weedle is not raid KEEP");
+must(weedle?.verdict === "LOOK", "only low-SP raid pre-evo LOOKs at familyKeep 2");
+must(
+  weedle?.raidSp != null && weedle.raidSp.percent < 90,
+  `weedle raid SP should be below 90, got ${weedle?.raidSp?.percent}`,
 );
 
 const machamp = all.find((g) => g.mon.speciesId === "machamp_shadow");
@@ -183,10 +194,17 @@ must(
   "familyKeep 0 dumps ungated junk including only copies",
 );
 must(
-  sampleZero.keep.some(
-    (g) => g.mon.speciesId === "weedle" && g.keepClasses.includes("raid") && g.reasons.some((r) => /as Beedrill/i.test(r)),
+  sampleZero.keep.some((g) => g.mon.speciesId === "machamp_shadow" && g.keepClasses.includes("raid")),
+  "familyKeep 0 still KEEPs a high-SP raid attacker",
+);
+must(
+  [...sampleZero.keep, ...sampleZero.look, ...sampleZero.dump].some(
+    (g) =>
+      g.mon.speciesId === "weedle" &&
+      g.verdict === "DUMP" &&
+      g.reasons.some((r) => /raid .*worse than keep/i.test(r) || r.includes("keep 0 per family")),
   ),
-  "familyKeep 0 still KEEPs a raid pre-evo",
+  "familyKeep 0 dumps a low-SP raid pre-evo",
 );
 must(
   sampleZero.keep.some((g) => g.mon.speciesId === "wooper" && g.keepClasses.includes("gl")),
@@ -372,6 +390,18 @@ function ivMon(
     purified: false,
   };
 }
+
+const trashBulb = ivMon("bulbasaur", "Bulbasaur", 450, 0, 0, 0);
+const trashGrade = gradeBox([trashBulb], bulbMeta);
+must(trashGrade.keep.length === 0, "0/0/0 bulbasaur is not raid KEEP at 90% SP");
+must(
+  [...trashGrade.look, ...trashGrade.dump][0]?.raidSp != null &&
+    [...trashGrade.look, ...trashGrade.dump][0].raidSp!.percent < 90,
+  "0/0/0 Venusaur SP is below 90%",
+);
+const anyIvRaid = gradeBox([trashBulb], { ...bulbMeta, raidSpKeep: 0 });
+must(anyIvRaid.keep[0]?.keepClasses.includes("raid") === true, "raid SP keep 0 KEEPs any raid IV");
+must(anyIvRaid.raidSpKeep === 0, "echo raidSpKeep 0");
 
 must(meta.glTop500.has("machoke"), "machoke is independently on GL");
 must(meta.glTop500.has("machamp"), "machamp is independently on GL");
