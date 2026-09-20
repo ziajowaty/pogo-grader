@@ -483,11 +483,11 @@ export function mountApp(root: HTMLElement): void {
         </section>
       </div>
 
-      <section class="card rankings-card" aria-labelledby="rankings-title">
-        <div class="rankings-head">
+      <details class="card rankings-card">
+        <summary class="rankings-head">
           <h2 id="rankings-title">Rankings</h2>
           <p class="note rankings-status" id="rankings-status">Loading lists…</p>
-        </div>
+        </summary>
         <nav class="rankings-tabs" aria-label="Rankings lists">
           <button type="button" class="btn btn--preset" data-rankings-tab="gl">Great League</button>
           <button type="button" class="btn btn--preset" data-rankings-tab="lc">Little Cup</button>
@@ -520,7 +520,7 @@ export function mountApp(root: HTMLElement): void {
             <div id="rankings-raid" class="rankings-table-wrap"></div>
           </div>
         </div>
-      </section>
+      </details>
 
       <div id="error" class="banner banner--error hidden" role="alert"></div>
       <p id="busy" class="status-line hidden"></p>

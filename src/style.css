@@ -736,17 +736,59 @@ input[type="file"] {
   margin-bottom: 12px;
 }
 
-.rankings-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+.rankings-card > summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: var(--tap);
+  border-radius: 8px;
+}
+
+.rankings-card > summary::-webkit-details-marker,
+.rankings-card > summary::marker {
+  display: none;
+  content: "";
+}
+
+.rankings-card > summary:focus {
+  outline: none;
+}
+
+.rankings-card > summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.rankings-card[open] > summary {
   margin-bottom: 8px;
 }
 
+.rankings-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .rankings-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
+}
+
+.rankings-head h2::before {
+  content: "";
+  width: 0.42em;
+  height: 0.42em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.12s ease;
+}
+
+.rankings-card[open] .rankings-head h2::before {
+  transform: rotate(45deg);
 }
 
 .rankings-status {
