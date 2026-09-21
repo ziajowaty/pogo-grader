@@ -221,19 +221,19 @@ export interface Meta {
   /** Keep PvPoke GL overall species this far down. Rank 1 is best. Default 500. */
   pvpListKeep?: number;
   /**
-   * Copies kept per PvPoke-listed Great League stage and per Little Cup species.
-   * 1–3, default 2. Raid stays 6. `keepAllGood` still keeps every floor copy.
+   * Copies kept per job: each PvPoke Great League stage, each Little Cup species,
+   * and the raid attacker. 1–3, default 1. Higher PvPoke GL stages fill first.
+   * `keepAllGood` still keeps every hundo; it does not add extra copies of the same job.
    */
   pvpKeep?: number;
   /**
    * When a PvP/raid family has no KEEP, LOOK this many best copies and DUMP the rest.
    * 0 DUMPs those copies and ungated junk (not useful for PvP or raids), still
    * never dumping shadows / limited / special / non-unique IVs.
-   * Default 2. Does not change KEEP slot caps (`pvpKeep` GL per listed stage,
-   * `pvpKeep` LC, 6 raid per family). Each copy gets at most one of those jobs. GL
-   * seats fill before LC; within a league, higher PvPoke species exhaust
-   * their seats before a worse evo. Unlisted forms (Dratini in GL) are
-   * not jobs.
+   * Default 2. Does not change KEEP slot caps (`pvpKeep` per GL stage, LC species,
+   * and raid attacker). Each copy gets at most one of those jobs. GL seats fill
+   * before LC; within a league, higher PvPoke species exhaust their seats before
+   * a worse evo. Raid is last. Unlisted forms (Dratini in GL) are not jobs.
    */
   familyKeep?: number;
   /**
@@ -243,8 +243,8 @@ export interface Meta {
   raidIvKeep?: number;
   /**
    * Keep every eligible good copy (all 4*, all raid attackers, all PvP-floor IVs).
-   * Off = treat extra good copies as dupes (`pvpKeep` GL per PvPoke-listed stage,
-   * `pvpKeep` LC, 6 raid and 1 hundo per family, one job per copy).
+   * Off = one job per copy (`pvpKeep` per GL stage, LC species, and raid attacker,
+   * plus 1 hundo per family). On still does not duplicate a filled job.
    */
   keepAllGood?: boolean;
   /**
@@ -279,8 +279,8 @@ export const GL_LIST_CAP = 500;
 export const LC_LIST_CAP = 100;
 export const DEFAULT_PVP_LIST_KEEP = 500;
 
-/** Copies kept per Great League stage and per Little Cup species. */
-export const DEFAULT_PVP_KEEP = 2;
+/** Copies kept per Great League stage, Little Cup species, and raid attacker. */
+export const DEFAULT_PVP_KEEP = 1;
 export const PVP_KEEP_MIN = 1;
 export const PVP_KEEP_MAX = 3;
 

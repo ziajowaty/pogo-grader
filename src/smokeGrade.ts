@@ -58,7 +58,7 @@ must(parsed.dialect === "pokegenie", `expected pokegenie, got ${parsed.dialect}`
 must(parsed.mons.length === 10, `expected 10 mons, got ${parsed.mons.length}`);
 must(result.pvpRankKeep === 500, "echo pvpRankKeep 500");
 must(result.pvpListKeep === 500, "default pvpListKeep 500");
-must(result.pvpKeep === 2, "default pvpKeep 2");
+must(result.pvpKeep === 1, "default pvpKeep 1");
 must(clampPvpKeep(0) === PVP_KEEP_MIN && PVP_KEEP_MIN === 1, "pvpKeep clamps down to 1");
 must(clampPvpKeep(9) === PVP_KEEP_MAX && PVP_KEEP_MAX === 3, "pvpKeep clamps up to 3");
 must(result.familyKeep === 2, "default familyKeep 2");
@@ -410,8 +410,8 @@ const dupeHundos = gradeBox(eightHundos, { ...meta, keepAllGood: false });
 const allHundos = gradeBox(eightHundos, { ...meta, keepAllGood: true });
 const raidMachamp = meta.raidAttackers.has("machamp");
 if (raidMachamp) {
-  must(dupeHundos.keep.length === 6, `dupe mode keeps 6 raid 4*, got ${dupeHundos.keep.length}`);
-  must(dupeHundos.dump.length === 2, `dupe mode dumps extra 4* raid, got ${dupeHundos.dump.length}`);
+  must(dupeHundos.keep.length === 1, `dupe mode keeps 1 raid 4*, got ${dupeHundos.keep.length}`);
+  must(dupeHundos.dump.length === 7, `dupe mode dumps extra 4* raid, got ${dupeHundos.dump.length}`);
 } else {
   must(dupeHundos.keep.length === 1, "dupe mode keeps 1 hundo if not a raid species");
   must(dupeHundos.dump.length === 7, "extra 4* dump as dupes");
@@ -448,16 +448,16 @@ const eightBulbs = Array.from({ length: 8 }, (_, i) =>
   hundoAt("bulbasaur", "Bulbasaur", 420 + i, i < 6 ? 15 : 10),
 );
 const bulbDupes = gradeBox(eightBulbs, bulbMeta);
-must(bulbDupes.keep.length === 6, `dupe mode keeps 6 raid pre-evo copies, got ${bulbDupes.keep.length}`);
-must(bulbDupes.dump.length === 2, `dupe mode dumps extra raid pre-evos, got ${bulbDupes.dump.length}`);
+must(bulbDupes.keep.length === 1, `dupe mode keeps 1 raid pre-evo copy, got ${bulbDupes.keep.length}`);
+must(bulbDupes.dump.length === 7, `dupe mode dumps extra raid pre-evos, got ${bulbDupes.dump.length}`);
 
 const mixedLine = [
   ...Array.from({ length: 4 }, (_, i) => hundoAt("bulbasaur", "Bulbasaur", 430 + i, 15)),
   ...Array.from({ length: 4 }, (_, i) => hundoAt("venusaur", "Venusaur", 440 + i, 15)),
 ];
 const mixedDupes = gradeBox(mixedLine, bulbMeta);
-must(mixedDupes.keep.length === 6, `family raid pool keeps 6 across Bulbasaur/Venusaur, got ${mixedDupes.keep.length}`);
-must(mixedDupes.dump.length === 2, `family raid pool dumps extras across stages, got ${mixedDupes.dump.length}`);
+must(mixedDupes.keep.length === 1, `family raid pool keeps 1 across Bulbasaur/Venusaur, got ${mixedDupes.keep.length}`);
+must(mixedDupes.dump.length === 7, `family raid pool dumps extras across stages, got ${mixedDupes.dump.length}`);
 must(
   mixedDupes.keep.concat(mixedDupes.dump).every((g) => g.copiesInGroup === 8),
   "Bulbasaur and Venusaur share one family copy count",
@@ -519,7 +519,7 @@ const pvpOnly: typeof meta = {
 };
 const bulkyMachop = ivMon("machop", "Machop", 500, 0, 15, 15);
 const attackMachop = ivMon("machop", "Machop", 501, 15, 0, 0);
-const dualMachops = gradeBox([bulkyMachop, attackMachop], pvpOnly);
+const dualMachops = gradeBox([bulkyMachop, attackMachop], { ...pvpOnly, pvpKeep: 2 });
 const bulkyGraded = [...dualMachops.keep, ...dualMachops.look, ...dualMachops.dump].find(
   (g) => g.mon.sourceRow === 500,
 );
@@ -542,7 +542,7 @@ must(
 );
 const worseMachStage = betterMachStage === "machoke" ? "machamp" : "machoke";
 const thirdMachop = ivMon("machop", "Machop", 502, 8, 8, 8);
-const tripleMachops = gradeBox([bulkyMachop, attackMachop, thirdMachop], pvpOnly);
+const tripleMachops = gradeBox([bulkyMachop, attackMachop, thirdMachop], { ...pvpOnly, pvpKeep: 2 });
 const tripleJobs = [...tripleMachops.keep, ...tripleMachops.look, ...tripleMachops.dump].map((g) => g.pvpJob?.speciesId);
 must(
   tripleJobs.filter((id) => id === betterMachStage).length === 2,
@@ -565,9 +565,9 @@ must(
 
 const threeMachamp = [0, 1, 2].map((i) => ivMon("machamp", "Machamp", 520 + i, i, 15, 15));
 const champOnly = gradeBox(threeMachamp, pvpOnly);
-must(champOnly.keep.length === 2, `machamp-only fills 2 Machamp GL slots, got ${champOnly.keep.length}`);
-must(champOnly.dump.length === 1, "extra machamp dumps; cannot fill Machoke slots");
-must(champOnly.pvpKeep === 2, "default pvpKeep is 2");
+must(champOnly.keep.length === 1, `machamp-only fills 1 Machamp GL slot, got ${champOnly.keep.length}`);
+must(champOnly.dump.length === 2, "extra machamps dump; cannot fill Machoke slots");
+must(champOnly.pvpKeep === 1, "default pvpKeep is 1");
 must(
   champOnly.keep.every((g) => g.glAs?.every((r) => r.evoSpeciesId === "machamp")),
   "fully evolved machamp is not ranked as Machoke",
@@ -607,6 +607,7 @@ const dratiniGrade = gradeBox(dratiniLine, {
   keepLucky: false,
   keepFavorite: false,
   pvpRankKeep: 500,
+  pvpKeep: 2,
 });
 const dratiniAll = [...dratiniGrade.keep, ...dratiniGrade.look, ...dratiniGrade.dump];
 const jobOf = (row: number) => dratiniAll.find((g) => g.mon.sourceRow === row)?.pvpJob;
@@ -628,7 +629,7 @@ must(jobOf(700)?.kind === "raid" && jobOf(700)?.speciesId === "dragonite", "hund
 must(jobOf(701)?.kind === "raid" && jobOf(701)?.speciesId === "dragonite", "14/15/14 leftover is raid Dragonite");
 must(jobOf(702)?.kind === "gl" && jobOf(702)?.speciesId === "dragonair", "1/4/15 is GL Dragonair (GL before LC)");
 must(jobOf(703)?.kind === "gl" && jobOf(703)?.speciesId === "dragonair", "6/14/15 fills the second Dragonair seat");
-must(jobOf(704)?.kind === "raid", "15/12/14 high-IV leftover is raid Dragonite");
+must(jobOf(704) == null, "15/12/14 is the third raid IV, after the two raid seats are full");
 must(
   jobOf(710)?.kind === "gl" && jobOf(710)?.speciesId === "dragonair_shadow",
   "1/11/13 shadow is GL Dragonair (GL before LC)",

@@ -71,7 +71,7 @@ const FAMILY_KEEP_PRESETS = [FAMILY_KEEP_MIN, 1, 2, 6, FAMILY_KEEP_MAX] as const
 const RAID_IV_PRESETS = [RAID_IV_KEEP_MIN, 80, 90, 95, RAID_IV_KEEP_MAX] as const;
 const RANK_KEEP_KEY = "pogo-grader.pvpRankKeep";
 const LIST_KEEP_KEY = "pogo-grader.pvpListKeep";
-const PVP_KEEP_KEY = "pogo-grader.pvpKeep";
+const PVP_KEEP_KEY = "pogo-grader.pvpKeep.v2";
 const FAMILY_KEEP_KEY = "pogo-grader.familyKeep";
 const RAID_IV_KEEP_KEY = "pogo-grader.raidIvKeep";
 const RAID_IV_KEEP_KEY_LEGACY = "pogo-grader.raidSpKeep";
@@ -710,7 +710,7 @@ export function mountApp(root: HTMLElement): void {
                   `<button type="button" class="btn btn--preset" data-pvp-keep="${n}">${n}</button>`,
               ).join("")}
             </div>
-            <p class="note">Copies kept for each Great League stage and each Little Cup species. 1 skips a second Dragonair; that copy can take LC or the next evo instead. Raid stays 6.</p>
+            <p class="note">Copies of each job: one Great League stage, one Little Cup species, one raid attacker. 1 keeps a single Dragonair, then the next copy is Dragonite, then Little Cup, then one raid.</p>
           </div>
           <div class="rules-block">
             <div class="rank-row">
@@ -745,7 +745,7 @@ export function mountApp(root: HTMLElement): void {
               <button type="button" class="btn btn--preset" data-keep-all="0">DUMP extras</button>
               <button type="button" class="btn btn--preset" data-keep-all="1">KEEP all good</button>
             </div>
-            <p class="note">KEEP all good keeps every 4* / raid / PvP-floor copy. DUMP extras still never dumps shadows.</p>
+            <p class="note">KEEP all good keeps every 4*. It does not assign a second copy of a job that is already filled.</p>
           </div>
         </div>
       </section>

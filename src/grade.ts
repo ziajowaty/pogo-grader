@@ -36,7 +36,6 @@ import {
   type RankGm,
 } from "./rank";
 
-const RAID_KEEP = 6;
 const MAX_REASON = 8;
 
 function hasId(set: Set<string>, speciesId: string): boolean {
@@ -197,8 +196,8 @@ function compareRoles(a: RoleDef, b: RoleDef): number {
 /**
  * One job per copy. Fill Great League before Little Cup, and within a league
  * exhaust the higher PvPoke species (Dragonair #85 before Dragonite #340)
- * before touching the next identity. Raid leftovers last. Seat count per
- * GL/LC identity is `pvpKeep` (1–3).
+ * before touching the next identity. Raid leftovers last. Each GL stage, LC
+ * species, and raid attacker gets `pvpKeep` seats (1–3, default 1).
  */
 function assignFamilyJobs(
   rows: GradedMon[],
@@ -445,6 +444,7 @@ function jobKeepReason(
   limited: boolean,
   raidCopy: number,
   raidN: number,
+  seats: number,
 ): string {
   const { verb, name } = jobAction(g, job.speciesId);
   if (job.kind === "lc") {
@@ -465,7 +465,7 @@ function jobKeepReason(
   const head = verb === "Evolve to" ? `Evolve to ${name} for raids` : `Raid attacker`;
   if (limited) return `${head}${ivBit} (limited — keep all)`;
   if (keepAllGood) return `${head}${ivBit} (keep all eligible)`;
-  return `${head}${ivBit} (copy ${raidCopy || g.copyRankInGroup} of ${raidN}, keep ${Math.min(RAID_KEEP, raidN)} ≥${raidIvKeep}%)`;
+  return `${head}${ivBit} (copy ${raidCopy || g.copyRankInGroup} of ${raidN}, keep ${Math.min(seats, raidN)} ≥${raidIvKeep}%)`;
 }
 
 function extraJobReason(
@@ -570,9 +570,9 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const keepLucky = keepLuckyOn(meta);
   const keepFavorite = keepFavoriteOn(meta);
   const keepShadow = keepShadowOn(meta);
-  const glSlots = keepAllGood ? Number.POSITIVE_INFINITY : pvpKeep;
-  const lcSlots = keepAllGood ? Number.POSITIVE_INFINITY : pvpKeep;
-  const raidSlots = keepAllGood ? Number.POSITIVE_INFINITY : RAID_KEEP;
+  const glSlots = pvpKeep;
+  const lcSlots = pvpKeep;
+  const raidSlots = pvpKeep;
   const glIndex = indexRanks(meta.glRankings);
   const lcIndex = indexRanks(meta.lcRankings);
   const glOf = meta.glRankings?.length || GL_LIST_CAP;
@@ -768,7 +768,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (job) {
         const raidCopy = raidOrdered.indexOf(g) + 1;
         const raidN = raidEligible.length || n;
-        pushReason(g, jobKeepReason(g, job, cutoff, raidIvKeep, keepAllGood, limited, raidCopy, raidN));
+        pushReason(g, jobKeepReason(g, job, cutoff, raidIvKeep, keepAllGood, limited, raidCopy, raidN, pvpKeep));
       } else if (roles.length) {
         pushReason(g, "No PvP/raid job — extra in this family");
       }
@@ -806,9 +806,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
           } else {
             pushReason(
               g,
-              keepAllGood
-                ? `Raid copies: ${raidEligible.length}`
-                : `Raid copies: ${raidEligible.length}, keeping ${Math.min(RAID_KEEP, raidEligible.length)}`,
+              `Raid copies: ${raidEligible.length}, keeping ${Math.min(pvpKeep, raidEligible.length)}`,
             );
           }
         }

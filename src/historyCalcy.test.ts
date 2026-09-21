@@ -180,8 +180,8 @@ must(result.keep.length + result.look.length + result.dump.length === 134, "no d
 must(result.dump.length <= result.dumpCap, "dump cap respected");
 must(result.dumpCapped === false, "134-row box should not hit dump-cap 100");
 must(
-  result.keep.length === 39 && result.look.length === 43 && result.dump.length === 52,
-  `verdict snapshot keep/look/dump 39/43/52, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
+  result.keep.length === 38 && result.look.length === 43 && result.dump.length === 53,
+  `verdict snapshot keep/look/dump 38/43/53, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
 );
 
 must(
