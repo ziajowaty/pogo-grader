@@ -287,46 +287,99 @@ body {
 
 .rank-presets,
 .mode-row {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
 }
 
-.rank-presets {
-  grid-template-columns: repeat(4, 1fr);
+.rank-presets .btn--preset,
+.mode-row .btn--preset {
+  flex: 1 1 3.4rem;
 }
 
-.rank-presets + .rank-row,
-.rank-presets + .note {
-  margin-top: 10px;
+.rule-control > :first-child {
+  margin-top: 0;
 }
 
-.note + .rank-row {
-  margin-top: 10px;
-}
-
-.mode-row {
-  grid-template-columns: 1fr 1fr;
-}
-
-.mode-row + .mode-row {
+#pvp-list-cutoff {
   margin-top: 8px;
 }
 
-.rules-grid {
+#pvp-list-cutoff.is-hidden {
+  display: none;
+}
+
+.rules {
   display: grid;
-  gap: 12px 16px;
+  gap: 16px;
 }
 
-@media (min-width: 840px) {
-  .rules-grid {
-    grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
-    align-items: start;
+.rule-group {
+  display: grid;
+  gap: 8px;
+}
+
+.rule-group h3 {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rule-group--keep h3 {
+  color: var(--keep);
+}
+
+.rule-group--who h3 {
+  color: var(--gl);
+}
+
+.rule-group--iv h3 {
+  color: var(--look);
+}
+
+.rule-group--count h3 {
+  color: var(--dump);
+}
+
+.rule {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+}
+
+.rule-title {
+  display: block;
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+
+.rule-hint {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.rule--tags {
+  align-items: start;
+}
+
+.rule-control {
+  min-width: 0;
+}
+
+@media (min-width: 800px) {
+  .rule:not(.rule--tags) {
+    grid-template-columns: minmax(14rem, 1fr) minmax(16rem, 26rem);
+    align-items: center;
+    gap: 16px 24px;
   }
-}
-
-.rules-block--chips {
-  grid-column: 1 / -1;
 }
 
 .keep-chips {
@@ -374,6 +427,12 @@ body {
   background: var(--focus);
   color: #14180f;
   border-color: #a8b84a;
+}
+
+.btn--preset:disabled,
+.rank-row input:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .file-label {

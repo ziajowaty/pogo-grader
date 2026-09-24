@@ -58,6 +58,7 @@ must(parsed.dialect === "pokegenie", `expected pokegenie, got ${parsed.dialect}`
 must(parsed.mons.length === 10, `expected 10 mons, got ${parsed.mons.length}`);
 must(result.pvpRankKeep === 500, "echo pvpRankKeep 500");
 must(result.pvpListKeep === 500, "default pvpListKeep 500");
+must(result.pvpAny === false, "default pvpAny off");
 must(result.pvpKeep === 1, "default pvpKeep 1");
 must(clampPvpKeep(0) === PVP_KEEP_MIN && PVP_KEEP_MIN === 1, "pvpKeep clamps down to 1");
 must(clampPvpKeep(9) === PVP_KEEP_MAX && PVP_KEEP_MAX === 3, "pvpKeep clamps up to 3");
@@ -853,6 +854,50 @@ must(
 
 const keepFavZero = gradeBox([junkFav], { ...meta, keepFavorite: false, familyKeep: 0 });
 must(keepFavZero.dump.length === 0 && keepFavZero.look.length === 1, "familyKeep 0 still never dumps favorites");
+
+const bulkBidoof = { ...ivMon("bidoof", "Bidoof", 900, 0, 15, 15), cp: 400 };
+const anyOff = gradeBox([bulkBidoof], { ...meta, pvpAny: false, pvpRankKeep: 4096 });
+const anyOffRow = [...anyOff.keep, ...anyOff.look, ...anyOff.dump][0];
+must(anyOff.pvpAny === false, "echo pvpAny false");
+must(anyOffRow?.pvpJob == null, "bidoof has no PvP job when any-species is off");
+must(anyOffRow?.keepClasses.includes("gl") !== true, "bidoof is not a GL keep off the PvPoke list");
+
+const anyMeta = {
+  ...meta,
+  pvpAny: true,
+  pvpRankKeep: 4096,
+  pvpKeep: 1,
+  familyKeep: 0,
+  raidAttackers: new Set<string>(),
+  raidEvolution: {},
+};
+const anyOne = gradeBox([bulkBidoof], anyMeta);
+const anyBib = anyOne.keep[0]?.glAs?.find((rank) => rank.evoSpeciesId === "bibarel");
+must(anyOne.pvpAny === true, "echo pvpAny true");
+must(anyOne.keep[0]?.pvpJob?.kind === "gl" && anyOne.keep[0]?.pvpJob?.speciesId === "bibarel", "any-species bidoof KEEPs as Bibarel");
+must(anyBib != null && anyBib.rank >= 1, "any-species ranks Bidoof as Bibarel");
+const anyAtFloor = gradeBox([bulkBidoof], { ...anyMeta, pvpRankKeep: anyBib?.rank ?? 1 });
+must(anyAtFloor.keep.some((g) => g.keepClasses.includes("gl")), "IV at the floor still KEEPs any species");
+if ((anyBib?.rank ?? 1) > 1) {
+  const anyBelow = gradeBox([bulkBidoof], { ...anyMeta, pvpRankKeep: (anyBib?.rank ?? 2) - 1 });
+  must(
+    anyBelow.keep.every((g) => !g.keepClasses.includes("gl")),
+    "IV worse than the floor is not a GL keep",
+  );
+}
+const anyThree = gradeBox(
+  [0, 1, 2].map((i) => ({ ...ivMon("bidoof", "Bidoof", 910 + i, 0, 15, 15), cp: 400 })),
+  anyMeta,
+);
+const anyJobs = anyThree.keep.map((g) => g.pvpJob);
+must(
+  anyJobs.filter((job) => job?.kind === "gl").map((job) => job?.speciesId).join(",") === "bibarel,bidoof",
+  `GL Bibarel and Bidoof fill before Little Cup, got ${anyJobs.map((job) => `${job?.kind}:${job?.speciesId}`).join(" ")}`,
+);
+must(
+  anyJobs.some((job) => job?.kind === "lc" && job.speciesId === "bidoof"),
+  "third bidoof fills Little Cup when any species is viable",
+);
 
 console.log(
   JSON.stringify(

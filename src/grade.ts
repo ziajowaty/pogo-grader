@@ -16,6 +16,7 @@ import {
   clampPvpRankKeep,
   clampRaidIvKeep,
   DEFAULT_FAMILY_KEEP,
+  DEFAULT_PVP_ANY,
   DEFAULT_PVP_KEEP,
   DEFAULT_PVP_LIST_KEEP,
   DEFAULT_PVP_RANK_KEEP,
@@ -30,6 +31,7 @@ import {
   getRankGm,
   GREAT_LEAGUE_CAP,
   LITTLE_CUP_CAP,
+  lookupBaseStats,
   rankGreatLeagueAs,
   rankLittleCup,
   raidIvPercent,
@@ -168,6 +170,48 @@ function independentRaidIds(members: string[], meta: Meta): string[] {
 
 function isMegaStage(id: string): boolean {
   return /_mega(?:_[xy])?$/.test(id) || id.includes("_primal") || id.includes("gigantamax");
+}
+
+function hasBaseStats(id: string, gm: RankGm): boolean {
+  return lookupBaseStats(id, gm) != null;
+}
+
+/** Every non-mega stage this family can become, when the PvPoke list is not the gate. */
+function anyGlIds(members: string[], meta: Meta, gm: RankGm): string[] {
+  const ids: string[] = [];
+  for (const id of members) {
+    const reach = meta.evoReach?.[id];
+    if (reach?.length) ids.push(...reach);
+    else ids.push(id);
+    const mapped = meta.glEvolution[id];
+    if (mapped) ids.push(mapped);
+  }
+  return uniqueIds(ids.filter((id) => !isMegaStage(id) && hasBaseStats(id, gm)));
+}
+
+/** Unevolved species that can still evolve. Little Cup when any species is viable. */
+function isLittleCupSpecies(id: string, meta: Meta, members: string[]): boolean {
+  if (!id || isMegaStage(id)) return false;
+  for (const member of members) {
+    if (member === id) continue;
+    if (meta.evoReach?.[member]?.includes(id)) return false;
+  }
+  return (meta.evoReach?.[id] ?? []).some((next) => next !== id);
+}
+
+function anyLcIds(members: string[], meta: Meta, gm: RankGm): string[] {
+  return uniqueIds(members.filter((id) => isLittleCupSpecies(id, meta, members) && hasBaseStats(id, gm)));
+}
+
+/**
+ * Listed species fill in PvPoke order. Unlisted finals fill before unlisted
+ * pre-evos, so a non-meta Bidoof becomes Bibarel before it stays Bidoof.
+ */
+function stageFillRank(id: string, index: Map<string, PvpokeRankRow>, meta: Meta): number {
+  const listed = lookupRank(id, index)?.rank;
+  if (listed != null) return listed;
+  const evolvesFurther = (meta.evoReach?.[id] ?? []).some((next) => next !== id && !isMegaStage(next));
+  return evolvesFurther ? GL_LIST_CAP + 2 : GL_LIST_CAP + 1;
 }
 
 type JobKind = PvpJob["kind"];
@@ -378,6 +422,10 @@ function pvpListCutoff(meta: Meta): number {
   return clampPvpListKeep(meta.pvpListKeep ?? DEFAULT_PVP_LIST_KEEP);
 }
 
+function pvpAnyOn(meta: Meta): boolean {
+  return meta.pvpAny ?? DEFAULT_PVP_ANY;
+}
+
 function pvpKeepCap(meta: Meta): number {
   return clampPvpKeep(meta.pvpKeep ?? DEFAULT_PVP_KEEP);
 }
@@ -563,6 +611,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const gm: RankGm = getRankGm(meta.glEvolution);
   const cutoff = pvpCutoff(meta);
   const listKeep = pvpListCutoff(meta);
+  const pvpAny = pvpAnyOn(meta);
   const pvpKeep = pvpKeepCap(meta);
   const familyKeep = familyKeepCap(meta);
   const raidIvKeep = raidIvFloor(meta);
@@ -588,10 +637,17 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     const key = familyKey(speciesId, meta);
     if (!independentGlCache.has(key)) {
       const members = familyMembers(speciesId, meta, families);
-      const listed = independentGlIds(members, meta.glTop500, meta);
-      listedGlCache.set(key, listed);
-      independentGlCache.set(key, listed.filter((id) => gateMeta.glTop500.has(id)));
-      independentLcCache.set(key, independentLcIds(members, meta));
+      if (pvpAny) {
+        const stages = anyGlIds(members, meta, gm);
+        listedGlCache.set(key, stages);
+        independentGlCache.set(key, stages);
+        independentLcCache.set(key, anyLcIds(members, meta, gm));
+      } else {
+        const listed = independentGlIds(members, meta.glTop500, meta);
+        listedGlCache.set(key, listed);
+        independentGlCache.set(key, listed.filter((id) => gateMeta.glTop500.has(id)));
+        independentLcCache.set(key, independentLcIds(members, meta));
+      }
       independentRaidCache.set(key, independentRaidIds(members, meta));
     }
     return {
@@ -620,7 +676,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       .filter((r): r is MetaLeagueRank => r != null);
     const primary = glAs[0] ?? null;
     const primaryMeta = (primary && glMetaAs.find((m) => m.speciesId === primary.evoSpeciesId)) || null;
-    const lc = isLcSpecies(mon.speciesId, meta);
+    const lc = pvpAny ? ind.lc.includes(canonId(mon.speciesId)) : isLcSpecies(mon.speciesId, meta);
     const lcRow = lookupRank(mon.speciesId, lcIndex);
     const raidTarget =
       raidGateId(mon.speciesId, meta) ?? ind.raid.find((t) => canBecome(mon.speciesId, t, meta)) ?? null;
@@ -680,7 +736,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
         kind: "gl" as const,
         speciesId: id,
         slots: glSlots,
-        metaRank: lookupRank(id, glIndex)?.rank ?? GL_LIST_CAP + 1,
+        metaRank: pvpAny ? stageFillRank(id, glIndex, meta) : (lookupRank(id, glIndex)?.rank ?? GL_LIST_CAP + 1),
       })),
       ...lcIds.map((id) => ({
         kind: "lc" as const,
@@ -939,6 +995,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     dumpCapped,
     pvpRankKeep: cutoff,
     pvpListKeep: listKeep,
+    pvpAny,
     pvpKeep,
     familyKeep,
     raidIvKeep,

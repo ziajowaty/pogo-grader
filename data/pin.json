@@ -12,6 +12,7 @@
     "gl": "top 500 unique speciesId from all/overall 1500 (shadows distinct)",
     "lc": "top 100 unique speciesId from little/overall 500 — not all/overall/rankings-500.json (that file is open 500CP, not Little Cup)",
     "rank": "4096 IV rank, PvPoke CP/SP formulas, level cap 50",
+    "baseStats": "all PvPoke gamemaster species as of 2026-09-23 so any species can be IV-ranked, not only the GL top 500",
     "dumpCap": 100,
     "speciesTypes": "PvPoke gamemaster types; shadows inherit the non-shadow form",
     "raidAttackers": "Pokébattler unique-species rank order, then older KEEP extras (shadows/megas distinct, 24h server cache)"
@@ -20,7 +21,7 @@
     "glTop500": 500,
     "lcTop100": 100,
     "glEvolution": 643,
-    "baseStats": 585,
+    "baseStats": 1742,
     "legendary": 126,
     "mythical": 55,
     "limited": 218,

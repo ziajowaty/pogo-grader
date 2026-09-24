@@ -18,6 +18,7 @@ import {
   DEFAULT_KEEP_FAVORITE,
   DEFAULT_KEEP_LUCKY,
   DEFAULT_KEEP_SHADOW,
+  DEFAULT_PVP_ANY,
   DEFAULT_PVP_KEEP,
   DEFAULT_PVP_LIST_KEEP,
   DEFAULT_PVP_RANK_KEEP,
@@ -71,6 +72,7 @@ const FAMILY_KEEP_PRESETS = [FAMILY_KEEP_MIN, 1, 2, 6, FAMILY_KEEP_MAX] as const
 const RAID_IV_PRESETS = [RAID_IV_KEEP_MIN, 80, 90, 95, RAID_IV_KEEP_MAX] as const;
 const RANK_KEEP_KEY = "pogo-grader.pvpRankKeep";
 const LIST_KEEP_KEY = "pogo-grader.pvpListKeep";
+const PVP_ANY_KEY = "pogo-grader.pvpAny";
 const PVP_KEEP_KEY = "pogo-grader.pvpKeep.v2";
 const FAMILY_KEEP_KEY = "pogo-grader.familyKeep";
 const RAID_IV_KEEP_KEY = "pogo-grader.raidIvKeep";
@@ -100,6 +102,7 @@ interface AppState {
   meta: Meta | null;
   pvpRankKeep: number;
   pvpListKeep: number;
+  pvpAny: boolean;
   pvpKeep: number;
   familyKeep: number;
   raidIvKeep: number;
@@ -129,6 +132,16 @@ function readStoredListKeep(): number {
     return clampPvpListKeep(Number(raw));
   } catch {
     return DEFAULT_PVP_LIST_KEEP;
+  }
+}
+
+function readStoredPvpAny(): boolean {
+  try {
+    const raw = localStorage.getItem(PVP_ANY_KEY);
+    if (raw == null || raw === "") return DEFAULT_PVP_ANY;
+    return raw === "1";
+  } catch {
+    return DEFAULT_PVP_ANY;
   }
 }
 
@@ -211,6 +224,7 @@ const state: AppState = {
   meta: null,
   pvpRankKeep: readStoredRankKeep(),
   pvpListKeep: readStoredListKeep(),
+  pvpAny: readStoredPvpAny(),
   pvpKeep: readStoredPvpKeep(),
   familyKeep: readStoredFamilyKeep(),
   raidIvKeep: readStoredRaidIvKeep(),
@@ -660,93 +674,138 @@ export function mountApp(root: HTMLElement): void {
 
       <section class="card card--rules" aria-labelledby="rank-title">
         <h2 id="rank-title">KEEP rules</h2>
-        <div class="rules-grid">
-          <div class="rules-block rules-block--chips">
-            <p class="file-label" id="keep-chips-label">KEEP tags</p>
-            <div class="keep-chips" role="group" aria-labelledby="keep-chips-label">
-              <button type="button" class="chip chip--lucky keep-chip" data-keep-chip="lucky" aria-pressed="true" title="KEEP luckies. Click to fade — luckies must earn KEEP another way.">Lucky</button>
-              <button type="button" class="chip chip--favorite keep-chip" data-keep-chip="favorite" aria-pressed="true" title="KEEP starred copies. Click to fade — favorites LOOK, never dump.">Favorite</button>
-              <button type="button" class="chip chip--shadow keep-chip" data-keep-chip="shadow" aria-pressed="true" title="KEEP every shadow. Click to fade — shadows LOOK, never dump.">Shadow</button>
+        <div class="rules">
+          <section class="rule-group rule-group--keep" aria-labelledby="rules-tags">
+            <h3 id="rules-tags">Always keep</h3>
+            <div class="rule rule--tags">
+              <div class="keep-chips" role="group" aria-labelledby="rules-tags">
+                <button type="button" class="chip chip--lucky keep-chip" data-keep-chip="lucky" aria-pressed="true" title="KEEP luckies. Click to fade — luckies must earn KEEP another way.">Lucky</button>
+                <button type="button" class="chip chip--favorite keep-chip" data-keep-chip="favorite" aria-pressed="true" title="KEEP starred copies. Click to fade — favorites LOOK, never dump.">Favorite</button>
+                <button type="button" class="chip chip--shadow keep-chip" data-keep-chip="shadow" aria-pressed="true" title="KEEP every shadow. Click to fade — shadows LOOK, never dump.">Shadow</button>
+              </div>
+              <p class="rule-hint">Bright tags KEEP. Fade Lucky to dump junk luckies. Fade Favorite or Shadow and those copies LOOK, never dump.</p>
             </div>
-            <p class="note">Same colors as KEEP-table chips. Bright = that tag KEEPs. Fade Lucky to dump junk luckies. Fade Favorite or Shadow to LOOK them (never dump).</p>
-          </div>
-          <div class="rules-block">
-            <div class="rank-row">
-              <label class="file-label" for="rank-keep">KEEP PvP ≤</label>
-              <input id="rank-keep" type="number" inputmode="numeric" min="1" max="${PVP_RANK_OF}" step="1" value="${state.pvpRankKeep}" />
-              <span class="rank-suffix">/ ${PVP_RANK_OF}</span>
+          </section>
+
+          <section class="rule-group rule-group--who" aria-labelledby="rules-who">
+            <h3 id="rules-who">Which Pokémon</h3>
+            <div class="rule">
+              <div class="rule-copy">
+                <p class="rule-title" id="pvp-species-label">PvP species</p>
+                <p class="rule-hint" id="pvp-list-note"></p>
+              </div>
+              <div class="rule-control">
+                <div class="mode-row" role="group" aria-labelledby="pvp-species-label">
+                  <button type="button" class="btn btn--preset" data-pvp-any="0">Top list</button>
+                  <button type="button" class="btn btn--preset" data-pvp-any="1">Any species</button>
+                </div>
+                <div id="pvp-list-cutoff">
+                  <div class="rank-row">
+                    <input id="pvp-list-keep" type="number" inputmode="numeric" min="1" max="${GL_LIST_CAP}" step="1" value="${state.pvpListKeep}" aria-label="Great League rank cutoff" />
+                    <span class="rank-suffix">/ ${GL_LIST_CAP}</span>
+                  </div>
+                  <div class="rank-presets" role="group" aria-label="Great League species cutoff">
+                    ${LIST_KEEP_PRESETS.map(
+                      (n) =>
+                        `<button type="button" class="btn btn--preset" data-list-keep="${n}">${n}</button>`,
+                    ).join("")}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="rank-presets" role="group" aria-label="KEEP PvP rank">
-              ${RANK_PRESETS.map(
-                (n) =>
-                  `<button type="button" class="btn btn--preset" data-rank="${n}">${n === PVP_RANK_OF ? "any" : String(n)}</button>`,
-              ).join("")}
+          </section>
+
+          <section class="rule-group rule-group--iv" aria-labelledby="rules-iv">
+            <h3 id="rules-iv">How good</h3>
+            <div class="rule">
+              <div class="rule-copy">
+                <label class="rule-title" for="rank-keep">PvP IV rank</label>
+                <p class="rule-hint">Keep this rank or better. 1 is the best of ${PVP_RANK_OF} Great League and Little Cup spreads.</p>
+              </div>
+              <div class="rule-control">
+                <div class="rank-row">
+                  <input id="rank-keep" type="number" inputmode="numeric" min="1" max="${PVP_RANK_OF}" step="1" value="${state.pvpRankKeep}" aria-label="PvP IV rank" />
+                  <span class="rank-suffix">/ ${PVP_RANK_OF}</span>
+                </div>
+                <div class="rank-presets" role="group" aria-label="PvP IV rank">
+                  ${RANK_PRESETS.map(
+                    (n) =>
+                      `<button type="button" class="btn btn--preset" data-rank="${n}">${n === PVP_RANK_OF ? "any" : String(n)}</button>`,
+                  ).join("")}
+                </div>
+              </div>
             </div>
-            <p class="note">IV floor among 4096 Great League / Little Cup spreads.</p>
-          </div>
-          <div class="rules-block">
-            <div class="rank-row">
-              <label class="file-label" for="pvp-list-keep">PvPoke GL top</label>
-              <input id="pvp-list-keep" type="number" inputmode="numeric" min="1" max="${GL_LIST_CAP}" step="1" value="${state.pvpListKeep}" />
-              <span class="rank-suffix">/ ${GL_LIST_CAP}</span>
+            <div class="rule">
+              <div class="rule-copy">
+                <label class="rule-title" for="raid-iv-keep">Raid IV</label>
+                <p class="rule-hint">Keep this percent or better. Attack, Defense, and Stamina out of 45.</p>
+              </div>
+              <div class="rule-control">
+                <div class="rank-row">
+                  <input id="raid-iv-keep" type="number" inputmode="numeric" min="${RAID_IV_KEEP_MIN}" max="${RAID_IV_KEEP_MAX}" step="1" value="${state.raidIvKeep}" aria-label="Raid IV percent" />
+                  <span class="rank-suffix">% IV</span>
+                </div>
+                <div class="rank-presets" role="group" aria-label="Raid IV percent">
+                  ${RAID_IV_PRESETS.map(
+                    (n) =>
+                      `<button type="button" class="btn btn--preset" data-raid-iv="${n}">${n === RAID_IV_KEEP_MIN ? "any" : String(n)}</button>`,
+                  ).join("")}
+                </div>
+              </div>
             </div>
-            <div class="rank-presets" role="group" aria-label="PvPoke GL species cutoff">
-              ${LIST_KEEP_PRESETS.map(
-                (n) =>
-                  `<button type="button" class="btn btn--preset" data-list-keep="${n}">${n}</button>`,
-              ).join("")}
+          </section>
+
+          <section class="rule-group rule-group--count" aria-labelledby="rules-count">
+            <h3 id="rules-count">How many</h3>
+            <div class="rule">
+              <div class="rule-copy">
+                <label class="rule-title" for="pvp-keep">Copies per job</label>
+                <p class="rule-hint">Seats for each Great League stage, each Little Cup species, and the raid attacker. Better PvPoke species fill first.</p>
+              </div>
+              <div class="rule-control">
+                <div class="rank-row">
+                  <input id="pvp-keep" type="number" inputmode="numeric" min="${PVP_KEEP_MIN}" max="${PVP_KEEP_MAX}" step="1" value="${state.pvpKeep}" aria-label="Copies per job" />
+                  <span class="rank-suffix">copies</span>
+                </div>
+                <div class="rank-presets" role="group" aria-label="Copies per job">
+                  ${PVP_KEEP_PRESETS.map(
+                    (n) =>
+                      `<button type="button" class="btn btn--preset" data-pvp-keep="${n}">${n}</button>`,
+                  ).join("")}
+                </div>
+              </div>
             </div>
-            <p class="note">Only species this high on PvPoke Great League overall count as PvP. Little Cup stays top ${LC_LIST_CAP}.</p>
-          </div>
-          <div class="rules-block">
-            <div class="rank-row">
-              <label class="file-label" for="pvp-keep">Keep PvP</label>
-              <input id="pvp-keep" type="number" inputmode="numeric" min="${PVP_KEEP_MIN}" max="${PVP_KEEP_MAX}" step="1" value="${state.pvpKeep}" />
-              <span class="rank-suffix">per identity</span>
+            <div class="rule">
+              <div class="rule-copy">
+                <label class="rule-title" for="family-keep">Spares with no keeper</label>
+                <p class="rule-hint">If a family has no KEEP, LOOK this many best copies. 0 dumps anything useless for PvP and raids.</p>
+              </div>
+              <div class="rule-control">
+                <div class="rank-row">
+                  <input id="family-keep" type="number" inputmode="numeric" min="${FAMILY_KEEP_MIN}" max="${FAMILY_KEEP_MAX}" step="1" value="${state.familyKeep}" aria-label="Spares with no keeper" />
+                  <span class="rank-suffix">copies</span>
+                </div>
+                <div class="rank-presets" role="group" aria-label="Spares with no keeper">
+                  ${FAMILY_KEEP_PRESETS.map(
+                    (n) =>
+                      `<button type="button" class="btn btn--preset" data-family-keep="${n}">${n === FAMILY_KEEP_MAX ? "all" : String(n)}</button>`,
+                  ).join("")}
+                </div>
+              </div>
             </div>
-            <div class="rank-presets" role="group" aria-label="Keep PvP copies per identity">
-              ${PVP_KEEP_PRESETS.map(
-                (n) =>
-                  `<button type="button" class="btn btn--preset" data-pvp-keep="${n}">${n}</button>`,
-              ).join("")}
+            <div class="rule">
+              <div class="rule-copy">
+                <p class="rule-title" id="keep-all-label">Extra 4*</p>
+                <p class="rule-hint">DUMP extras keeps one 4* per family. KEEP all good keeps every 4*. A filled job does not get a second copy.</p>
+              </div>
+              <div class="rule-control">
+                <div class="mode-row" role="group" aria-labelledby="keep-all-label">
+                  <button type="button" class="btn btn--preset" data-keep-all="0">DUMP extras</button>
+                  <button type="button" class="btn btn--preset" data-keep-all="1">KEEP all good</button>
+                </div>
+              </div>
             </div>
-            <p class="note">Copies of each job: one Great League stage, one Little Cup species, one raid attacker. 1 keeps a single Dragonair, then the next copy is Dragonite, then Little Cup, then one raid.</p>
-          </div>
-          <div class="rules-block">
-            <div class="rank-row">
-              <label class="file-label" for="family-keep">Keep</label>
-              <input id="family-keep" type="number" inputmode="numeric" min="${FAMILY_KEEP_MIN}" max="${FAMILY_KEEP_MAX}" step="1" value="${state.familyKeep}" />
-              <span class="rank-suffix">per family</span>
-            </div>
-            <div class="rank-presets" role="group" aria-label="Keep copies per family">
-              ${FAMILY_KEEP_PRESETS.map(
-                (n) =>
-                  `<button type="button" class="btn btn--preset" data-family-keep="${n}">${n === FAMILY_KEEP_MAX ? "all" : String(n)}</button>`,
-              ).join("")}
-            </div>
-            <p class="note">PvP/raid species with no KEEP: LOOK the best this many, DUMP extras. 0 DUMPs anything useless for PvP and raids.</p>
-          </div>
-          <div class="rules-block">
-            <div class="rank-row">
-              <label class="file-label" for="raid-iv-keep">KEEP raid ≥</label>
-              <input id="raid-iv-keep" type="number" inputmode="numeric" min="${RAID_IV_KEEP_MIN}" max="${RAID_IV_KEEP_MAX}" step="1" value="${state.raidIvKeep}" />
-              <span class="rank-suffix">% IV</span>
-            </div>
-            <div class="rank-presets" role="group" aria-label="KEEP raid IV percent">
-              ${RAID_IV_PRESETS.map(
-                (n) =>
-                  `<button type="button" class="btn btn--preset" data-raid-iv="${n}">${n === RAID_IV_KEEP_MIN ? "any" : String(n)}</button>`,
-              ).join("")}
-            </div>
-            <p class="note">Raid copies need this IV% (Atk+Def+Sta out of 45). 0 keeps any IV.</p>
-          </div>
-          <div class="rules-block">
-            <div class="mode-row" role="group" aria-label="DUMP extras">
-              <button type="button" class="btn btn--preset" data-keep-all="0">DUMP extras</button>
-              <button type="button" class="btn btn--preset" data-keep-all="1">KEEP all good</button>
-            </div>
-            <p class="note">KEEP all good keeps every 4*. It does not assign a second copy of a job that is already filled.</p>
-          </div>
+          </section>
         </div>
       </section>
 
@@ -791,6 +850,8 @@ export function mountApp(root: HTMLElement): void {
   const fileInput = root.querySelector("#csv-file") as HTMLInputElement;
   const rankInput = root.querySelector("#rank-keep") as HTMLInputElement;
   const listKeepInput = root.querySelector("#pvp-list-keep") as HTMLInputElement;
+  const listCutoffEl = root.querySelector("#pvp-list-cutoff") as HTMLElement;
+  const listNoteEl = root.querySelector("#pvp-list-note") as HTMLElement;
   const pvpKeepInput = root.querySelector("#pvp-keep") as HTMLInputElement;
   const familyKeepInput = root.querySelector("#family-keep") as HTMLInputElement;
   const raidIvKeepInput = root.querySelector("#raid-iv-keep") as HTMLInputElement;
@@ -810,6 +871,7 @@ export function mountApp(root: HTMLElement): void {
       ...meta,
       pvpRankKeep: state.pvpRankKeep,
       pvpListKeep: state.pvpListKeep,
+      pvpAny: state.pvpAny,
       pvpKeep: state.pvpKeep,
       familyKeep: state.familyKeep,
       raidIvKeep: state.raidIvKeep,
@@ -831,6 +893,14 @@ export function mountApp(root: HTMLElement): void {
   function persistListKeep(n: number): void {
     try {
       localStorage.setItem(LIST_KEEP_KEY, String(n));
+    } catch {
+      /* private mode */
+    }
+  }
+
+  function persistPvpAny(on: boolean): void {
+    try {
+      localStorage.setItem(PVP_ANY_KEY, on ? "1" : "0");
     } catch {
       /* private mode */
     }
@@ -902,9 +972,20 @@ export function mountApp(root: HTMLElement): void {
       const n = Number(btn.getAttribute("data-rank"));
       btn.classList.toggle("is-active", n === state.pvpRankKeep);
     });
+    listKeepInput.disabled = state.pvpAny;
+    listCutoffEl.classList.toggle("is-hidden", state.pvpAny);
+    listNoteEl.textContent = state.pvpAny
+      ? "Every species can be Great League. Little Cup is every unevolved Pokémon that can still evolve."
+      : `Great League species through this PvPoke rank. Little Cup stays the top ${LC_LIST_CAP}.`;
     root.querySelectorAll("[data-list-keep]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-list-keep"));
-      btn.classList.toggle("is-active", n === state.pvpListKeep);
+      (btn as HTMLButtonElement).disabled = state.pvpAny;
+      btn.classList.toggle("is-active", !state.pvpAny && n === state.pvpListKeep);
+    });
+    root.querySelectorAll("[data-pvp-any]").forEach((btn) => {
+      const on = btn.getAttribute("data-pvp-any") === "1";
+      btn.classList.toggle("is-active", on === state.pvpAny);
+      btn.setAttribute("aria-pressed", on === state.pvpAny ? "true" : "false");
     });
     root.querySelectorAll("[data-pvp-keep]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-pvp-keep"));
@@ -1080,19 +1161,21 @@ export function mountApp(root: HTMLElement): void {
     const raid = meta.raidRankings ?? [];
     const raidFinals = raid.filter((row) => !row.asSpeciesId).length;
     const raidPre = raid.length - raidFinals;
-    const glIn = gl.filter((row) => row.rank <= state.pvpListKeep).length;
+    const glIn = state.pvpAny ? gl.length : gl.filter((row) => row.rank <= state.pvpListKeep).length;
     const raidType = state.rankingsRaidType;
     const raidTypeLabel = raidType ? prettyPokemonType(raidType) : "";
     const raidTyped = raidType ? raid.filter((row) => raidRowHasType(row, raidType)).length : 0;
     const typeStatus = raidType ? ` · ${raidTyped} ${raidTypeLabel}` : "";
-    rankingsStatusEl.textContent = `${pvpokeStatus(meta)} · ${raidListStatus(meta)} · GL ${glIn}/${gl.length || GL_LIST_CAP} in play · LC top ${lc.length || LC_LIST_CAP} · ${raidFinals} raid attackers · ${raidPre} pre-evos${typeStatus}`;
+    const glStatus = state.pvpAny ? "GL any species" : `GL ${glIn}/${gl.length || GL_LIST_CAP} in play`;
+    const lcStatus = state.pvpAny ? "LC any unevolved" : `LC top ${lc.length || LC_LIST_CAP}`;
+    rankingsStatusEl.textContent = `${pvpokeStatus(meta)} · ${raidListStatus(meta)} · ${glStatus} · ${lcStatus} · ${raidFinals} raid attackers · ${raidPre} pre-evos${typeStatus}`;
     rankingsRaidTitleEl.textContent = raidType ? `${raidTypeLabel} raid attackers` : "Raid attackers";
     rankingsRaidNoteEl.textContent = raidType
       ? `${raidTypeLabel}-type KEEP attackers numbered 1 = best ${raidTypeLabel}. Pre-evos share that attacker’s type rank.`
       : "KEEP list sorted by Pokébattler aggregated rank (1 = best). Pre-evolutions sit with the attacker they count as.";
     rankingsGlEl.innerHTML = renderRankingTable(
       gl,
-      state.pvpListKeep,
+      state.pvpAny ? null : state.pvpListKeep,
       "Great League list missing",
     );
     rankingsLcEl.innerHTML = renderRankingTable(lc, null, "Little Cup list missing");
@@ -1135,7 +1218,7 @@ export function mountApp(root: HTMLElement): void {
     }
     resultsEl.classList.remove("hidden");
     gradeTablesEl.classList.remove("hidden");
-    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP} · Keep ${result.pvpKeep} PvP/identity · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "LOOK favorite"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}`;
+    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · ${result.pvpAny ? "PvP any species" : `PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP}`} · Keep ${result.pvpKeep} PvP/identity · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "LOOK favorite"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}`;
     const counts: Array<[string, number]> = [
       ["keep", result.keep.length],
       ["look", result.look.length],
@@ -1268,7 +1351,16 @@ export function mountApp(root: HTMLElement): void {
   function applyListKeep(raw: unknown): void {
     const next = clampPvpListKeep(raw);
     state.pvpListKeep = next;
+    state.pvpAny = false;
     persistListKeep(next);
+    persistPvpAny(false);
+    paintRankControls();
+    regradeLive();
+  }
+
+  function applyPvpAny(on: boolean): void {
+    state.pvpAny = on;
+    persistPvpAny(on);
     paintRankControls();
     regradeLive();
   }
@@ -1387,8 +1479,14 @@ export function mountApp(root: HTMLElement): void {
     }
 
     const listKeepBtn = target.closest("[data-list-keep]") as HTMLElement | null;
-    if (listKeepBtn?.dataset.listKeep) {
+    if (listKeepBtn?.dataset.listKeep && !listKeepBtn.hasAttribute("disabled")) {
       applyListKeep(listKeepBtn.dataset.listKeep);
+      return;
+    }
+
+    const pvpAnyBtn = target.closest("[data-pvp-any]") as HTMLElement | null;
+    if (pvpAnyBtn?.dataset.pvpAny != null) {
+      applyPvpAny(pvpAnyBtn.dataset.pvpAny === "1");
       return;
     }
 

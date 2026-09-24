@@ -173,6 +173,8 @@ export interface GradeResult {
   pvpRankKeep: number;
   /** Species in PvPoke GL overall this far down count as PvP. Rank 1 is best. */
   pvpListKeep: number;
+  /** When true, every species with stats is PvP-viable. The GL top-N cutoff is ignored. */
+  pvpAny: boolean;
   /** Copies kept per Great League stage and per Little Cup species. */
   pvpKeep: number;
   /** LOOK this many best copies of a PvP/raid family with no KEEP; extras DUMP. 0 dumps junk too. */
@@ -218,8 +220,14 @@ export interface Meta {
   dumpCap: number;
   /** Keep GL/LC IVs at this rank or better. Rank 1 is best. Default 500. */
   pvpRankKeep?: number;
-  /** Keep PvPoke GL overall species this far down. Rank 1 is best. Default 500. */
+  /** Keep PvPoke GL overall species this far down. Rank 1 is best. Default 500. Ignored when `pvpAny`. */
   pvpListKeep?: number;
+  /**
+   * When true, Great League is any species with base stats (not only the PvPoke top 500),
+   * and Little Cup is any unevolved species that can still evolve (not only the top 100).
+   * IV floor (`pvpRankKeep`) still applies. Default false.
+   */
+  pvpAny?: boolean;
   /**
    * Copies kept per job: each PvPoke Great League stage, each Little Cup species,
    * and the raid attacker. 1–3, default 1. Higher PvPoke GL stages fill first.
@@ -278,6 +286,8 @@ export const PVP_RANK_OF = 4096;
 export const GL_LIST_CAP = 500;
 export const LC_LIST_CAP = 100;
 export const DEFAULT_PVP_LIST_KEEP = 500;
+/** Off: only the PvPoke GL/LC lists count. On: any species with stats can be PvP. */
+export const DEFAULT_PVP_ANY = false;
 
 /** Copies kept per Great League stage, Little Cup species, and raid attacker. */
 export const DEFAULT_PVP_KEEP = 1;
