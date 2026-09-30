@@ -37,6 +37,8 @@ import {
   RAID_IV_KEEP_MAX,
   RAID_IV_KEEP_MIN,
 } from "./types";
+import { compareScanStream } from "./grade";
+import { clearLastCsv, loadLastCsv, saveLastCsv } from "./lastCsv";
 import { fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP } from "./rank";
 import {
   dumpExecuteString,
@@ -83,8 +85,11 @@ const KEEP_LUCKY_KEY = "pogo-grader.keepLucky";
 const KEEP_FAVORITE_KEY = "pogo-grader.keepFavorite";
 const KEEP_SHADOW_KEY = "pogo-grader.keepShadow";
 
-type Tab = Verdict;
+type Tab = Verdict | "BOX";
 type RankingsTab = "gl" | "lc" | "raid";
+type BoxSort = "cp" | "scan";
+
+const BOX_DISMISS_PREFIX = "pogo-grader.boxDismissed.";
 
 interface Engine {
   parseInventoryCsv: (text: string) => ParseResult;
@@ -114,6 +119,11 @@ interface AppState {
   rankingsTab: RankingsTab;
   rankingsFilter: string;
   rankingsRaidType: PokemonType | "";
+  boxSort: BoxSort;
+  /** sourceRow values removed from the list, tracks, and dump search. Last removed is last. */
+  dismissed: number[];
+  boxSelected: number | null;
+  boxFileKey: string;
 }
 
 function readStoredRankKeep(): number {
@@ -236,6 +246,10 @@ const state: AppState = {
   rankingsTab: "gl",
   rankingsFilter: "",
   rankingsRaidType: "",
+  boxSort: "cp",
+  dismissed: [],
+  boxSelected: null,
+  boxFileKey: "",
 };
 
 function errMsg(err: unknown): string {
@@ -583,6 +597,106 @@ function pickDefaultTab(result: GradeResult): Tab {
   return "KEEP";
 }
 
+function boxStorageKey(file: { name: string; size: number; lastModified: number }): string {
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
+
+function readDismissed(key: string): number[] {
+  if (!key) return [];
+  try {
+    const raw = sessionStorage.getItem(BOX_DISMISS_PREFIX + key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((n): n is number => typeof n === "number" && Number.isFinite(n));
+  } catch {
+    return [];
+  }
+}
+
+function writeDismissed(key: string, rows: number[]): void {
+  if (!key) return;
+  try {
+    if (rows.length === 0) sessionStorage.removeItem(BOX_DISMISS_PREFIX + key);
+    else sessionStorage.setItem(BOX_DISMISS_PREFIX + key, JSON.stringify(rows));
+  } catch {
+    /* private mode */
+  }
+}
+
+function shownRows(rows: GradedMon[]): GradedMon[] {
+  if (state.dismissed.length === 0) return rows;
+  const gone = new Set(state.dismissed);
+  return rows.filter((row) => !gone.has(row.mon.sourceRow));
+}
+
+function boxRows(result: GradeResult): GradedMon[] {
+  const rows = shownRows([...result.keep, ...result.look, ...result.dump]);
+  const byCp = state.boxSort === "cp";
+  rows.sort((a, b) => {
+    if (byCp && a.mon.cp !== b.mon.cp) return b.mon.cp - a.mon.cp;
+    return compareScanStream(a.mon, b.mon);
+  });
+  return rows;
+}
+
+function findGraded(sourceRow: number): GradedMon | undefined {
+  const result = state.result;
+  if (!result) return undefined;
+  return (
+    result.keep.find((row) => row.mon.sourceRow === sourceRow) ??
+    result.look.find((row) => row.mon.sourceRow === sourceRow) ??
+    result.dump.find((row) => row.mon.sourceRow === sourceRow)
+  );
+}
+
+function boxLabel(item: GradedMon): { title: string; sub: string } {
+  const { mon } = item;
+  const species = mon.speciesName || mon.speciesId;
+  const nick = mon.nickname?.trim();
+  const title = nick || species;
+  const speciesBit = nick && species && nick !== species ? species : "";
+  const named = `${title} ${speciesBit}`;
+  const sub = [
+    speciesBit,
+    mon.shadow && !/shadow/i.test(named) ? "shadow" : "",
+    mon.purified && !/purified/i.test(named) ? "purified" : "",
+    mon.form && !/^(normal|standard|none|default|\d+)$/i.test(mon.form.trim()) ? mon.form : "",
+    mon.shiny && !/shiny/i.test(named) ? "shiny" : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return { title, sub };
+}
+
+function renderBoxTile(item: GradedMon, selected: boolean): string {
+  const { mon } = item;
+  const { title, sub } = boxLabel(item);
+  const verdict = item.verdict.toLowerCase();
+  const star = mon.favorite ? `<span class="box-star" title="Favorite">★</span>` : "";
+  const subHtml = sub ? `<div class="box-sub">${escapeHtml(sub)}</div>` : "";
+  const openLabel = `${title}, CP ${mon.cp}, ${item.verdict}. Show details.`;
+  return `<div class="box-tile box-tile--${verdict}${selected ? " is-selected" : ""}">
+    <button type="button" class="box-open" data-box-open="${mon.sourceRow}" aria-pressed="${selected ? "true" : "false"}" aria-label="${escapeHtml(openLabel)}">
+      <div class="box-cp">${star}<span class="box-cp-k">CP</span> ${mon.cp}</div>
+      <div class="box-name">${escapeHtml(title)}</div>
+      ${subHtml}
+    </button>
+    <button type="button" class="box-x" data-box-dismiss="${mon.sourceRow}" aria-label="Remove ${escapeHtml(title)} CP ${mon.cp} from the list" title="Remove from the list">×</button>
+  </div>`;
+}
+
+function renderBoxDetail(item: GradedMon): string {
+  const { mon } = item;
+  const { title, sub } = boxLabel(item);
+  const line = [`CP ${mon.cp}`, `IVs ${formatIvs(mon)}`, sub, formatRanks(item, state.meta)]
+    .filter(Boolean)
+    .join(" · ");
+  return `<div class="box-detail-title">${escapeHtml(title)} <span class="box-detail-verdict box-detail-verdict--${item.verdict.toLowerCase()}">${item.verdict}</span></div>
+    <div class="meta">${escapeHtml(line)}</div>
+    ${rowChips(item, item.verdict, state.meta)}`;
+}
+
 export function mountApp(root: HTMLElement): void {
   root.innerHTML = `
     <div class="app">
@@ -597,8 +711,14 @@ export function mountApp(root: HTMLElement): void {
         <section class="card card--csv" aria-labelledby="csv-title">
           <h2 id="csv-title">CSV</h2>
           <label class="file-label" for="csv-file">Calcy IV or Poke Genie export</label>
-          <input id="csv-file" type="file" accept=".csv,text/csv" />
-          <p class="note">Not uploaded. Skip-scan KEEP museum first — Calcy often omits shiny.</p>
+          <div class="csv-field" id="csv-field">
+            <label class="csv-pick" for="csv-file">
+              <span id="csv-name" class="csv-name">Choose a CSV</span>
+            </label>
+            <input id="csv-file" class="csv-file" type="file" accept=".csv,text/csv" />
+            <button type="button" id="csv-clear" class="csv-clear hidden" aria-label="Remove stored CSV" title="Remove stored CSV">×</button>
+          </div>
+          <p class="note">Kept on this device until you clear it. Skip-scan KEEP museum first — Calcy often omits shiny.</p>
         </section>
 
         <section class="card card--skip" aria-labelledby="skip-title">
@@ -822,6 +942,7 @@ export function mountApp(root: HTMLElement): void {
           <button type="button" class="tab" data-tab="KEEP">KEEP <span class="count" id="count-keep-tab">0</span></button>
           <button type="button" class="tab" data-tab="LOOK">LOOK <span class="count" id="count-look-tab">0</span></button>
           <button type="button" class="tab" data-tab="DUMP">DUMP <span class="count" id="count-dump-tab">0</span></button>
+          <button type="button" class="tab" data-tab="BOX">LIST <span class="count" id="count-box-tab">0</span></button>
         </nav>
 
         <div class="tracks">
@@ -836,6 +957,24 @@ export function mountApp(root: HTMLElement): void {
           <section class="track track--dump" data-track="DUMP">
             <header class="track-head">DUMP <span class="count" id="count-dump">0</span></header>
             <div id="list-dump" class="list"></div>
+          </section>
+          <section class="track track--box" id="box-card" data-track="BOX" aria-labelledby="box-title">
+            <header class="track-head">
+              <span id="box-title">LIST</span>
+              <span class="count" id="count-box">0</span>
+            </header>
+            <div class="box-tools">
+              <div class="mode-row box-sort" role="group" aria-label="List sort">
+                <button type="button" class="btn btn--preset is-active" data-box-sort="cp" aria-pressed="true">CP</button>
+                <button type="button" class="btn btn--preset" data-box-sort="scan" aria-pressed="false">Scan</button>
+              </div>
+              <p class="note box-cleared" id="box-cleared"></p>
+              <button type="button" class="btn hidden" id="box-undo">Undo</button>
+              <button type="button" class="btn hidden" id="box-restore">Restore all</button>
+            </div>
+            <p class="note box-note">CP matches the GO sort. × drops one you transferred.</p>
+            <div id="box-detail" class="box-detail hidden"></div>
+            <div id="box-grid" class="box-grid"></div>
           </section>
         </div>
       </div>
@@ -855,7 +994,15 @@ export function mountApp(root: HTMLElement): void {
   const listKeepEl = root.querySelector("#list-keep") as HTMLElement;
   const listLookEl = root.querySelector("#list-look") as HTMLElement;
   const listDumpEl = root.querySelector("#list-dump") as HTMLElement;
+  const boxGridEl = root.querySelector("#box-grid") as HTMLElement;
+  const boxDetailEl = root.querySelector("#box-detail") as HTMLElement;
+  const boxClearedEl = root.querySelector("#box-cleared") as HTMLElement;
+  const boxUndoEl = root.querySelector("#box-undo") as HTMLElement;
+  const boxRestoreEl = root.querySelector("#box-restore") as HTMLElement;
   const fileInput = root.querySelector("#csv-file") as HTMLInputElement;
+  const csvField = root.querySelector("#csv-field") as HTMLElement;
+  const csvName = root.querySelector("#csv-name") as HTMLElement;
+  const csvClear = root.querySelector("#csv-clear") as HTMLButtonElement;
   const rankInput = root.querySelector("#rank-keep") as HTMLInputElement;
   const listKeepInput = root.querySelector("#pvp-list-keep") as HTMLInputElement;
   const listCutoffEl = root.querySelector("#pvp-list-cutoff") as HTMLElement;
@@ -1211,9 +1358,109 @@ export function mountApp(root: HTMLElement): void {
     root.querySelectorAll(".track").forEach((track) => {
       track.classList.toggle("is-active", track.getAttribute("data-track") === state.tab);
     });
-    paintTrack(listKeepEl, result.keep, "KEEP", LIST_PAINT_MAX, state.meta);
-    paintTrack(listLookEl, result.look, "LOOK", LIST_PAINT_MAX, state.meta);
-    paintTrack(listDumpEl, result.dump, "DUMP", DUMP_LIST_MAX, state.meta);
+    paintTrack(listKeepEl, shownRows(result.keep), "KEEP", LIST_PAINT_MAX, state.meta);
+    paintTrack(listLookEl, shownRows(result.look), "LOOK", LIST_PAINT_MAX, state.meta);
+    paintTrack(listDumpEl, shownRows(result.dump), "DUMP", DUMP_LIST_MAX, state.meta);
+  }
+
+  function listScrolls(): { box: number; keep: number; look: number; dump: number } {
+    return {
+      box: boxGridEl.scrollTop,
+      keep: listKeepEl.scrollTop,
+      look: listLookEl.scrollTop,
+      dump: listDumpEl.scrollTop,
+    };
+  }
+
+  function restoreListScrolls(saved: { box: number; keep: number; look: number; dump: number }): void {
+    boxGridEl.scrollTop = saved.box;
+    listKeepEl.scrollTop = saved.keep;
+    listLookEl.scrollTop = saved.look;
+    listDumpEl.scrollTop = saved.dump;
+  }
+
+  function paintBoxChrome(): void {
+    const gone = new Set(state.dismissed);
+    if (state.boxSelected != null && gone.has(state.boxSelected)) state.boxSelected = null;
+    const selected = state.boxSelected;
+    for (const el of root.querySelectorAll<HTMLButtonElement>("[data-box-open]")) {
+      const on = Number(el.dataset.boxOpen) === selected;
+      el.classList.toggle("is-selected", on);
+      el.setAttribute("aria-pressed", on ? "true" : "false");
+      el.closest(".box-tile")?.classList.toggle("is-selected", on);
+    }
+    const item = selected == null ? undefined : findGraded(selected);
+    if (!item || gone.has(item.mon.sourceRow)) {
+      boxDetailEl.classList.add("hidden");
+      boxDetailEl.innerHTML = "";
+    } else {
+      boxDetailEl.classList.remove("hidden");
+      boxDetailEl.innerHTML = renderBoxDetail(item);
+    }
+    for (const btn of root.querySelectorAll<HTMLButtonElement>("[data-box-sort]")) {
+      const on = btn.dataset.boxSort === state.boxSort;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    }
+    const n = state.dismissed.length;
+    boxClearedEl.textContent = n === 0 ? "" : n === 1 ? "1 removed" : `${n} removed`;
+    boxUndoEl.classList.toggle("hidden", n === 0);
+    boxRestoreEl.classList.toggle("hidden", n === 0);
+  }
+
+  function paintBox(): void {
+    const result = state.result;
+    if (!result) return;
+    const rows = boxRows(result);
+    const selected = state.boxSelected;
+    boxGridEl.innerHTML =
+      rows.length > 0
+        ? rows.map((row) => renderBoxTile(row, row.mon.sourceRow === selected)).join("")
+        : `<p class="empty">${state.dismissed.length > 0 ? "All removed. Restore to show the list again." : "None"}</p>`;
+    const shown = String(rows.length);
+    const boxCount = root.querySelector("#count-box");
+    const boxTabCount = root.querySelector("#count-box-tab");
+    if (boxCount) boxCount.textContent = shown;
+    if (boxTabCount) boxTabCount.textContent = shown;
+    paintBoxChrome();
+  }
+
+  function persistDismissed(): void {
+    writeDismissed(state.boxFileKey, state.dismissed);
+  }
+
+  function dismissBox(sourceRow: number): void {
+    if (!Number.isFinite(sourceRow) || state.dismissed.includes(sourceRow)) return;
+    const saved = listScrolls();
+    state.dismissed.push(sourceRow);
+    if (state.boxSelected === sourceRow) state.boxSelected = null;
+    persistDismissed();
+    paintResults();
+    restoreListScrolls(saved);
+  }
+
+  function undoBox(): void {
+    if (state.dismissed.length === 0) return;
+    const saved = listScrolls();
+    state.dismissed.pop();
+    persistDismissed();
+    paintResults();
+    restoreListScrolls(saved);
+  }
+
+  function restoreBox(): void {
+    if (state.dismissed.length === 0) return;
+    const saved = listScrolls();
+    state.dismissed = [];
+    persistDismissed();
+    paintResults();
+    restoreListScrolls(saved);
+  }
+
+  function toggleBox(sourceRow: number): void {
+    if (!Number.isFinite(sourceRow)) return;
+    state.boxSelected = state.boxSelected === sourceRow ? null : sourceRow;
+    paintBoxChrome();
   }
 
   function paintResults(): void {
@@ -1226,11 +1473,12 @@ export function mountApp(root: HTMLElement): void {
     }
     resultsEl.classList.remove("hidden");
     gradeTablesEl.classList.remove("hidden");
-    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · ${result.pvpAny ? "PvP any species" : `PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP}`} · Keep ${result.pvpKeep} PvP/identity · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "LOOK favorite"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}`;
+    const removedNote = state.dismissed.length > 0 ? ` · ${state.dismissed.length} removed from list` : "";
+    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · ${result.pvpAny ? "PvP any species" : `PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP}`} · Keep ${result.pvpKeep} PvP/identity · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "LOOK favorite"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
     const counts: Array<[string, number]> = [
-      ["keep", result.keep.length],
-      ["look", result.look.length],
-      ["dump", result.dump.length],
+      ["keep", shownRows(result.keep).length],
+      ["look", shownRows(result.look).length],
+      ["dump", shownRows(result.dump).length],
     ];
     for (const [id, n] of counts) {
       const main = root.querySelector(`#count-${id}`) as HTMLElement | null;
@@ -1264,65 +1512,153 @@ export function mountApp(root: HTMLElement): void {
       dumpCapEl.textContent = "";
     }
 
-    const dumpMons = result.dump.map((row) => row.mon);
+    const dumpMons = shownRows(result.dump).map((row) => row.mon);
     const plan = dumpSearchPlan(dumpMons, { keepLucky: state.keepLucky });
     dumpPreviewEl.textContent = plan.preview;
     dumpExecuteEl.textContent = plan.execute;
     dumpNoteEl.textContent = plan.instruction;
     paintList();
+    paintBox();
   }
 
-  async function gradeFile(file: File): Promise<void> {
-    showError("");
-    showBusy("Reading CSV on this device…");
-    resultsEl.classList.add("hidden");
-    gradeTablesEl.classList.add("hidden");
+  let csvEpoch = 0;
 
-    const text = await new Promise<string>((resolve, reject) => {
+  function paintCsvField(): void {
+    const filled = state.fileName.length > 0;
+    csvField.classList.toggle("is-filled", filled);
+    csvName.textContent = filled ? state.fileName : "Choose a CSV";
+    csvName.title = filled ? state.fileName : "";
+    csvClear.classList.toggle("hidden", !filled);
+    csvClear.hidden = !filled;
+  }
+
+  function readFileText(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result ?? ""));
       reader.onerror = () => reject(new Error("Could not read that file."));
       reader.readAsText(file);
     });
+  }
+
+  interface CsvSnapshot {
+    fileName: string;
+    parse: ParseResult | null;
+    result: GradeResult | null;
+    boxFileKey: string;
+    dismissed: number[];
+    boxSelected: number | null;
+    tab: Tab;
+  }
+
+  function snapshotCsv(): CsvSnapshot {
+    return {
+      fileName: state.fileName,
+      parse: state.parse,
+      result: state.result,
+      boxFileKey: state.boxFileKey,
+      dismissed: state.dismissed.slice(),
+      boxSelected: state.boxSelected,
+      tab: state.tab,
+    };
+  }
+
+  function applyCsvSnapshot(snap: CsvSnapshot): void {
+    fileInput.value = "";
+    state.fileName = snap.fileName;
+    state.parse = snap.parse;
+    state.result = snap.result;
+    state.boxFileKey = snap.boxFileKey;
+    state.dismissed = snap.dismissed;
+    state.boxSelected = snap.boxSelected;
+    state.tab = snap.tab;
+    showBusy("");
+    paintCsvField();
+    if (snap.result && snap.parse) paintResults();
+    else {
+      resultsEl.classList.add("hidden");
+      gradeTablesEl.classList.add("hidden");
+    }
+  }
+
+  function resetCsvView(): void {
+    applyCsvSnapshot({
+      fileName: "",
+      parse: null,
+      result: null,
+      boxFileKey: "",
+      dismissed: [],
+      boxSelected: null,
+      tab: state.tab,
+    });
+    showError("");
+  }
+
+  async function gradeCsv(
+    text: string,
+    file: { name: string; size: number; lastModified: number },
+    persist: boolean,
+    epoch: number,
+    previous: CsvSnapshot,
+  ): Promise<void> {
+    const current = () => epoch === csvEpoch;
+    const fail = async (message: string): Promise<void> => {
+      if (!current()) return;
+      applyCsvSnapshot(previous);
+      showError(message);
+      if (persist) return;
+      try {
+        await clearLastCsv();
+      } catch {
+        /* the error above still explains why the reload had nothing to grade */
+      }
+    };
+
+    showError("");
+    showBusy("Reading CSV on this device…");
+    state.fileName = file.name;
+    paintCsvField();
+    resultsEl.classList.add("hidden");
+    gradeTablesEl.classList.add("hidden");
 
     let engine: Engine;
     try {
       engine = await loadEngine();
     } catch (err) {
-      showBusy("");
-      showError(errMsg(err));
+      await fail(errMsg(err));
       return;
     }
+    if (!current()) return;
 
     let parsed: ParseResult;
     try {
       showBusy("Parsing inventory…");
       parsed = engine.parseInventoryCsv(text);
     } catch (err) {
-      showBusy("");
-      showError(`CSV parse failed: ${errMsg(err)}`);
+      await fail(`CSV parse failed: ${errMsg(err)}`);
       return;
     }
+    if (!current()) return;
 
     let meta: Meta;
     try {
       showBusy("Loading meta gates…");
       meta = await engine.loadMeta();
     } catch (err) {
-      showBusy("");
-      showError(`loadMeta failed: ${errMsg(err)}`);
+      await fail(`loadMeta failed: ${errMsg(err)}`);
       return;
     }
+    if (!current()) return;
 
     let graded: GradeResult;
     try {
       showBusy("Grading box…");
       graded = engine.gradeBox(parsed.mons, gradeKnobs(meta));
     } catch (err) {
-      showBusy("");
-      showError(`gradeBox failed: ${errMsg(err)}`);
+      await fail(`gradeBox failed: ${errMsg(err)}`);
       return;
     }
+    if (!current()) return;
 
     state.engine = engine;
     state.meta = meta;
@@ -1330,9 +1666,58 @@ export function mountApp(root: HTMLElement): void {
     state.result = graded;
     state.fileName = file.name;
     state.tab = pickDefaultTab(graded);
+    state.boxFileKey = boxStorageKey(file);
+    const alive = new Set(parsed.mons.map((mon) => mon.sourceRow));
+    state.dismissed = readDismissed(state.boxFileKey).filter((row) => alive.has(row));
+    state.boxSelected = null;
+    if (state.dismissed.length > 0) writeDismissed(state.boxFileKey, state.dismissed);
     showBusy("");
+    paintCsvField();
     paintRankings();
     paintResults();
+
+    if (!persist || !current()) return;
+    try {
+      await saveLastCsv({
+        name: file.name,
+        text,
+        size: file.size,
+        lastModified: file.lastModified,
+      });
+    } catch (err) {
+      if (!current()) return;
+      showError(`Graded, but this browser could not keep the CSV: ${errMsg(err)}`);
+    }
+  }
+
+  async function acceptFile(file: File): Promise<void> {
+    const epoch = ++csvEpoch;
+    const previous = snapshotCsv();
+    state.fileName = file.name;
+    paintCsvField();
+    showError("");
+    showBusy("Reading CSV on this device…");
+    let text: string;
+    try {
+      text = await readFileText(file);
+    } catch (err) {
+      if (epoch !== csvEpoch) return;
+      applyCsvSnapshot(previous);
+      showError(errMsg(err));
+      return;
+    }
+    if (epoch !== csvEpoch) return;
+    await gradeCsv(text, file, true, epoch, previous);
+  }
+
+  async function clearStoredCsv(): Promise<void> {
+    csvEpoch++;
+    resetCsvView();
+    try {
+      await clearLastCsv();
+    } catch (err) {
+      showError(`Could not remove the stored CSV: ${errMsg(err)}`);
+    }
   }
 
   function regradeLive(): void {
@@ -1470,10 +1855,14 @@ export function mountApp(root: HTMLElement): void {
   fileInput.addEventListener("change", () => {
     const file = fileInput.files?.[0];
     if (!file) return;
-    void gradeFile(file).catch((err) => {
+    void acceptFile(file).catch((err) => {
       showBusy("");
       showError(errMsg(err));
     });
+  });
+
+  csvClear.addEventListener("click", () => {
+    void clearStoredCsv();
   });
 
   root.addEventListener("click", (event) => {
@@ -1558,10 +1947,43 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
 
+    const dismissBtn = target.closest("[data-box-dismiss]") as HTMLElement | null;
+    if (dismissBtn?.dataset.boxDismiss) {
+      dismissBox(Number(dismissBtn.dataset.boxDismiss));
+      return;
+    }
+
+    if (target.closest("#box-undo")) {
+      undoBox();
+      return;
+    }
+
+    if (target.closest("#box-restore")) {
+      restoreBox();
+      return;
+    }
+
+    const boxSortBtn = target.closest("[data-box-sort]") as HTMLElement | null;
+    if (boxSortBtn?.dataset.boxSort === "cp" || boxSortBtn?.dataset.boxSort === "scan") {
+      const next = boxSortBtn.dataset.boxSort;
+      if (state.boxSort !== next) {
+        state.boxSort = next;
+        paintBox();
+        boxGridEl.scrollTop = 0;
+      }
+      return;
+    }
+
+    const boxOpenBtn = target.closest("[data-box-open]") as HTMLElement | null;
+    if (boxOpenBtn?.dataset.boxOpen) {
+      toggleBox(Number(boxOpenBtn.dataset.boxOpen));
+      return;
+    }
+
     const tabBtn = target.closest("[data-tab]") as HTMLElement | null;
     if (tabBtn?.dataset.tab && state.result) {
       const next = tabBtn.dataset.tab as Tab;
-      if (next === "KEEP" || next === "LOOK" || next === "DUMP") {
+      if (next === "KEEP" || next === "LOOK" || next === "DUMP" || next === "BOX") {
         state.tab = next;
         paintList();
       }
@@ -1571,7 +1993,7 @@ export function mountApp(root: HTMLElement): void {
     const copyBtn = target.closest("[data-copy]") as HTMLButtonElement | null;
     if (!copyBtn) return;
     const kind = copyBtn.dataset.copy;
-    const dumpMons = state.result?.dump.map((row) => row.mon) ?? [];
+    const dumpMons = shownRows(state.result?.dump ?? []).map((row) => row.mon);
     const dumpOpts = { keepLucky: state.keepLucky };
     let payload = "";
     if (kind === "skip") payload = skipScanString({ keepLucky: state.keepLucky, keepFavorite: state.keepFavorite });
@@ -1593,5 +2015,16 @@ export function mountApp(root: HTMLElement): void {
     })
     .catch(() => {
       rankingsStatusEl.textContent = "Bundled lists load on grade";
+    });
+
+  void loadLastCsv()
+    .then((stored) => {
+      if (!stored || csvEpoch !== 0) return;
+      const epoch = ++csvEpoch;
+      return gradeCsv(stored.text, stored, false, epoch, snapshotCsv());
+    })
+    .catch((err) => {
+      if (csvEpoch !== 0) return;
+      showError(`Could not read the stored CSV: ${errMsg(err)}`);
     });
 }

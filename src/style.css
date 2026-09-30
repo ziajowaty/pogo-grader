@@ -442,15 +442,83 @@ body {
   font-size: 0.92rem;
 }
 
-input[type="file"] {
-  display: block;
-  width: 100%;
-  padding: 12px;
+.csv-field {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: var(--tap);
   border: 1px dashed color-mix(in srgb, var(--keep) 50%, var(--line));
   border-radius: 8px;
   background: #0c0f0b;
+}
+
+.csv-field.is-filled {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--keep) 65%, var(--line));
+}
+
+.csv-field:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.csv-pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.csv-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.csv-field.is-filled .csv-name {
   color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.88rem;
+}
+
+.csv-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.csv-clear {
+  flex: none;
+  width: var(--tap);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0 7px 7px 0;
+  background: transparent;
+  color: #ff5d5d;
   font: inherit;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.csv-clear:hover,
+.csv-clear:focus-visible {
+  background: #3a1618;
+  color: #ffd0d0;
 }
 
 .banner {
@@ -499,7 +567,7 @@ input[type="file"] {
 
 .tracks {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   min-height: 28rem;
 }
@@ -556,6 +624,10 @@ input[type="file"] {
 .track--dump .track-head {
   background: var(--dump-bg);
   color: var(--dump);
+}
+
+.track--box .track-head {
+  color: var(--ink);
 }
 
 .track-head .count {
@@ -1193,6 +1265,233 @@ button.type-chip.is-active {
   }
 }
 
+.track--box .box-tools {
+  flex: 0 0 auto;
+  padding: 8px 8px 0;
+}
+
+.box-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.box-sort {
+  flex-wrap: nowrap;
+  margin-top: 0;
+}
+
+.box-sort .btn--preset {
+  flex: 0 0 auto;
+  min-width: 3.4rem;
+}
+
+.box-tools .btn {
+  width: auto;
+  min-height: 36px;
+  margin-top: 0;
+  padding: 6px 10px;
+}
+
+.box-cleared,
+.box-note {
+  margin: 0;
+}
+
+.track--box .box-note {
+  flex: 0 0 auto;
+  margin: 6px 8px 0;
+  font-size: 0.75rem;
+}
+
+.track--box .box-detail {
+  flex: 0 0 auto;
+  max-height: 9rem;
+  overflow-y: auto;
+  margin: 8px 8px 0;
+}
+
+.box-detail {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #161b14;
+  border: 1px solid var(--line);
+}
+
+.box-detail-title {
+  font-weight: 750;
+}
+
+.box-detail-verdict {
+  margin-left: 6px;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.box-detail-verdict--keep {
+  color: var(--keep);
+}
+
+.box-detail-verdict--look {
+  color: var(--look);
+}
+
+.box-detail-verdict--dump {
+  color: #ef6d6d;
+}
+
+.box-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px 6px;
+  overflow-y: auto;
+  /* Overlay scrollbars paint on top of the grid. Keep a lane wider than the bar so the third column stays clear. */
+  scrollbar-gutter: stable;
+  padding: 8px 18px 8px 8px;
+}
+
+.box-tile {
+  --tile: var(--line);
+  position: relative;
+  border-radius: 10px;
+  border: 1px solid var(--tile);
+  background: #161b14;
+  min-width: 0;
+}
+
+.box-tile--keep {
+  --tile: var(--keep);
+  background: color-mix(in srgb, var(--keep) 34%, #102018);
+}
+
+.box-tile--look {
+  --tile: var(--look);
+  background: color-mix(in srgb, var(--look) 38%, #1c1808);
+}
+
+.box-tile--dump {
+  --tile: #ef6d6d;
+  background: color-mix(in srgb, #ef6d6d 36%, #1c0c0c);
+}
+
+.box-tile.is-selected {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.box-open {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 5.5rem;
+  margin: 0;
+  padding: 8px 6px 7px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.box-open:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.box-cp {
+  width: 100%;
+  padding: 28px 2px 0;
+  font-weight: 800;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.box-cp-k {
+  margin-right: 3px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+.box-star {
+  margin-right: 3px;
+  color: #f4d35e;
+  font-size: 0.75rem;
+}
+
+.box-name {
+  width: 100%;
+  margin-top: 6px;
+  padding-bottom: 3px;
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 3px solid var(--tile);
+}
+
+.box-sub {
+  width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.box-x {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, #000 55%, transparent);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.box-x:hover,
+.box-x:focus-visible {
+  background: #3a1618;
+  border-color: #ef6d6d;
+  color: #ffd0d0;
+}
+
+.box-x:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
 .hidden {
   display: none !important;
 }
@@ -1249,10 +1548,21 @@ button.type-chip.is-active {
   border-color: var(--dump);
 }
 
-@media (max-width: 959px) {
+.tab[data-tab="BOX"] {
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.tab[data-tab="BOX"].is-active {
+  background: var(--focus);
+  border-color: #a8b84a;
+  color: #14180f;
+}
+
+@media (max-width: 1279px) {
   .tabs {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
     margin: 0 0 10px;
     position: sticky;
