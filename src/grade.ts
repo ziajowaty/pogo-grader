@@ -825,6 +825,12 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
         const raidCopy = raidOrdered.indexOf(g) + 1;
         const raidN = raidEligible.length || n;
         pushReason(g, jobKeepReason(g, job, cutoff, raidIvKeep, keepAllGood, limited, raidCopy, raidN, pvpKeep));
+        for (const role of roles) {
+          if (role.kind !== "gl") continue;
+          if (job.kind === "gl" && job.speciesId === role.speciesId) continue;
+          const over = glCapMiss(g, role.speciesId, gm);
+          if (over) pushReason(g, over);
+        }
       } else if (roles.length) {
         pushReason(g, "No PvP/raid job — extra in this family");
       }

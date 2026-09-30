@@ -708,6 +708,26 @@ const highWooperGrade = gradeBox([highWooper], {
   keepShadow: false,
 });
 const highWooperRow = [...highWooperGrade.keep, ...highWooperGrade.look, ...highWooperGrade.dump][0];
+const tallDratini = {
+  ...ivMon("dratini", "Dratini", 900, 1, 4, 15),
+  level: 30,
+  cp: 730,
+};
+const tallGrade = gradeBox([tallDratini], {
+  ...meta,
+  pvpRankKeep: 4096,
+  keepLucky: false,
+  keepFavorite: false,
+  keepShadow: false,
+});
+const tallRow = [...tallGrade.keep, ...tallGrade.look, ...tallGrade.dump][0];
+must(tallRow?.pvpJob?.speciesId === "dragonair", "level-30 dratini still keeps the Dragonair seat");
+must(tallRow?.pvpJob?.speciesId !== "dragonite", "level-30 dratini is not a GL Dragonite");
+must(
+  tallRow?.reasons.some((r) => /Dragonite would be CP \d+ over Great League 1500/.test(r)) === true,
+  `Dragonair keeper should say Dragonite is over 1500, got ${tallRow?.reasons.join(" | ")}`,
+);
+
 must(highWooperRow?.pvpJob?.kind !== "gl", "level-40 wooper is not a Great League Quagsire job");
 must(
   highWooperRow?.reasons.some((r) => /over Great League 1500/.test(r)) === true,

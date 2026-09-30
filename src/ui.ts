@@ -37,6 +37,7 @@ import {
   RAID_IV_KEEP_MAX,
   RAID_IV_KEEP_MIN,
 } from "./types";
+import { fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP } from "./rank";
 import {
   dumpExecuteString,
   dumpPreviewString,
@@ -387,7 +388,14 @@ function formatLeagueBits(
   return "";
 }
 
-function formatRanks(item: GradedMon): string {
+function glOverCapNote(mon: GradedMon["mon"], speciesId: string, meta: Meta | null): string {
+  if (!meta || !speciesId) return "";
+  const fit = fitsLeagueCap(mon, speciesId, GREAT_LEAGUE_CAP, getRankGm(meta.glEvolution));
+  if (fit.fits || fit.cp == null) return "";
+  return ` over ${GREAT_LEAGUE_CAP} (${fit.cp} CP)`;
+}
+
+function formatRanks(item: GradedMon, meta: Meta | null): string {
   const glRanks = item.glAs?.length ? item.glAs : item.gl ? [item.gl] : [];
   const glBits =
     glRanks.length > 0
@@ -397,9 +405,9 @@ function formatRanks(item: GradedMon): string {
             (item.glMeta?.speciesId === iv.evoSpeciesId ? item.glMeta : null);
           const as =
             iv.evoSpeciesId && iv.evoSpeciesId !== item.mon.speciesId ? iv.evoSpeciesId : "";
-          return formatLeagueBits("GL", metaRank, iv, as);
+          return formatLeagueBits("GL", metaRank, iv, as) + glOverCapNote(item.mon, iv.evoSpeciesId, meta);
         })
-      : [formatLeagueBits("GL", item.glMeta, item.gl)];
+      : [formatLeagueBits("GL", item.glMeta, item.gl) + glOverCapNote(item.mon, item.gl?.evoSpeciesId ?? item.mon.speciesId, meta)];
   const raid = item.raidIv
     ? `Raid${item.raidIv.evoSpeciesId !== item.mon.speciesId ? ` as ${prettySpeciesId(item.raidIv.evoSpeciesId)}` : ""} ${item.raidIv.percent}% IV`
     : "";
@@ -522,7 +530,7 @@ function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null): string {
   const jobBadge = job
     ? `<span class="badge-job badge-job--${item.pvpJob?.kind ?? "gl"}">${escapeHtml(job)}</span>`
     : "";
-  const line = [speciesBit, `IVs ${formatIvs(mon)}`, flags, formatRanks(item)].filter(Boolean).join(" · ");
+  const line = [speciesBit, `IVs ${formatIvs(mon)}`, flags, formatRanks(item, meta)].filter(Boolean).join(" · ");
 
   return `<article class="row row--${verdict.toLowerCase()}${crowd ? " row--crowd" : ""}">
     <div class="row-top">
