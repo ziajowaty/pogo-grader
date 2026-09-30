@@ -360,6 +360,10 @@ body {
   font-size: 0.98rem;
 }
 
+.rule-title--raid {
+  color: var(--raid);
+}
+
 .rule-hint {
   margin: 3px 0 0;
   color: var(--muted);
@@ -1265,9 +1269,25 @@ button.type-chip.is-active {
   }
 }
 
+.box-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 0 18px 8px 8px;
+}
+
+.box-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bg-elev);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
 .track--box .box-tools {
   flex: 0 0 auto;
-  padding: 8px 8px 0;
 }
 
 .box-tools {
@@ -1280,6 +1300,7 @@ button.type-chip.is-active {
 .box-sort {
   flex-wrap: nowrap;
   margin-top: 0;
+  padding-top: 8px;
 }
 
 .box-sort .btn--preset {
@@ -1298,11 +1319,18 @@ button.type-chip.is-active {
   margin: 0;
 }
 
+.box-tools .count {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
 .track--box .box-detail {
   flex: 0 0 auto;
   max-height: 9rem;
   overflow-y: auto;
-  margin: 8px 8px 0;
+  margin: 8px 0 0;
 }
 
 .box-detail {
@@ -1335,16 +1363,11 @@ button.type-chip.is-active {
 }
 
 .box-grid {
-  flex: 1 1 auto;
-  min-height: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: start;
   gap: 8px 6px;
-  overflow-y: auto;
-  /* Overlay scrollbars paint on top of the grid. Keep a lane wider than the bar so the third column stays clear. */
-  scrollbar-gutter: stable;
-  padding: 8px 18px 8px 8px;
+  padding-top: 8px;
 }
 
 .box-tile {
@@ -1379,6 +1402,33 @@ button.type-chip.is-active {
 .box-tile.is-leaving {
   pointer-events: none;
   z-index: 1;
+}
+
+.box-tip {
+  position: fixed;
+  z-index: 30;
+  max-width: min(18rem, calc(100vw - 16px));
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #14180f;
+  color: var(--ink);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.box-tip--keep {
+  border-color: var(--keep);
+}
+
+.box-tip--look {
+  border-color: var(--look);
+}
+
+.box-tip--dump {
+  border-color: #ef6d6d;
 }
 
 .box-open {
@@ -1584,18 +1634,18 @@ button.type-chip.is-active {
     display: flex;
   }
 
-  /* The list grows with the page here. Pin the sort bar; a fixed inner scroller is too short on a phone. */
+  /* The list grows with the page here. Pin the count, undo, and details; leave Scan/CP to scroll away. */
   .track--box.is-active {
     overflow: visible;
   }
 
-  .track--box.is-active .box-tools {
-    position: sticky;
+  .track--box.is-active .box-scroll {
+    overflow: visible;
+    flex: none;
+  }
+
+  .track--box.is-active .box-sticky {
     top: 60px;
-    z-index: 3;
-    background: var(--bg-elev);
-    padding: 8px;
-    border-bottom: 1px solid var(--line);
   }
 }
 
@@ -1608,7 +1658,7 @@ button.type-chip.is-active {
     border-top: 1px solid var(--line);
   }
 
-  .track--box.is-active .box-tools {
+  .track--box.is-active .box-sticky {
     top: 0;
   }
 

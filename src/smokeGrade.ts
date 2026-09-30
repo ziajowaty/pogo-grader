@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { parseInventoryCsv } from "./parseCsv";
 import { loadMeta, parsePokebattlerAttackers, pokebattlerToCanonId, unionUniqueIds } from "./meta";
 import { gradeBox, compareScanStream } from "./grade";
-import { clampFamilyKeep, clampPvpKeep, clampRaidIvKeep, FAMILY_KEEP_MIN, PVP_KEEP_MAX, PVP_KEEP_MIN, RAID_IV_KEEP_MIN, type Mon } from "./types";
+import { clampFamilyKeep, clampPvpKeep, clampRaidIvKeep, clampRaidKeep, FAMILY_KEEP_MIN, PVP_KEEP_MAX, PVP_KEEP_MIN, RAID_IV_KEEP_MIN, RAID_KEEP_MAX, RAID_KEEP_MIN, type Mon } from "./types";
 import { cpAsSpecies, fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, LITTLE_CUP_CAP } from "./rank";
 
 function must(cond: boolean, message: string): void {
@@ -62,6 +62,9 @@ must(result.pvpAny === false, "default pvpAny off");
 must(result.pvpKeep === 1, "default pvpKeep 1");
 must(clampPvpKeep(0) === PVP_KEEP_MIN && PVP_KEEP_MIN === 1, "pvpKeep clamps down to 1");
 must(clampPvpKeep(9) === PVP_KEEP_MAX && PVP_KEEP_MAX === 3, "pvpKeep clamps up to 3");
+must(result.raidKeep === 1, "default raidKeep 1");
+must(clampRaidKeep(0) === RAID_KEEP_MIN && RAID_KEEP_MIN === 1, "raidKeep clamps down to 1");
+must(clampRaidKeep(40) === RAID_KEEP_MAX && RAID_KEEP_MAX === 12, "raidKeep clamps up to 12");
 must(result.familyKeep === 2, "default familyKeep 2");
 must(clampFamilyKeep(0) === 0 && FAMILY_KEEP_MIN === 0, "familyKeep 0 is a valid clamp");
 must(result.raidIvKeep === 90, "default raid IV keep 90");
@@ -463,6 +466,20 @@ must(
   mixedDupes.keep.concat(mixedDupes.dump).every((g) => g.copiesInGroup === 8),
   "Bulbasaur and Venusaur share one family copy count",
 );
+const raidCapBulbs = [15, 14, 13].map((atk, i) => hundoAt("bulbasaur", "Bulbasaur", 460 + i, atk));
+const raidCap = gradeBox(raidCapBulbs, { ...bulbMeta, pvpKeep: 3, raidKeep: 1 });
+must(raidCap.keep.length === 1, `copies per job does not raise the raid cap, got ${raidCap.keep.length}`);
+must(raidCap.pvpKeep === 3 && raidCap.raidKeep === 1, "pvp and raid caps echo separately");
+const raidParty = gradeBox(
+  Array.from({ length: 6 }, (_, i) => hundoAt("bulbasaur", "Bulbasaur", 470 + i, 15)),
+  { ...bulbMeta, pvpKeep: 1, raidKeep: 6 },
+);
+must(raidParty.keep.length === 6, `raid copies keeps six while PvP stays at one, got ${raidParty.keep.length}`);
+must(raidParty.raidKeep === 6 && raidParty.pvpKeep === 1, "raid copies is independent of copies per job");
+must(
+  raidParty.keep.every((g) => g.keepClasses.includes("raid") && g.pvpJob?.kind === "raid"),
+  "six raid seats are raid jobs",
+);
 
 function ivMon(
   speciesId: string,
@@ -609,6 +626,7 @@ const dratiniGrade = gradeBox(dratiniLine, {
   keepFavorite: false,
   pvpRankKeep: 500,
   pvpKeep: 2,
+  raidKeep: 2,
 });
 const dratiniAll = [...dratiniGrade.keep, ...dratiniGrade.look, ...dratiniGrade.dump];
 const jobOf = (row: number) => dratiniAll.find((g) => g.mon.sourceRow === row)?.pvpJob;

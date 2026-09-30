@@ -15,12 +15,14 @@ import {
   clampPvpListKeep,
   clampPvpRankKeep,
   clampRaidIvKeep,
+  clampRaidKeep,
   DEFAULT_FAMILY_KEEP,
   DEFAULT_PVP_ANY,
   DEFAULT_PVP_KEEP,
   DEFAULT_PVP_LIST_KEEP,
   DEFAULT_PVP_RANK_KEEP,
   DEFAULT_RAID_IV_KEEP,
+  DEFAULT_RAID_KEEP,
   GL_LIST_CAP,
   LC_LIST_CAP,
   prettySpeciesId,
@@ -240,8 +242,9 @@ function compareRoles(a: RoleDef, b: RoleDef): number {
 /**
  * One job per copy. Fill Great League before Little Cup, and within a league
  * exhaust the higher PvPoke species (Dragonair #85 before Dragonite #340)
- * before touching the next identity. Raid leftovers last. Each GL stage, LC
- * species, and raid attacker gets `pvpKeep` seats (1–3, default 1).
+ * before touching the next identity. Raid leftovers last. Each GL stage and LC
+ * species gets `pvpKeep` seats (1–3, default 1). Each raid attacker gets
+ * `raidKeep` seats (1–12, default 1).
  */
 function assignFamilyJobs(
   rows: GradedMon[],
@@ -430,6 +433,10 @@ function pvpKeepCap(meta: Meta): number {
   return clampPvpKeep(meta.pvpKeep ?? DEFAULT_PVP_KEEP);
 }
 
+function raidKeepCap(meta: Meta): number {
+  return clampRaidKeep(meta.raidKeep ?? DEFAULT_RAID_KEEP);
+}
+
 function familyKeepCap(meta: Meta): number {
   return clampFamilyKeep(meta.familyKeep ?? DEFAULT_FAMILY_KEEP);
 }
@@ -613,6 +620,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const listKeep = pvpListCutoff(meta);
   const pvpAny = pvpAnyOn(meta);
   const pvpKeep = pvpKeepCap(meta);
+  const raidKeep = raidKeepCap(meta);
   const familyKeep = familyKeepCap(meta);
   const raidIvKeep = raidIvFloor(meta);
   const keepAllGood = Boolean(meta.keepAllGood);
@@ -621,7 +629,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const keepShadow = keepShadowOn(meta);
   const glSlots = pvpKeep;
   const lcSlots = pvpKeep;
-  const raidSlots = pvpKeep;
+  const raidSlots = raidKeep;
   const glIndex = indexRanks(meta.glRankings);
   const lcIndex = indexRanks(meta.lcRankings);
   const glOf = meta.glRankings?.length || GL_LIST_CAP;
@@ -824,7 +832,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (job) {
         const raidCopy = raidOrdered.indexOf(g) + 1;
         const raidN = raidEligible.length || n;
-        pushReason(g, jobKeepReason(g, job, cutoff, raidIvKeep, keepAllGood, limited, raidCopy, raidN, pvpKeep));
+        pushReason(g, jobKeepReason(g, job, cutoff, raidIvKeep, keepAllGood, limited, raidCopy, raidN, raidSlots));
         for (const role of roles) {
           if (role.kind !== "gl") continue;
           if (job.kind === "gl" && job.speciesId === role.speciesId) continue;
@@ -868,7 +876,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
           } else {
             pushReason(
               g,
-              `Raid copies: ${raidEligible.length}, keeping ${Math.min(pvpKeep, raidEligible.length)}`,
+              `Raid copies: ${raidEligible.length}, keeping ${Math.min(raidSlots, raidEligible.length)}`,
             );
           }
         }
@@ -1003,6 +1011,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     pvpListKeep: listKeep,
     pvpAny,
     pvpKeep,
+    raidKeep,
     familyKeep,
     raidIvKeep,
     keepAllGood,

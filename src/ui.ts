@@ -14,6 +14,7 @@ import {
   clampPvpListKeep,
   clampPvpRankKeep,
   clampRaidIvKeep,
+  clampRaidKeep,
   DEFAULT_FAMILY_KEEP,
   DEFAULT_KEEP_FAVORITE,
   DEFAULT_KEEP_LUCKY,
@@ -23,6 +24,7 @@ import {
   DEFAULT_PVP_LIST_KEEP,
   DEFAULT_PVP_RANK_KEEP,
   DEFAULT_RAID_IV_KEEP,
+  DEFAULT_RAID_KEEP,
   FAMILY_KEEP_MAX,
   FAMILY_KEEP_MIN,
   GL_LIST_CAP,
@@ -36,6 +38,8 @@ import {
   PVP_RANK_OF,
   RAID_IV_KEEP_MAX,
   RAID_IV_KEEP_MIN,
+  RAID_KEEP_MAX,
+  RAID_KEEP_MIN,
 } from "./types";
 import { compareScanStream } from "./grade";
 import { clearLastCsv, loadLastCsv, saveLastCsv } from "./lastCsv";
@@ -71,12 +75,14 @@ const LIST_PAINT_MAX = 200;
 const RANK_PRESETS = [50, 150, 500, 4096] as const;
 const LIST_KEEP_PRESETS = [100, 200, 300, 500] as const;
 const PVP_KEEP_PRESETS = [1, 2, 3] as const;
+const RAID_KEEP_PRESETS = [1, 3, 6, 12] as const;
 const FAMILY_KEEP_PRESETS = [FAMILY_KEEP_MIN, 1, 2, 6, FAMILY_KEEP_MAX] as const;
 const RAID_IV_PRESETS = [RAID_IV_KEEP_MIN, 80, 90, 95, RAID_IV_KEEP_MAX] as const;
 const RANK_KEEP_KEY = "pogo-grader.pvpRankKeep";
 const LIST_KEEP_KEY = "pogo-grader.pvpListKeep";
 const PVP_ANY_KEY = "pogo-grader.pvpAny";
 const PVP_KEEP_KEY = "pogo-grader.pvpKeep.v2";
+const RAID_KEEP_KEY = "pogo-grader.raidKeep";
 const FAMILY_KEEP_KEY = "pogo-grader.familyKeep";
 const RAID_IV_KEEP_KEY = "pogo-grader.raidIvKeep";
 const RAID_IV_KEEP_KEY_LEGACY = "pogo-grader.raidSpKeep";
@@ -84,6 +90,8 @@ const KEEP_ALL_GOOD_KEY = "pogo-grader.keepAllGood";
 const KEEP_LUCKY_KEY = "pogo-grader.keepLucky";
 const KEEP_FAVORITE_KEY = "pogo-grader.keepFavorite";
 const KEEP_SHADOW_KEY = "pogo-grader.keepShadow";
+const PIN_DETAIL_KEY = "pogo-grader.pinDetail";
+const TAB_KEY = "pogo-grader.tab";
 
 type Tab = Verdict | "BOX";
 type RankingsTab = "gl" | "lc" | "raid";
@@ -110,12 +118,14 @@ interface AppState {
   pvpListKeep: number;
   pvpAny: boolean;
   pvpKeep: number;
+  raidKeep: number;
   familyKeep: number;
   raidIvKeep: number;
   keepAllGood: boolean;
   keepLucky: boolean;
   keepFavorite: boolean;
   keepShadow: boolean;
+  pinDetail: boolean;
   rankingsTab: RankingsTab;
   rankingsFilter: string;
   rankingsRaidType: PokemonType | "";
@@ -163,6 +173,23 @@ function readStoredPvpKeep(): number {
     return clampPvpKeep(Number(raw));
   } catch {
     return DEFAULT_PVP_KEEP;
+  }
+}
+
+function readStoredRaidKeep(): number {
+  try {
+    const raw = localStorage.getItem(RAID_KEEP_KEY);
+    if (raw != null && raw !== "") return clampRaidKeep(Number(raw));
+    const legacy = localStorage.getItem(PVP_KEEP_KEY);
+    const next = legacy != null && legacy !== "" ? clampRaidKeep(Number(legacy)) : DEFAULT_RAID_KEEP;
+    try {
+      localStorage.setItem(RAID_KEEP_KEY, String(next));
+    } catch {
+      /* private mode */
+    }
+    return next;
+  } catch {
+    return DEFAULT_RAID_KEEP;
   }
 }
 
@@ -214,6 +241,14 @@ function readStoredKeepFavorite(): boolean {
   }
 }
 
+function readStoredPinDetail(): boolean {
+  try {
+    return localStorage.getItem(PIN_DETAIL_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
 function readStoredKeepShadow(): boolean {
   try {
     const raw = localStorage.getItem(KEEP_SHADOW_KEY);
@@ -225,7 +260,7 @@ function readStoredKeepShadow(): boolean {
 }
 
 const state: AppState = {
-  tab: "DUMP",
+  tab: readStoredTab() ?? "DUMP",
   result: null,
   parse: null,
   fileName: "",
@@ -237,12 +272,14 @@ const state: AppState = {
   pvpListKeep: readStoredListKeep(),
   pvpAny: readStoredPvpAny(),
   pvpKeep: readStoredPvpKeep(),
+  raidKeep: readStoredRaidKeep(),
   familyKeep: readStoredFamilyKeep(),
   raidIvKeep: readStoredRaidIvKeep(),
   keepAllGood: readStoredKeepAllGood(),
   keepLucky: readStoredKeepLucky(),
   keepFavorite: readStoredKeepFavorite(),
   keepShadow: readStoredKeepShadow(),
+  pinDetail: readStoredPinDetail(),
   rankingsTab: "gl",
   rankingsFilter: "",
   rankingsRaidType: "",
@@ -590,6 +627,27 @@ function raidListStatus(meta: Meta | null): string {
   return meta.raidSource === "live" ? "Pokébattler live" : `Pokébattler ${age}`;
 }
 
+function isTab(value: string | null): value is Tab {
+  return value === "KEEP" || value === "LOOK" || value === "DUMP" || value === "BOX";
+}
+
+function readStoredTab(): Tab | null {
+  try {
+    const raw = localStorage.getItem(TAB_KEY);
+    return isTab(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistTab(tab: Tab): void {
+  try {
+    localStorage.setItem(TAB_KEY, tab);
+  } catch {
+    /* private mode */
+  }
+}
+
 function pickDefaultTab(result: GradeResult): Tab {
   if (result.dumpCapped) return "LOOK";
   if (result.dump.length > 0) return "DUMP";
@@ -669,6 +727,45 @@ function boxLabel(item: GradedMon): { title: string; sub: string } {
   return { title, sub };
 }
 
+function mainBoxReason(item: GradedMon): string {
+  const reasons = item.reasons;
+  if (item.verdict === "KEEP") {
+    const job = reasons.find((reason) => /for great league|for little cup|for raids|raid attacker/i.test(reason));
+    if (job) return job;
+    const identity = reasons.find((reason) =>
+      /^(shiny|lucky|costume|background|4\* \/ hundo|favorite|special \/ legacy move|shadow|dynamax \/ gigantamax|legendary|mythical|limited)/i.test(
+        reason,
+      ),
+    );
+    if (identity) return identity;
+    const visible = reasons.filter((reason) => !isNegativeReason(reason) && !/no pvp\/raid job/i.test(reason));
+    return visible[0] ?? reasons[0] ?? "Kept";
+  }
+  if (item.verdict === "LOOK") {
+    const deciding = reasons.find((reason) =>
+      /never dump|cannot dump|only copy|best junk|pvp\/raid family|dump-cap/i.test(reason),
+    );
+    if (deciding === "dump-cap") return "Dump list is full";
+    return deciding ?? reasons[reasons.length - 1] ?? "Worth a look";
+  }
+  const deciding = [...reasons].reverse().find((reason) =>
+    /extra copy|useless for pvp|keep 0 per family|not gl\/lc\/raid/i.test(reason),
+  );
+  const rest = reasons.filter((reason) => !isBetterAsReason(reason));
+  return deciding ?? rest[rest.length - 1] ?? reasons[reasons.length - 1] ?? "Dump";
+}
+
+function renderBoxDetail(item: GradedMon): string {
+  const { mon } = item;
+  const { title, sub } = boxLabel(item);
+  const line = [`CP ${mon.cp}`, `IVs ${formatIvs(mon)}`, sub, formatRanks(item, state.meta)]
+    .filter(Boolean)
+    .join(" · ");
+  return `<div class="box-detail-title">${escapeHtml(title)} <span class="box-detail-verdict box-detail-verdict--${item.verdict.toLowerCase()}">${item.verdict}</span></div>
+    <div class="meta">${escapeHtml(line)}</div>
+    ${rowChips(item, item.verdict, state.meta)}`;
+}
+
 function renderBoxTile(item: GradedMon, selected: boolean): string {
   const { mon } = item;
   const { title, sub } = boxLabel(item);
@@ -684,17 +781,6 @@ function renderBoxTile(item: GradedMon, selected: boolean): string {
     </button>
     <button type="button" class="box-x" data-box-dismiss="${mon.sourceRow}" aria-label="Remove ${escapeHtml(title)} CP ${mon.cp} from the list" title="Remove from the list">×</button>
   </div>`;
-}
-
-function renderBoxDetail(item: GradedMon): string {
-  const { mon } = item;
-  const { title, sub } = boxLabel(item);
-  const line = [`CP ${mon.cp}`, `IVs ${formatIvs(mon)}`, sub, formatRanks(item, state.meta)]
-    .filter(Boolean)
-    .join(" · ");
-  return `<div class="box-detail-title">${escapeHtml(title)} <span class="box-detail-verdict box-detail-verdict--${item.verdict.toLowerCase()}">${item.verdict}</span></div>
-    <div class="meta">${escapeHtml(line)}</div>
-    ${rowChips(item, item.verdict, state.meta)}`;
 }
 
 export function mountApp(root: HTMLElement): void {
@@ -888,7 +974,7 @@ export function mountApp(root: HTMLElement): void {
             <div class="rule">
               <div class="rule-copy">
                 <label class="rule-title" for="pvp-keep">Copies per job</label>
-                <p class="rule-hint">Seats for each Great League stage, each Little Cup species, and the raid attacker. Better PvPoke species fill first.</p>
+                <p class="rule-hint">Seats for each Great League stage and each Little Cup species. Better PvPoke species fill first.</p>
               </div>
               <div class="rule-control">
                 <div class="rank-row">
@@ -899,6 +985,24 @@ export function mountApp(root: HTMLElement): void {
                   ${PVP_KEEP_PRESETS.map(
                     (n) =>
                       `<button type="button" class="btn btn--preset" data-pvp-keep="${n}">${n}</button>`,
+                  ).join("")}
+                </div>
+              </div>
+            </div>
+            <div class="rule">
+              <div class="rule-copy">
+                <label class="rule-title rule-title--raid" for="raid-keep">Raid copies</label>
+                <p class="rule-hint">Seats for each family's raid attacker. Highest attack fills first.</p>
+              </div>
+              <div class="rule-control">
+                <div class="rank-row">
+                  <input id="raid-keep" type="number" inputmode="numeric" min="${RAID_KEEP_MIN}" max="${RAID_KEEP_MAX}" step="1" value="${state.raidKeep}" aria-label="Raid copies" />
+                  <span class="rank-suffix">copies</span>
+                </div>
+                <div class="rank-presets" role="group" aria-label="Raid copies">
+                  ${RAID_KEEP_PRESETS.map(
+                    (n) =>
+                      `<button type="button" class="btn btn--preset" data-raid-keep="${n}">${n}</button>`,
                   ).join("")}
                 </div>
               </div>
@@ -961,22 +1065,28 @@ export function mountApp(root: HTMLElement): void {
           <section class="track track--box" id="box-card" data-track="BOX" aria-labelledby="box-title">
             <header class="track-head">
               <span id="box-title">LIST</span>
-              <span class="count" id="count-box">0</span>
             </header>
-            <div class="box-tools">
+            <div class="box-scroll" id="box-scroll">
+              <div class="box-sticky">
+                <div class="box-tools">
+                  <span class="count" id="count-box">0</span>
+                  <button type="button" class="btn btn--preset is-active" id="box-pin" aria-pressed="true" title="Keep the details card on screen. Turn off when the window is short.">Pin</button>
+                  <p class="note box-cleared" id="box-cleared"></p>
+                  <button type="button" class="btn hidden" id="box-undo">Undo</button>
+                  <button type="button" class="btn hidden" id="box-restore">Restore all</button>
+                </div>
+                <div id="box-detail" class="box-detail hidden"></div>
+              </div>
               <div class="mode-row box-sort" role="group" aria-label="List sort">
                 <button type="button" class="btn btn--preset is-active" data-box-sort="scan" aria-pressed="true">Scan</button>
                 <button type="button" class="btn btn--preset" data-box-sort="cp" aria-pressed="false">CP</button>
               </div>
-              <p class="note box-cleared" id="box-cleared"></p>
-              <button type="button" class="btn hidden" id="box-undo">Undo</button>
-              <button type="button" class="btn hidden" id="box-restore">Restore all</button>
+              <div id="box-grid" class="box-grid"></div>
             </div>
-            <div id="box-detail" class="box-detail hidden"></div>
-            <div id="box-grid" class="box-grid"></div>
           </section>
         </div>
       </div>
+      <div id="box-tip" class="box-tip hidden" role="tooltip"></div>
     </div>
   `;
 
@@ -993,8 +1103,13 @@ export function mountApp(root: HTMLElement): void {
   const listKeepEl = root.querySelector("#list-keep") as HTMLElement;
   const listLookEl = root.querySelector("#list-look") as HTMLElement;
   const listDumpEl = root.querySelector("#list-dump") as HTMLElement;
+  const boxScrollEl = root.querySelector("#box-scroll") as HTMLElement;
   const boxGridEl = root.querySelector("#box-grid") as HTMLElement;
+  const boxStickyEl = root.querySelector(".box-sticky") as HTMLElement;
+  const boxSortEl = boxScrollEl.querySelector(".box-sort") as HTMLElement;
   const boxDetailEl = root.querySelector("#box-detail") as HTMLElement;
+  const boxPinEl = root.querySelector("#box-pin") as HTMLButtonElement;
+  const boxTipEl = root.querySelector("#box-tip") as HTMLElement;
   const boxClearedEl = root.querySelector("#box-cleared") as HTMLElement;
   const boxUndoEl = root.querySelector("#box-undo") as HTMLElement;
   const boxRestoreEl = root.querySelector("#box-restore") as HTMLElement;
@@ -1007,6 +1122,7 @@ export function mountApp(root: HTMLElement): void {
   const listCutoffEl = root.querySelector("#pvp-list-cutoff") as HTMLElement;
   const listNoteEl = root.querySelector("#pvp-list-note") as HTMLElement;
   const pvpKeepInput = root.querySelector("#pvp-keep") as HTMLInputElement;
+  const raidKeepInput = root.querySelector("#raid-keep") as HTMLInputElement;
   const familyKeepInput = root.querySelector("#family-keep") as HTMLInputElement;
   const raidIvKeepInput = root.querySelector("#raid-iv-keep") as HTMLInputElement;
   const skipScanEl = root.querySelector("#skip-scan") as HTMLElement;
@@ -1027,6 +1143,7 @@ export function mountApp(root: HTMLElement): void {
       pvpListKeep: state.pvpListKeep,
       pvpAny: state.pvpAny,
       pvpKeep: state.pvpKeep,
+      raidKeep: state.raidKeep,
       familyKeep: state.familyKeep,
       raidIvKeep: state.raidIvKeep,
       keepAllGood: state.keepAllGood,
@@ -1063,6 +1180,14 @@ export function mountApp(root: HTMLElement): void {
   function persistPvpKeep(n: number): void {
     try {
       localStorage.setItem(PVP_KEEP_KEY, String(n));
+    } catch {
+      /* private mode */
+    }
+  }
+
+  function persistRaidKeep(n: number): void {
+    try {
+      localStorage.setItem(RAID_KEEP_KEY, String(n));
     } catch {
       /* private mode */
     }
@@ -1120,6 +1245,7 @@ export function mountApp(root: HTMLElement): void {
     rankInput.value = String(state.pvpRankKeep);
     listKeepInput.value = String(state.pvpListKeep);
     pvpKeepInput.value = String(state.pvpKeep);
+    raidKeepInput.value = String(state.raidKeep);
     familyKeepInput.value = String(state.familyKeep);
     raidIvKeepInput.value = String(state.raidIvKeep);
     root.querySelectorAll("[data-rank]").forEach((btn) => {
@@ -1144,6 +1270,10 @@ export function mountApp(root: HTMLElement): void {
     root.querySelectorAll("[data-pvp-keep]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-pvp-keep"));
       btn.classList.toggle("is-active", n === state.pvpKeep);
+    });
+    root.querySelectorAll("[data-raid-keep]").forEach((btn) => {
+      const n = Number(btn.getAttribute("data-raid-keep"));
+      btn.classList.toggle("is-active", n === state.raidKeep);
     });
     root.querySelectorAll("[data-family-keep]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-family-keep"));
@@ -1364,7 +1494,7 @@ export function mountApp(root: HTMLElement): void {
 
   function listScrolls(): { box: number; keep: number; look: number; dump: number } {
     return {
-      box: boxGridEl.scrollTop,
+      box: boxScrollEl.scrollTop,
       keep: listKeepEl.scrollTop,
       look: listLookEl.scrollTop,
       dump: listDumpEl.scrollTop,
@@ -1372,7 +1502,7 @@ export function mountApp(root: HTMLElement): void {
   }
 
   function restoreListScrolls(saved: { box: number; keep: number; look: number; dump: number }): void {
-    boxGridEl.scrollTop = saved.box;
+    boxScrollEl.scrollTop = saved.box;
     listKeepEl.scrollTop = saved.keep;
     listLookEl.scrollTop = saved.look;
     listDumpEl.scrollTop = saved.dump;
@@ -1386,6 +1516,7 @@ export function mountApp(root: HTMLElement): void {
       const on = Number(el.dataset.boxOpen) === selected;
       el.classList.toggle("is-selected", on);
       el.setAttribute("aria-pressed", on ? "true" : "false");
+      if (!on) el.removeAttribute("aria-describedby");
       el.closest(".box-tile")?.classList.toggle("is-selected", on);
     }
     const item = selected == null ? undefined : findGraded(selected);
@@ -1396,6 +1527,8 @@ export function mountApp(root: HTMLElement): void {
       boxDetailEl.classList.remove("hidden");
       boxDetailEl.innerHTML = renderBoxDetail(item);
     }
+    placeBoxDetail();
+    placeBoxTip();
     for (const btn of root.querySelectorAll<HTMLButtonElement>("[data-box-sort]")) {
       const on = btn.dataset.boxSort === state.boxSort;
       btn.classList.toggle("is-active", on);
@@ -1483,10 +1616,70 @@ export function mountApp(root: HTMLElement): void {
     restoreListScrolls(saved);
   }
 
+  function placeBoxDetail(): void {
+    const pin = state.pinDetail;
+    boxPinEl.classList.toggle("is-active", pin);
+    boxPinEl.setAttribute("aria-pressed", pin ? "true" : "false");
+    if (pin) {
+      if (boxDetailEl.parentElement !== boxStickyEl) boxStickyEl.appendChild(boxDetailEl);
+      return;
+    }
+    if (boxDetailEl.nextElementSibling !== boxSortEl) boxScrollEl.insertBefore(boxDetailEl, boxSortEl);
+  }
+
   function toggleBox(sourceRow: number): void {
     if (!Number.isFinite(sourceRow)) return;
     state.boxSelected = state.boxSelected === sourceRow ? null : sourceRow;
     paintBoxChrome();
+  }
+
+  function placeBoxTip(): void {
+    const selected = state.boxSelected;
+    const item = selected == null ? undefined : findGraded(selected);
+    const gone = state.dismissed.includes(selected ?? -1);
+    const open = boxGridEl.querySelector(`[data-box-open="${selected}"]`);
+    const tile = open?.closest(".box-tile");
+    if (!item || gone || !(tile instanceof HTMLElement)) {
+      boxTipEl.classList.add("hidden");
+      boxTipEl.textContent = "";
+      return;
+    }
+    const port = boxScrollEl.getBoundingClientRect();
+    const rect = tile.getBoundingClientRect();
+    const viewTop = Math.max(port.top, 0);
+    const viewBottom = Math.min(port.bottom, window.innerHeight);
+    const onScreen =
+      rect.bottom > viewTop + 4 &&
+      rect.top < viewBottom - 4 &&
+      rect.right > 0 &&
+      rect.left < window.innerWidth;
+    if (!onScreen) {
+      boxTipEl.classList.add("hidden");
+      return;
+    }
+    boxTipEl.classList.remove("box-tip--keep", "box-tip--look", "box-tip--dump");
+    boxTipEl.classList.add(`box-tip--${item.verdict.toLowerCase()}`);
+    boxTipEl.textContent = mainBoxReason(item);
+    boxTipEl.style.left = "-9999px";
+    boxTipEl.classList.remove("hidden");
+    const margin = 8;
+    const tipW = boxTipEl.offsetWidth;
+    const tipH = boxTipEl.offsetHeight;
+    let left = rect.left + rect.width / 2 - tipW / 2;
+    left = Math.max(margin, Math.min(left, window.innerWidth - tipW - margin));
+    let top = rect.bottom + 6;
+    let limitBottom = window.innerHeight - margin;
+    const tabs = root.querySelector(".tabs");
+    if (tabs instanceof HTMLElement && getComputedStyle(tabs).display !== "none") {
+      const tabRect = tabs.getBoundingClientRect();
+      if (tabRect.top > window.innerHeight * 0.5) limitBottom = Math.min(limitBottom, tabRect.top - margin);
+    }
+    if (top + tipH > limitBottom) top = rect.top - tipH - 6;
+    if (top < margin) top = margin;
+    boxTipEl.style.left = `${Math.round(left)}px`;
+    boxTipEl.style.top = `${Math.round(top)}px`;
+    const button = open instanceof HTMLButtonElement ? open : null;
+    button?.setAttribute("aria-describedby", "box-tip");
   }
 
   function paintResults(): void {
@@ -1500,7 +1693,7 @@ export function mountApp(root: HTMLElement): void {
     resultsEl.classList.remove("hidden");
     gradeTablesEl.classList.remove("hidden");
     const removedNote = state.dismissed.length > 0 ? ` · ${state.dismissed.length} removed from list` : "";
-    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · ${result.pvpAny ? "PvP any species" : `PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP}`} · Keep ${result.pvpKeep} PvP/identity · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "LOOK favorite"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
+    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · ${result.pvpAny ? "PvP any species" : `PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP}`} · Keep ${result.pvpKeep} PvP/identity · Keep ${result.raidKeep} raid · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "LOOK favorite"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
     const counts: Array<[string, number]> = [
       ["keep", shownRows(result.keep).length],
       ["look", shownRows(result.look).length],
@@ -1691,7 +1884,7 @@ export function mountApp(root: HTMLElement): void {
     state.parse = parsed;
     state.result = graded;
     state.fileName = file.name;
-    state.tab = pickDefaultTab(graded);
+    state.tab = readStoredTab() ?? pickDefaultTab(graded);
     state.boxFileKey = boxStorageKey(file);
     const alive = new Set(parsed.mons.map((mon) => mon.sourceRow));
     state.dismissed = readDismissed(state.boxFileKey).filter((row) => alive.has(row));
@@ -1792,6 +1985,14 @@ export function mountApp(root: HTMLElement): void {
     regradeLive();
   }
 
+  function applyRaidKeep(raw: unknown): void {
+    const next = clampRaidKeep(raw);
+    state.raidKeep = next;
+    persistRaidKeep(next);
+    paintRankControls();
+    regradeLive();
+  }
+
   function applyFamilyKeep(raw: unknown): void {
     const next = clampFamilyKeep(raw);
     state.familyKeep = next;
@@ -1856,6 +2057,12 @@ export function mountApp(root: HTMLElement): void {
   pvpKeepInput.addEventListener("blur", () => {
     applyPvpKeep(pvpKeepInput.value);
   });
+  raidKeepInput.addEventListener("change", () => {
+    applyRaidKeep(raidKeepInput.value);
+  });
+  raidKeepInput.addEventListener("blur", () => {
+    applyRaidKeep(raidKeepInput.value);
+  });
   familyKeepInput.addEventListener("change", () => {
     applyFamilyKeep(familyKeepInput.value);
   });
@@ -1891,6 +2098,9 @@ export function mountApp(root: HTMLElement): void {
     void clearStoredCsv();
   });
 
+  document.addEventListener("scroll", () => placeBoxTip(), { capture: true, passive: true });
+  window.addEventListener("resize", () => placeBoxTip());
+
   root.addEventListener("click", (event) => {
     const target = event.target as HTMLElement | null;
     if (!target) return;
@@ -1916,6 +2126,12 @@ export function mountApp(root: HTMLElement): void {
     const pvpKeepBtn = target.closest("[data-pvp-keep]") as HTMLElement | null;
     if (pvpKeepBtn?.dataset.pvpKeep) {
       applyPvpKeep(pvpKeepBtn.dataset.pvpKeep);
+      return;
+    }
+
+    const raidKeepBtn = target.closest("[data-raid-keep]") as HTMLElement | null;
+    if (raidKeepBtn?.dataset.raidKeep) {
+      applyRaidKeep(raidKeepBtn.dataset.raidKeep);
       return;
     }
 
@@ -1979,6 +2195,18 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
 
+    if (target.closest("#box-pin")) {
+      state.pinDetail = !state.pinDetail;
+      try {
+        localStorage.setItem(PIN_DETAIL_KEY, state.pinDetail ? "1" : "0");
+      } catch {
+        /* private mode */
+      }
+      placeBoxDetail();
+      placeBoxTip();
+      return;
+    }
+
     if (target.closest("#box-undo")) {
       undoBox();
       return;
@@ -1995,7 +2223,7 @@ export function mountApp(root: HTMLElement): void {
       if (state.boxSort !== next) {
         state.boxSort = next;
         paintBox();
-        boxGridEl.scrollTop = 0;
+        boxScrollEl.scrollTop = 0;
       }
       return;
     }
@@ -2011,6 +2239,7 @@ export function mountApp(root: HTMLElement): void {
       const next = tabBtn.dataset.tab as Tab;
       if (next === "KEEP" || next === "LOOK" || next === "DUMP" || next === "BOX") {
         state.tab = next;
+        persistTab(next);
         paintList();
       }
       return;
@@ -2031,6 +2260,8 @@ export function mountApp(root: HTMLElement): void {
       else showError("Copy failed — select the search text manually.");
     });
   });
+
+  placeBoxDetail();
 
   void loadEngine()
     .then((engine) => engine.loadMeta())

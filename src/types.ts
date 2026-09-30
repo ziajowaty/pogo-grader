@@ -177,6 +177,8 @@ export interface GradeResult {
   pvpAny: boolean;
   /** Copies kept per Great League stage and per Little Cup species. */
   pvpKeep: number;
+  /** Copies kept of each family's raid attacker. Independent of `pvpKeep`. */
+  raidKeep: number;
   /** LOOK this many best copies of a PvP/raid family with no KEEP; extras DUMP. 0 dumps junk too. */
   familyKeep: number;
   /** Raid KEEP only if IV% is this or better. 0 keeps any IV. */
@@ -229,17 +231,24 @@ export interface Meta {
    */
   pvpAny?: boolean;
   /**
-   * Copies kept per job: each PvPoke Great League stage, each Little Cup species,
-   * and the raid attacker. 1–3, default 1. Higher PvPoke GL stages fill first.
+   * Copies kept per PvP job: each PvPoke Great League stage and each Little Cup
+   * species. 1–3, default 1. Higher PvPoke GL stages fill first.
+   * Does not cap raid attackers (`raidKeep`).
    * `keepAllGood` still keeps every hundo; it does not add extra copies of the same job.
    */
   pvpKeep?: number;
   /**
+   * Copies kept of each family's raid attacker. 1–12, default 1.
+   * Highest attack fills first. Independent of `pvpKeep`.
+   * Limited raid species still KEEP every copy. `keepAllGood` still keeps every hundo.
+   */
+  raidKeep?: number;
+  /**
    * When a PvP/raid family has no KEEP, LOOK this many best copies and DUMP the rest.
    * 0 DUMPs those copies and ungated junk (not useful for PvP or raids), still
    * never dumping shadows / limited / special / non-unique IVs.
-   * Default 2. Does not change KEEP slot caps (`pvpKeep` per GL stage, LC species,
-   * and raid attacker). Each copy gets at most one of those jobs. GL seats fill
+   * Default 2. Does not change KEEP slot caps (`pvpKeep` per GL stage and LC species,
+   * `raidKeep` per raid attacker). Each copy gets at most one of those jobs. GL seats fill
    * before LC; within a league, higher PvPoke species exhaust their seats before
    * a worse evo. Raid is last. Unlisted forms (Dratini in GL) are not jobs.
    */
@@ -251,8 +260,8 @@ export interface Meta {
   raidIvKeep?: number;
   /**
    * Keep every eligible good copy (all 4*, all raid attackers, all PvP-floor IVs).
-   * Off = one job per copy (`pvpKeep` per GL stage, LC species, and raid attacker,
-   * plus 1 hundo per family). On still does not duplicate a filled job.
+   * Off = one job per copy (`pvpKeep` per GL stage and LC species, `raidKeep` per
+   * raid attacker, plus 1 hundo per family). On still does not duplicate a filled job.
    */
   keepAllGood?: boolean;
   /**
@@ -289,10 +298,15 @@ export const DEFAULT_PVP_LIST_KEEP = 500;
 /** Off: only the PvPoke GL/LC lists count. On: any species with stats can be PvP. */
 export const DEFAULT_PVP_ANY = false;
 
-/** Copies kept per Great League stage, Little Cup species, and raid attacker. */
+/** Copies kept per Great League stage and Little Cup species. */
 export const DEFAULT_PVP_KEEP = 1;
 export const PVP_KEEP_MIN = 1;
 export const PVP_KEEP_MAX = 3;
+
+/** Copies kept of each family's raid attacker. */
+export const DEFAULT_RAID_KEEP = 1;
+export const RAID_KEEP_MIN = 1;
+export const RAID_KEEP_MAX = 12;
 
 /** Best copies to LOOK in a PvP/raid family that has no KEEP. 0 dumps junk too. */
 export const DEFAULT_FAMILY_KEEP = 2;
@@ -321,6 +335,12 @@ export function clampPvpKeep(n: unknown): number {
   const v = typeof n === "number" ? n : Number(n);
   if (!Number.isFinite(v)) return DEFAULT_PVP_KEEP;
   return Math.min(PVP_KEEP_MAX, Math.max(PVP_KEEP_MIN, Math.round(v)));
+}
+
+export function clampRaidKeep(n: unknown): number {
+  const v = typeof n === "number" ? n : Number(n);
+  if (!Number.isFinite(v)) return DEFAULT_RAID_KEEP;
+  return Math.min(RAID_KEEP_MAX, Math.max(RAID_KEEP_MIN, Math.round(v)));
 }
 
 export function prettySpeciesId(id: string): string {
