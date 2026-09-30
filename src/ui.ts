@@ -246,7 +246,7 @@ const state: AppState = {
   rankingsTab: "gl",
   rankingsFilter: "",
   rankingsRaidType: "",
-  boxSort: "cp",
+  boxSort: "scan",
   dismissed: [],
   boxSelected: null,
   boxFileKey: "",
@@ -965,14 +965,13 @@ export function mountApp(root: HTMLElement): void {
             </header>
             <div class="box-tools">
               <div class="mode-row box-sort" role="group" aria-label="List sort">
-                <button type="button" class="btn btn--preset is-active" data-box-sort="cp" aria-pressed="true">CP</button>
-                <button type="button" class="btn btn--preset" data-box-sort="scan" aria-pressed="false">Scan</button>
+                <button type="button" class="btn btn--preset is-active" data-box-sort="scan" aria-pressed="true">Scan</button>
+                <button type="button" class="btn btn--preset" data-box-sort="cp" aria-pressed="false">CP</button>
               </div>
               <p class="note box-cleared" id="box-cleared"></p>
               <button type="button" class="btn hidden" id="box-undo">Undo</button>
               <button type="button" class="btn hidden" id="box-restore">Restore all</button>
             </div>
-            <p class="note box-note">CP matches the GO sort. × drops one you transferred.</p>
             <div id="box-detail" class="box-detail hidden"></div>
             <div id="box-grid" class="box-grid"></div>
           </section>
@@ -1429,7 +1428,7 @@ export function mountApp(root: HTMLElement): void {
     writeDismissed(state.boxFileKey, state.dismissed);
   }
 
-  function dismissBox(sourceRow: number): void {
+  function commitDismiss(sourceRow: number): void {
     if (!Number.isFinite(sourceRow) || state.dismissed.includes(sourceRow)) return;
     const saved = listScrolls();
     state.dismissed.push(sourceRow);
@@ -1437,6 +1436,33 @@ export function mountApp(root: HTMLElement): void {
     persistDismissed();
     paintResults();
     restoreListScrolls(saved);
+  }
+
+  function dismissBox(sourceRow: number): void {
+    if (!Number.isFinite(sourceRow) || state.dismissed.includes(sourceRow)) return;
+    const tile = boxGridEl
+      .querySelector(`[data-box-dismiss="${sourceRow}"]`)
+      ?.closest(".box-tile");
+    if (!(tile instanceof HTMLElement) || tile.classList.contains("is-leaving")) {
+      commitDismiss(sourceRow);
+      return;
+    }
+    tile.classList.add("is-leaving");
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      commitDismiss(sourceRow);
+    };
+    const anim = tile.animate(
+      [
+        { opacity: 1, transform: "scale(1)" },
+        { opacity: 0, transform: "scale(0.86)" },
+      ],
+      { duration: 180, easing: "ease", fill: "forwards" },
+    );
+    anim.onfinish = finish;
+    window.setTimeout(finish, 260);
   }
 
   function undoBox(): void {

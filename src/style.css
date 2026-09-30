@@ -1294,15 +1294,8 @@ button.type-chip.is-active {
   padding: 6px 10px;
 }
 
-.box-cleared,
-.box-note {
+.box-cleared {
   margin: 0;
-}
-
-.track--box .box-note {
-  flex: 0 0 auto;
-  margin: 6px 8px 0;
-  font-size: 0.75rem;
 }
 
 .track--box .box-detail {
@@ -1381,6 +1374,11 @@ button.type-chip.is-active {
 .box-tile.is-selected {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
+}
+
+.box-tile.is-leaving {
+  pointer-events: none;
+  z-index: 1;
 }
 
 .box-open {
@@ -1585,6 +1583,20 @@ button.type-chip.is-active {
   .track.is-active {
     display: flex;
   }
+
+  /* The list grows with the page here. Pin the sort bar; a fixed inner scroller is too short on a phone. */
+  .track--box.is-active {
+    overflow: visible;
+  }
+
+  .track--box.is-active .box-tools {
+    position: sticky;
+    top: 60px;
+    z-index: 3;
+    background: var(--bg-elev);
+    padding: 8px;
+    border-bottom: 1px solid var(--line);
+  }
 }
 
 @media (max-width: 640px) {
@@ -1594,6 +1606,10 @@ button.type-chip.is-active {
     margin: 10px 0 0;
     padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--line);
+  }
+
+  .track--box.is-active .box-tools {
+    top: 0;
   }
 
   .app {
