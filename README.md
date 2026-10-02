@@ -27,7 +27,7 @@ npm run preview  # serve the production build
 3. Drop the CSV here. Nothing is uploaded.
 4. Three tracks in CSV order: **KEEP**, **LOOK**, **DUMP** (DUMP cap 100; overflow goes to LOOK).
 5. **KEEP PvP ≤** (default 500/4096). **DUMP extras** vs **KEEP all good** if you want every 4\* / raid / PvP-floor copy.
-6. Favorite KEEP in GO, **Search** DUMP, tag `#DUMP`, **Transfer** search, you tap Transfer.
+6. Read the DUMP grid, then transfer those copies yourself in GO.
 
 This app never talks to Scopely/Niantic and never taps Transfer.
 

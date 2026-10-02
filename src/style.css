@@ -115,10 +115,6 @@ body {
   border-top: 3px solid var(--gl);
 }
 
-.dump-card {
-  border-top: 3px solid var(--dump);
-}
-
 .rankings-card {
   border-top: 3px solid var(--gl);
 }
@@ -142,10 +138,6 @@ body {
 
 .card--skip h2 {
   color: var(--gl);
-}
-
-.dump-card h2 {
-  color: var(--dump);
 }
 
 .rankings-card h2 {
@@ -180,35 +172,6 @@ body {
   user-select: all;
 }
 
-.search-block--dump {
-  border-color: var(--dump-line);
-  background: #140f08;
-}
-
-.search-label {
-  margin: 0 0 2px;
-  font-size: 0.72rem;
-  font-weight: 750;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.search-hint {
-  margin: 0 0 6px;
-}
-
-.search-grid {
-  display: grid;
-  gap: 12px;
-}
-
-@media (min-width: 720px) {
-  .search-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
@@ -236,12 +199,6 @@ body {
   background: var(--focus);
   color: #14180f;
   border-color: #a8b84a;
-}
-
-.btn--dump {
-  background: #3a2a12;
-  border-color: var(--dump-line);
-  color: var(--dump);
 }
 
 .btn.is-copied {
@@ -330,6 +287,15 @@ body {
 
 .rule-group--keep h3 {
   color: var(--keep);
+}
+
+.rule-group--stars h3 {
+  color: #ff8aa0;
+}
+
+.mode-row--stars .btn--preset {
+  flex: 1 1 7rem;
+  white-space: nowrap;
 }
 
 .rule-group--who h3 {
@@ -551,11 +517,15 @@ body {
   color: var(--ink);
 }
 
-.status-bar .status-line,
 .status-line {
   color: var(--muted);
   font-size: 0.88rem;
   margin: 0 0 10px;
+}
+
+.card--csv .csv-loaded,
+.card--csv .issues {
+  margin: 8px 0 0;
 }
 
 .issues {

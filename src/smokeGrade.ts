@@ -879,19 +879,37 @@ must(keepFavOn.keep[0].keepClasses.includes("favorite"), "KEEP favorite uses fav
 
 const keepFavOff = gradeBox([junkFav], { ...meta, keepFavorite: false });
 must(keepFavOff.keepFavorite === false, "echo keepFavorite false");
-must(keepFavOff.keep.length === 0, "Favorite off drops the junk favorite keep class");
-must(keepFavOff.look.length === 1 && keepFavOff.dump.length === 0, "LOOK favorite never dumps");
+must(keepFavOff.keep.length === 0, "Can dump drops the junk favorite keep class");
+must(keepFavOff.look.length === 1 && keepFavOff.dump.length === 0, "lone junk star still LOOKs as the only copy");
 must(
   keepFavOff.look[0].keepClasses.includes("favorite") !== true,
-  "LOOK favorite does not attach favorite keep class",
+  "Can dump does not attach the favorite keep class",
 );
 must(
-  keepFavOff.look[0].reasons.some((r) => /favorite/i.test(r)),
-  "LOOK favorite still explains never-dump",
+  keepFavOff.look[0].reasons.every((r) => !/favorite/i.test(r)),
+  "only-copy LOOK is not a favorite lock",
 );
+must(keepFavOff.look[0].reasons.some((r) => r === "only copy"), "lone junk star explains only copy");
 
 const keepFavZero = gradeBox([junkFav], { ...meta, keepFavorite: false, familyKeep: 0 });
-must(keepFavZero.dump.length === 0 && keepFavZero.look.length === 1, "familyKeep 0 still never dumps favorites");
+must(keepFavZero.dump.length === 1 && keepFavZero.look.length === 0, "familyKeep 0 dumps a junk star");
+must(
+  keepFavZero.dump[0].reasons.every((r) => !/never dump/i.test(r)),
+  "dumped star has no never-dump lock",
+);
+
+const shinyStar = gradeBox([{ ...junkFav, shiny: true }], { ...meta, keepFavorite: false, familyKeep: 0 });
+must(
+  shinyStar.keep.length === 1 && shinyStar.keep[0].keepClasses.includes("shiny"),
+  "shiny star still KEEPs when the star itself can dump",
+);
+
+const extraStar = gradeBox(
+  [hundoAt("bidoof", "Bidoof", 504), { ...ivMon("bidoof", "Bidoof", 505, 0, 0, 0), favorite: true }],
+  { ...meta, keepFavorite: false },
+);
+must(extraStar.keep.some((g) => g.keepClasses.includes("hundo")), "hundo still KEEPs beside a star");
+must(extraStar.dump.some((g) => g.mon.favorite === true), "extra star DUMPs when the family already has a keeper");
 
 const bulkBidoof = { ...ivMon("bidoof", "Bidoof", 900, 0, 15, 15), cp: 400 };
 const anyOff = gradeBox([bulkBidoof], { ...meta, pvpAny: false, pvpRankKeep: 4096 });

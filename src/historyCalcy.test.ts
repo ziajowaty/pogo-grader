@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { parseInventoryCsv } from "./parseCsv";
 import { loadMeta } from "./meta";
 import { gradeBox, compareScanStream } from "./grade";
-import { dumpExecuteString, dumpPreviewString } from "./search";
 import type { GradedMon, Mon, Verdict } from "./types";
 
 /**
@@ -329,7 +328,7 @@ const noFavChip = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, keepFavorit
 must(noFavChip.keepFavorite === false, "echo keepFavorite false");
 must(
   noFavChip.dump.every((g) => !g.mon.favorite),
-  "LOOK favorite still never dumps history favorites",
+  "history favorite is lucky, so Can dump still leaves it off DUMP",
 );
 const machopFavOff = [...noFavChip.keep, ...noFavChip.look, ...noFavChip.dump].find((g) => g.mon.favorite);
 must(
@@ -423,16 +422,6 @@ must(
   ),
   "no Great League job on an over-cap copy",
 );
-
-const dumpPreview = dumpPreviewString(result.dump.map((g) => g.mon));
-must(!/shadow/i.test(dumpPreview), "DUMP search must not list Shadow copies");
-
-const cloakSeed = [parsed.mons[0]];
-const dumpCloakOn = dumpExecuteString(cloakSeed);
-must(dumpCloakOn.includes("!lucky"), "Transfer cloaks luckies while Lucky KEEPs");
-const dumpCloakOff = dumpExecuteString(cloakSeed, { keepLucky: false });
-must(!dumpCloakOff.includes("!lucky"), "Transfer drops !lucky when Lucky chip is faded");
-must(dumpCloakOff.includes("!shiny") && dumpCloakOff.includes("!shadow"), "Transfer still cloaks shiny and shadow");
 
 const alolaGraded = all.find((g) => g.mon.speciesId === "sandshrew_alolan_shadow");
 must(alolaGraded?.glMeta != null, "alolan shadow sandshrew matches PvPoke GL id with underscore");
