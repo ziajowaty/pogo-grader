@@ -811,7 +811,7 @@ export function mountApp(root: HTMLElement): void {
           <h2 id="skip-title">Skip-scan in GO</h2>
           <pre class="search-block" id="skip-scan">${escapeHtml(SKIP_SCAN)}</pre>
           <button type="button" class="btn btn--primary" data-copy="skip">Copy search</button>
-          <p class="note">Hides KEEP museum so you scan the rest. Do not add <code>!shadow</code>. Fade Lucky and luckies stay in this search. Can dump under Stars leaves starred copies in this search.</p>
+          <p class="note">Hides KEEP museum so you scan the rest. Do not add <code>!shadow</code>. Fade Lucky and luckies stay in this search. Can dump under Favorite leaves favorites in this search.</p>
         </section>
       </div>
 
@@ -859,7 +859,7 @@ export function mountApp(root: HTMLElement): void {
       <p id="busy" class="status-line hidden"></p>
 
       <div id="results" class="hidden">
-        <p class="banner banner--lock" id="transfer-lock">Favorite KEEP in GO first. This page never taps Transfer.</p>
+        <p class="banner banner--lock hidden" id="transfer-lock"></p>
         <div id="dump-cap" class="banner banner--warn hidden"></div>
       </div>
 
@@ -878,16 +878,16 @@ export function mountApp(root: HTMLElement): void {
           </section>
 
           <section class="rule-group rule-group--stars" aria-labelledby="rules-stars">
-            <h3 id="rules-stars">Stars</h3>
+            <h3 id="rules-stars">Favorite</h3>
             <div class="rule">
               <div class="rule-copy">
-                <p class="rule-title" id="favorite-mode-label">What a ★ means</p>
-                <p class="rule-hint">Always keep holds every star. Can dump ignores the star: other KEEP rules still apply, and a star that fails them can DUMP. You check that list.</p>
+                <p class="rule-title" id="favorite-mode-label">What a favorite means</p>
+                <p class="rule-hint">Always keep holds every favorite. Can dump ignores the favorite: other KEEP rules still apply, and a favorite that fails them can DUMP. You check that list.</p>
               </div>
               <div class="rule-control">
                 <div class="mode-row mode-row--stars" role="group" aria-labelledby="favorite-mode-label">
-                  <button type="button" class="btn btn--preset" data-keep-favorite="1" title="Every starred copy KEEPs.">Always keep</button>
-                  <button type="button" class="btn btn--preset" data-keep-favorite="0" title="A star does not protect the copy. Shiny, PvP, raids, and the other rules can still KEEP it.">Can dump</button>
+                  <button type="button" class="btn btn--preset" data-keep-favorite="1" title="Every favorite KEEPs.">Always keep</button>
+                  <button type="button" class="btn btn--preset" data-keep-favorite="0" title="A favorite does not protect the copy. Shiny, PvP, raids, and the other rules can still KEEP it.">Can dump</button>
                 </div>
               </div>
             </div>
@@ -1290,8 +1290,9 @@ export function mountApp(root: HTMLElement): void {
     const transferLockEl = root.querySelector("#transfer-lock");
     if (transferLockEl) {
       transferLockEl.textContent = state.keepFavorite
-        ? "Favorite KEEP in GO first. This page never taps Transfer."
-        : "Stars can DUMP when other rules do not save them. This page never taps Transfer.";
+        ? ""
+        : "Favorites can DUMP when other rules do not save them.";
+      transferLockEl.classList.toggle("hidden", state.keepFavorite);
     }
     skipScanEl.textContent = skipScanString({
       keepLucky: state.keepLucky,
