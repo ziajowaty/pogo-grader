@@ -189,7 +189,7 @@ export interface GradeResult {
   keepLucky: boolean;
   /** When true, a favorite KEEPs. When false, a star is not protected and can DUMP if other rules do not save it. */
   keepFavorite: boolean;
-  /** When true, every shadow KEEPs. When false, shadows LOOK unless another keep class fires — still never DUMP. */
+  /** When true, every shadow KEEPs. When false, a shadow must earn KEEP another way; useless copies can DUMP. */
   keepShadow: boolean;
   groups: Array<{
     key: string;
@@ -246,8 +246,9 @@ export interface Meta {
   /**
    * When a PvP/raid family has no KEEP, LOOK this many best copies and DUMP the rest.
    * 0 DUMPs those copies and ungated junk (not useful for PvP or raids), still
-   * never dumping shadows / limited / special / non-unique IVs. A favorite is
-   * included in that junk when `keepFavorite` is off.
+   * never dumping limited / special / non-unique IVs. A favorite is included
+   * in that junk when `keepFavorite` is off. A shadow is included when
+   * `keepShadow` is off.
    * Default 2. Does not change KEEP slot caps (`pvpKeep` per GL stage and LC species,
    * `raidKeep` per raid attacker). Each copy gets at most one of those jobs. GL seats fill
    * before LC; within a league, higher PvPoke species exhaust their seats before
@@ -276,8 +277,8 @@ export interface Meta {
    */
   keepFavorite?: boolean;
   /**
-   * Keep every shadow. Off = shadows LOOK unless another keep class fires.
-   * Shadows still never DUMP. Default true.
+   * Keep every shadow. Off = shadow is not a keep class and is not dump-protected.
+   * Useless copies can DUMP. Other KEEP rules still apply. Default true.
    */
   keepShadow?: boolean;
   /** How KEEP PvP species lists were loaded. */

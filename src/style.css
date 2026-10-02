@@ -289,15 +289,6 @@ body {
   color: var(--keep);
 }
 
-.rule-group--stars h3 {
-  color: #ff8aa0;
-}
-
-.mode-row--stars .btn--preset {
-  flex: 1 1 7rem;
-  white-space: nowrap;
-}
-
 .rule-group--who h3 {
   color: var(--gl);
 }
@@ -470,6 +461,9 @@ body {
 
 .csv-clear {
   flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: var(--tap);
   margin: 0;
   padding: 0;
@@ -483,6 +477,21 @@ body {
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+}
+
+/* Segoe UI draws × below the line box. These nudges put the ink on the button center. */
+.csv-clear::before,
+.box-x::before {
+  content: "\d7";
+  display: block;
+}
+
+.csv-clear::before {
+  transform: translateY(-0.115em);
+}
+
+.box-x::before {
+  transform: translateY(-0.14em);
 }
 
 .csv-clear:hover,
@@ -1479,7 +1488,7 @@ button.type-chip.is-active {
   z-index: 1;
   top: 4px;
   right: 4px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 28px;

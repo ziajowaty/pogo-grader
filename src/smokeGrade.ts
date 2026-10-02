@@ -316,7 +316,7 @@ must(
 );
 must(
   sampleZero.dump.every((g) => !g.mon.shadow),
-  "familyKeep 0 still never dumps shadows",
+  "familyKeep 0 with bright Shadow still never dumps shadows",
 );
 
 const tight = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 1 });
@@ -818,27 +818,56 @@ must(keepShadowOn.dump.length === 0, "KEEP shadow does not dump the junk shadow"
 
 const keepShadowOff = gradeBox([junkShadow], { ...meta, keepShadow: false });
 must(keepShadowOff.keepShadow === false, "echo keepShadow false");
-must(keepShadowOff.keep.length === 0, "LOOK shadow drops the junk shadow keep class");
-must(keepShadowOff.look.length === 1 && keepShadowOff.dump.length === 0, "LOOK shadow never dumps");
+must(keepShadowOff.keep.length === 0, "faded Shadow drops the junk shadow keep class");
 must(
-  keepShadowOff.look[0].keepClasses.includes("shadow") !== true,
-  "LOOK shadow does not attach shadow keep class",
+  keepShadowOff.look.length === 1 && keepShadowOff.dump.length === 0,
+  "lone junk shadow LOOKs at default familyKeep",
 );
 must(
-  keepShadowOff.look[0].reasons.some((r) => /shadow/i.test(r)),
-  "LOOK shadow still explains never-dump",
+  keepShadowOff.look[0].keepClasses.includes("shadow") !== true,
+  "faded Shadow does not attach shadow keep class",
+);
+must(
+  keepShadowOff.look[0].reasons.every((r) => !/never dump/i.test(r)),
+  "lone junk shadow is not a never-dump lock",
+);
+must(keepShadowOff.look[0].reasons.some((r) => r === "only copy"), "lone junk shadow explains only copy");
+
+const keepShadowDump = gradeBox([junkShadow], { ...meta, keepShadow: false, familyKeep: 0 });
+must(keepShadowDump.dump.length === 1, "faded Shadow + familyKeep 0 dumps a junk shadow");
+must(
+  keepShadowDump.dump[0].reasons.every((r) => !/never dump/i.test(r)),
+  "dumped shadow has no never-dump lock",
+);
+
+const extraShadow = { ...junkShadow, sourceRow: 501, nickname: "junk-shadow-2" };
+const shadowExtras = gradeBox([junkShadow, extraShadow], { ...meta, keepShadow: false });
+must(shadowExtras.dump.length === 1, "faded Shadow dumps the extra junk shadow");
+must(shadowExtras.look.length === 1, "faded Shadow LOOKs the best junk shadow");
+must(
+  shadowExtras.dump[0].mon.shadow === true && shadowExtras.dump[0].keepClasses.length === 0,
+  "dumped extra is a shadow with no keep class",
 );
 
 const sampleNoShadowKeep = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, keepShadow: false });
+const sampleFaded = [
+  ...sampleNoShadowKeep.keep,
+  ...sampleNoShadowKeep.look,
+  ...sampleNoShadowKeep.dump,
+].filter((g) => g.mon.shadow);
 must(
-  sampleNoShadowKeep.dump.every((g) => !g.mon.shadow),
-  "LOOK shadow still never dumps sample shadows",
+  sampleFaded.every(
+    (g) => !g.keepClasses.includes("shadow") && g.reasons.every((r) => !/shadow — never dump/i.test(r)),
+  ),
+  "faded Shadow drops sample shadow class and the never-dump lock",
 );
-const foxOff = [...sampleNoShadowKeep.keep, ...sampleNoShadowKeep.look, ...sampleNoShadowKeep.dump].find(
-  (g) => g.mon.speciesId === "ninetales_alolan_shadow",
+const foxOff = sampleFaded.find((g) => g.mon.speciesId === "ninetales_alolan_shadow");
+must(foxOff?.keepClasses.includes("shadow") !== true, "faded Shadow drops ninetales shadow class");
+const machampOff = sampleFaded.find((g) => g.mon.speciesId === "machamp_shadow");
+must(
+  machampOff?.verdict === "KEEP" && machampOff.keepClasses.includes("raid") === true,
+  "faded Shadow still KEEPs a raid machamp",
 );
-must(foxOff?.keepClasses.includes("shadow") !== true, "LOOK shadow drops ninetales shadow class");
-must(foxOff?.verdict !== "DUMP", "alolan shadow ninetales still never DUMP");
 
 const junkLucky: Mon = {
   ...ivMon("bidoof", "Bidoof", 502, 0, 0, 0),

@@ -908,12 +908,10 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     }
 
     const hardNeverDump =
-      g.mon.shadow ||
       isLimitedMon(g.mon, meta) ||
       g.mon.hasSpecialMove === true ||
       g.mon.ivUnique === false;
 
-    if (g.mon.shadow) pushReason(g, "Shadow — never dump in v1");
     if (g.mon.ivUnique === false) pushReason(g, "IVs not unique; cannot dump");
     if (g.mon.hasSpecialMove === true) pushReason(g, "Special / legacy move — never dump");
 

@@ -777,7 +777,7 @@ function renderBoxTile(item: GradedMon, selected: boolean): string {
       <div class="box-name">${escapeHtml(title)}</div>
       ${subHtml}
     </button>
-    <button type="button" class="box-x" data-box-dismiss="${mon.sourceRow}" aria-label="Remove ${escapeHtml(title)} CP ${mon.cp} from the list" title="Remove from the list">×</button>
+    <button type="button" class="box-x" data-box-dismiss="${mon.sourceRow}" aria-label="Remove ${escapeHtml(title)} CP ${mon.cp} from the list" title="Remove from the list"></button>
   </div>`;
 }
 
@@ -800,7 +800,7 @@ export function mountApp(root: HTMLElement): void {
               <span id="csv-name" class="csv-name">Choose a CSV</span>
             </label>
             <input id="csv-file" class="csv-file" type="file" accept=".csv,text/csv" />
-            <button type="button" id="csv-clear" class="csv-clear hidden" aria-label="Remove stored CSV" title="Remove stored CSV">×</button>
+            <button type="button" id="csv-clear" class="csv-clear hidden" aria-label="Remove stored CSV" title="Remove stored CSV"></button>
           </div>
           <p id="status" class="status-line csv-loaded hidden"></p>
           <ul id="issues" class="issues hidden"></ul>
@@ -811,7 +811,7 @@ export function mountApp(root: HTMLElement): void {
           <h2 id="skip-title">Skip-scan in GO</h2>
           <pre class="search-block" id="skip-scan">${escapeHtml(SKIP_SCAN)}</pre>
           <button type="button" class="btn btn--primary" data-copy="skip">Copy search</button>
-          <p class="note">Hides KEEP museum so you scan the rest. Do not add <code>!shadow</code>. Fade Lucky and luckies stay in this search. Can dump under Favorite leaves favorites in this search.</p>
+          <p class="note">Hides KEEP museum so you scan the rest. Do not add <code>!shadow</code>. Fade Lucky and luckies stay in this search. Fade Favorite and favorites stay in this search.</p>
         </section>
       </div>
 
@@ -871,25 +871,11 @@ export function mountApp(root: HTMLElement): void {
             <div class="rule rule--tags">
               <div class="keep-chips" role="group" aria-labelledby="rules-tags">
                 <button type="button" class="chip chip--lucky keep-chip" data-keep-chip="lucky" aria-pressed="true" title="KEEP luckies. Click to fade — luckies must earn KEEP another way.">Lucky</button>
-                <button type="button" class="chip chip--shadow keep-chip" data-keep-chip="shadow" aria-pressed="true" title="KEEP every shadow. Click to fade — shadows LOOK, never dump.">Shadow</button>
+                <button type="button" class="chip chip--shadow keep-chip" data-keep-chip="shadow" aria-pressed="true" title="KEEP every shadow. Click to fade — useless shadows can DUMP.">Shadow</button>
+                <button type="button" class="chip chip--favorite keep-chip" data-keep-chip="favorite" aria-pressed="true" title="KEEP every favorite. Click to fade — a star does not protect the copy.">Favorite</button>
+                <button type="button" class="chip chip--hundo keep-chip is-off" data-keep-chip="hundo" aria-pressed="false" title="KEEP every 4*. Click to fade — one 4* per family stays, extras can DUMP.">All 4*</button>
               </div>
-              <p class="rule-hint">Bright tags KEEP. Fade Lucky to dump junk luckies. Fade Shadow and those copies LOOK, never dump.</p>
-            </div>
-          </section>
-
-          <section class="rule-group rule-group--stars" aria-labelledby="rules-stars">
-            <h3 id="rules-stars">Favorite</h3>
-            <div class="rule">
-              <div class="rule-copy">
-                <p class="rule-title" id="favorite-mode-label">What a favorite means</p>
-                <p class="rule-hint">Always keep holds every favorite. Can dump ignores the favorite: other KEEP rules still apply, and a favorite that fails them can DUMP. You check that list.</p>
-              </div>
-              <div class="rule-control">
-                <div class="mode-row mode-row--stars" role="group" aria-labelledby="favorite-mode-label">
-                  <button type="button" class="btn btn--preset" data-keep-favorite="1" title="Every favorite KEEPs.">Always keep</button>
-                  <button type="button" class="btn btn--preset" data-keep-favorite="0" title="A favorite does not protect the copy. Shiny, PvP, raids, and the other rules can still KEEP it.">Can dump</button>
-                </div>
-              </div>
+              <p class="rule-hint">Bright tags KEEP. Fade Lucky, Shadow, or Favorite and that tag no longer protects the copy. All 4* starts faded — one 4* per family stays.</p>
             </div>
           </section>
 
@@ -1014,18 +1000,6 @@ export function mountApp(root: HTMLElement): void {
                     (n) =>
                       `<button type="button" class="btn btn--preset" data-family-keep="${n}">${n === FAMILY_KEEP_MAX ? "all" : String(n)}</button>`,
                   ).join("")}
-                </div>
-              </div>
-            </div>
-            <div class="rule">
-              <div class="rule-copy">
-                <p class="rule-title" id="keep-all-label">Extra 4*</p>
-                <p class="rule-hint">DUMP extras keeps one 4* per family. KEEP all good keeps every 4*. A filled job does not get a second copy.</p>
-              </div>
-              <div class="rule-control">
-                <div class="mode-row" role="group" aria-labelledby="keep-all-label">
-                  <button type="button" class="btn btn--preset" data-keep-all="0">DUMP extras</button>
-                  <button type="button" class="btn btn--preset" data-keep-all="1">KEEP all good</button>
                 </div>
               </div>
             </div>
@@ -1230,6 +1204,14 @@ export function mountApp(root: HTMLElement): void {
     }
   }
 
+  function keepChipOn(chip: string | null): boolean {
+    if (chip === "lucky") return state.keepLucky;
+    if (chip === "shadow") return state.keepShadow;
+    if (chip === "favorite") return state.keepFavorite;
+    if (chip === "hundo") return state.keepAllGood;
+    return true;
+  }
+
   function paintRankControls(): void {
     rankInput.value = String(state.pvpRankKeep);
     listKeepInput.value = String(state.pvpListKeep);
@@ -1272,19 +1254,9 @@ export function mountApp(root: HTMLElement): void {
       const n = Number(btn.getAttribute("data-raid-iv"));
       btn.classList.toggle("is-active", n === state.raidIvKeep);
     });
-    root.querySelectorAll("[data-keep-all]").forEach((btn) => {
-      const on = btn.getAttribute("data-keep-all") === "1";
-      btn.classList.toggle("is-active", on === state.keepAllGood);
-    });
     root.querySelectorAll("[data-keep-chip]").forEach((btn) => {
-      const chip = btn.getAttribute("data-keep-chip");
-      const on = chip === "lucky" ? state.keepLucky : chip === "shadow" ? state.keepShadow : true;
+      const on = keepChipOn(btn.getAttribute("data-keep-chip"));
       btn.classList.toggle("is-off", !on);
-      btn.setAttribute("aria-pressed", on ? "true" : "false");
-    });
-    root.querySelectorAll("[data-keep-favorite]").forEach((btn) => {
-      const on = (btn.getAttribute("data-keep-favorite") === "1") === state.keepFavorite;
-      btn.classList.toggle("is-active", on);
       btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
     const transferLockEl = root.querySelector("#transfer-lock");
@@ -1692,7 +1664,7 @@ export function mountApp(root: HTMLElement): void {
     gradeTablesEl.classList.remove("hidden");
     statusEl.classList.remove("hidden");
     const removedNote = state.dismissed.length > 0 ? ` · ${state.dismissed.length} removed from list` : "";
-    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · ${result.pvpAny ? "PvP any species" : `PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP}`} · Keep ${result.pvpKeep} PvP/identity · Keep ${result.raidKeep} raid · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "KEEP all good" : "DUMP extras"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "Favorite can dump"} · ${result.keepShadow ? "KEEP shadow" : "LOOK shadow"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
+    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF} · ${result.pvpAny ? "PvP any species" : `PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP}`} · Keep ${result.pvpKeep} PvP/identity · Keep ${result.raidKeep} raid · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "All 4*" : "One 4*"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "Favorite can dump"} · ${result.keepShadow ? "KEEP shadow" : "Shadow can dump"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
     const counts: Array<[string, number]> = [
       ["keep", shownRows(result.keep).length],
       ["look", shownRows(result.look).length],
@@ -2161,25 +2133,21 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
 
-    const keepAllBtn = target.closest("[data-keep-all]") as HTMLElement | null;
-    if (keepAllBtn?.dataset.keepAll != null) {
-      applyKeepAllGood(keepAllBtn.dataset.keepAll === "1");
-      return;
-    }
-
     const keepChipBtn = target.closest("[data-keep-chip]") as HTMLElement | null;
-    const favoriteModeBtn = target.closest("[data-keep-favorite]") as HTMLElement | null;
-    if (favoriteModeBtn?.dataset.keepFavorite != null) {
-      applyKeepFavorite(favoriteModeBtn.dataset.keepFavorite === "1");
-      return;
-    }
-
     if (keepChipBtn?.dataset.keepChip === "lucky") {
       applyKeepLucky(!state.keepLucky);
       return;
     }
     if (keepChipBtn?.dataset.keepChip === "shadow") {
       applyKeepShadow(!state.keepShadow);
+      return;
+    }
+    if (keepChipBtn?.dataset.keepChip === "favorite") {
+      applyKeepFavorite(!state.keepFavorite);
+      return;
+    }
+    if (keepChipBtn?.dataset.keepChip === "hundo") {
+      applyKeepAllGood(!state.keepAllGood);
       return;
     }
 

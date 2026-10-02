@@ -284,7 +284,7 @@ must(
 
 must(
   result.dump.every((g) => !g.mon.shadow),
-  "KR-SHADOW: shadows never DUMP",
+  "bright Shadow chip: shadows never DUMP",
 );
 must(
   shadows.every((m) => {
@@ -294,20 +294,31 @@ must(
   "every history shadow KEEPs with keep class shadow",
 );
 
-const lookShadow = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, keepShadow: false });
-must(lookShadow.keepShadow === false, "echo keepShadow false");
-must(
-  lookShadow.dump.every((g) => !g.mon.shadow),
-  "LOOK shadow still never dumps history shadows",
-);
+const fadedShadow = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, keepShadow: false });
+must(fadedShadow.keepShadow === false, "echo keepShadow false");
+const fadedShadowRows = [...fadedShadow.keep, ...fadedShadow.look, ...fadedShadow.dump];
 must(
   shadows.every((m) => {
-    const g = [...lookShadow.keep, ...lookShadow.look, ...lookShadow.dump].find(
-      (row) => row.mon.sourceRow === m.sourceRow,
+    const g = fadedShadowRows.find((row) => row.mon.sourceRow === m.sourceRow);
+    return (
+      g != null &&
+      !g.keepClasses.includes("shadow") &&
+      g.reasons.every((r) => !/shadow — never dump/i.test(r))
     );
-    return g != null && g.verdict !== "DUMP" && !g.keepClasses.includes("shadow");
   }),
-  "LOOK shadow drops the shadow keep class and still never dumps",
+  "faded Shadow drops the shadow keep class and the never-dump lock",
+);
+const fadedUseless = shadows
+  .map((m) => fadedShadowRows.find((row) => row.mon.sourceRow === m.sourceRow))
+  .filter((g): g is GradedMon => g != null && g.keepClasses.length === 0);
+must(fadedUseless.length > 0, "history has shadows that earn no other KEEP class");
+must(
+  fadedUseless.every((g) => g.verdict === "DUMP" || g.verdict === "LOOK"),
+  "useless faded shadows follow normal LOOK/DUMP rules",
+);
+must(
+  fadedUseless.some((g) => g.verdict === "DUMP" || g.reasons.includes("dump-cap")),
+  "faded Shadow lets a useless history shadow reach DUMP",
 );
 
 for (const lucky of luckies) {
@@ -385,7 +396,7 @@ must(zero.keep.length === result.keep.length, "familyKeep 0 does not drop KEEP")
 must(zero.dump.length >= result.dump.length, "familyKeep 0 dumps at least as much");
 must(
   zero.dump.every((g) => !g.mon.shadow),
-  "familyKeep 0 still never dumps shadows",
+  "familyKeep 0 with bright Shadow still never dumps shadows",
 );
 const zeroGibles = [...zero.keep, ...zero.look, ...zero.dump].filter((g) => g.mon.speciesId === "gible");
 const zeroGibleKeep = zeroGibles.filter((g) => g.verdict === "KEEP");

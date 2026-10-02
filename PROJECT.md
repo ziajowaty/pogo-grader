@@ -9,7 +9,7 @@ Not an overlay. Not a game client. CalcyIV / Poke Genie scan; this app decides.
 2. Drop CSV here (local only, never uploaded).
 3. App grades every row: **KEEP** | **LOOK** | **DUMP**.
 4. First DUMP list is capped at **100**. Then the UI forces LOOK.
-5. Shadows, limited/legendaries, `@special` never go to DUMP.
+5. Bright Shadow keeps every shadow off DUMP. Fade that chip and useless shadows can DUMP. Limited/legendaries and `@special` never go to DUMP.
 6. Per `species+form+shadow`, show a leaderboard (the Seismitoad problem).
 7. LOOK rows have human reasons.
 8. DUMP execution: copy a conservative in-game search (allowlist + `#DUMP` instructions). Human taps Transfer.
@@ -35,8 +35,8 @@ Not an overlay. Not a game client. CalcyIV / Poke Genie scan; this app decides.
 KEEP if any class fires. DUMP only if all fail **and** dump cap not reached.
 
 - **KR-ID:** shiny, lucky, costume, background, 4\*, legendary, mythical, ultrabeast, dynamax, gigantamax, `@special` / special move, favorite. Missing flags → KEEP/LOOK, never DUMP.
-- **KR-SHADOW:** `shadow === true` → KEEP or LOOK, **never DUMP** in v1.
-- **KR-GL:** species (or its GL evo) in PvPoke GL overall top **500**. Keep copies with 4096-rank ≤ `pvpRankKeep`. Default cap **2** per species+form+shadow; `keepAllGood` keeps every floor copy. Extras DUMP if the group already has a KEEP. Shadows / limited / `@special` / non-unique IVs never DUMP. A PvP family with **no** keeper stays LOOK.
+- **KR-SHADOW:** `keepShadow` (default on) and `shadow === true` → KEEP. Off: shadow is not a keep class and is not dump-protected. Useless copies DUMP like other junk. Shiny, PvP, raids, and the other rules can still KEEP the copy.
+- **KR-GL:** species (or its GL evo) in PvPoke GL overall top **500**. Keep copies with 4096-rank ≤ `pvpRankKeep`. Default cap **2** per species+form+shadow; `keepAllGood` keeps every floor copy. Extras DUMP if the group already has a KEEP. Limited / `@special` / non-unique IVs never DUMP. A bright Shadow chip also never DUMPs. A PvP family with **no** keeper stays LOOK.
 - **KR-LC:** PvPoke Little Cup top **100**, unevolved rank. Same floor, default cap **2**, `keepAllGood` keeps all floor copies.
 - **KR-RAID:** Limited → KEEP all. Default cap **6** non-limited raid copies; `keepAllGood` keeps every raid attacker. Extra 4\* are dupes unless `keepAllGood` (then keep all hundos). Always keep at least one hundo per species when any exist.
 - **DUMP fuel:** extras of a `species+form+shadow` that already has a KEEP or a 4096-floor copy; plus ungated junk extras (not the last copy). Cap `100` in **CSV stream order** (KEEP / LOOK / DUMP tracks are a partition of the export, never re-sorted).

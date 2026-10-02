@@ -26,7 +26,7 @@ npm run preview  # serve the production build
 2. AutoScan the rest in Calcy IV or Poke Genie, export CSV.
 3. Drop the CSV here. Nothing is uploaded.
 4. Three tracks in CSV order: **KEEP**, **LOOK**, **DUMP** (DUMP cap 100; overflow goes to LOOK).
-5. **KEEP PvP ≤** (default 500/4096). **DUMP extras** vs **KEEP all good** if you want every 4\* / raid / PvP-floor copy.
+5. **KEEP PvP ≤** (default 500/4096). Bright **Lucky**, **Shadow**, and **Favorite** keep those tags. Fade a chip and that tag no longer protects the copy. **All 4\*** starts faded: one 4\* per family. Brighten it to keep every 4\*.
 6. Read the DUMP grid, then transfer those copies yourself in GO.
 
 This app never talks to Scopely/Niantic and never taps Transfer.
