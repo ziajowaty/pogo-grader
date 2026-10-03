@@ -127,6 +127,37 @@ check("empty issue", empty.issues.length > 0 && empty.mons.length === 0);
 const semi = parseInventoryCsv("Name;CP;HP;Atk IV;Def IV;Sta IV;Level Min;Level Max\nMr. Mime;400;50;10;10;10;15;15\n");
 check("semicolon genie-ish", semi.dialect === "pokegenie" && semi.mons[0]?.speciesId === "mr_mime");
 
+const GENDER = `Name,Gender,Form,CP,HP,Atk IV,Def IV,Sta IV,Level Min,Level Max
+Lechonk,♀,,400,90,0,15,15,10,10
+Lechonk,♂,,400,90,0,15,15,10,10
+Oinkologne,♀,,800,140,0,15,15,20,20
+Oinkologne,♂,,800,140,0,15,15,20,20
+Oinkologne ♀,♀,,800,140,0,15,15,20,20
+Indeedee,♀,,500,120,10,10,10,15,15
+Indeedee,♂,,500,120,10,10,10,15,15
+Meowstic,♀,,500,120,10,10,10,15,15
+Basculegion,♂,,500,120,10,10,10,15,15
+Nidoran,♀,,200,40,10,10,10,10,10
+Pikachu,♀,,200,40,10,10,10,10,10
+Oinkologne,,Female,800,140,0,15,15,20,20
+`;
+const gendered = parseInventoryCsv(GENDER);
+const gid = (name: string, gender: string) =>
+  gendered.mons.find((m) => m.speciesName === name && m.gender === gender)?.speciesId;
+check("lechonk female stays lechonk", gid("Lechonk", "female") === "lechonk");
+check("lechonk male stays lechonk", gid("Lechonk", "male") === "lechonk");
+check("oinkologne female id", gid("Oinkologne", "female") === "oinkologne_female");
+check("oinkologne male id", gid("Oinkologne", "male") === "oinkologne");
+check("oinkologne symbol not doubled", gid("Oinkologne ♀", "female") === "oinkologne_female");
+check("indeedee female id", gid("Indeedee", "female") === "indeedee_female");
+check("indeedee male id", gid("Indeedee", "male") === "indeedee_male");
+check("meowstic female id", gid("Meowstic", "female") === "meowstic_female");
+check("basculegion male id", gid("Basculegion", "male") === "basculegion_male");
+check("nidoran female id", gid("Nidoran", "female") === "nidoran_female");
+check("pikachu gender is cosmetic", gid("Pikachu", "female") === "pikachu");
+const formFemale = gendered.mons.find((m) => m.speciesName === "Oinkologne" && m.form === "Female");
+check("form label selects oinkologne female", formFemale?.speciesId === "oinkologne_female" && formFemale.gender === "female");
+
 if (failed > 0) {
   throw new Error(`${failed} parseCsv checks failed`);
 }

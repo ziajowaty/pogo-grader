@@ -1,3 +1,4 @@
+import { applyGenderedSpecies } from "./genderForm.ts";
 import type { Gender, Mon, ParseIssue, ParseResult } from "./types.ts";
 
 /**
@@ -9,6 +10,9 @@ import type { Gender, Mon, ParseIssue, ParseResult } from "./types.ts";
  * - Mega X/Y -> `mega_x` / `mega_y`; other labelled forms slugified
  * - Numeric Calcy Form IDs are stored on `form` but not appended (unknown mapping)
  * - Shadow appends `_shadow` only (never `_purified`)
+ * - Gender column (or a Male/Female form label) selects split species ids:
+ *   Oinkologne ♀, Indeedee, Meowstic ♀, Basculegion, Nidoran. Lechonk stays
+ *   `lechonk`; the evolution gate applies gender later.
  * - Calcy Name suffixes (`Onix Shadow`, `Sandshrew Alolan Shadow`) peel like prefixes
  * - Calcy `ShadowForm`: 2 = this copy is shadow, 3 = purified; 1/7 mean the species
  *   can have a shadow, not that this row is one
@@ -85,6 +89,8 @@ const FORM_SLUG: Record<string, string | null> = {
   super: "super",
   shadow: null,
   purified: null,
+  male: null,
+  female: null,
 };
 
 const HEADER_HINTS = new Set([
@@ -411,11 +417,14 @@ function rowToMon(
   for (const f of peeled.forms) addForm(f);
   addForm(formSlug);
 
-  const baseSlug = slugToken(peeled.base) || slugToken(speciesName);
-  if (!baseSlug) {
+  const rawSlug = slugToken(peeled.base) || slugToken(speciesName);
+  if (!rawSlug) {
     issues.push({ row: sourceRow, message: `skip: could not slugify (${speciesName})` });
     return null;
   }
+  const genderCol = parseGender(cell(row, cols.i("gender")));
+  const gender = genderCol !== "unknown" ? genderCol : formGender(formRaw);
+  const baseSlug = applyGenderedSpecies(rawSlug, gender);
   const shadowBit = shadow && !baseSlug.endsWith("_shadow") ? "shadow" : "";
   const speciesId = [baseSlug, ...formParts, shadowBit].filter(Boolean).join("_");
 
@@ -434,7 +443,7 @@ function rowToMon(
     speciesName,
     speciesId,
     form,
-    gender: parseGender(cell(row, cols.i("gender"))),
+    gender,
     cp,
     hp,
     ivUnique,
@@ -535,6 +544,11 @@ function parseBool(raw: string): boolean | undefined {
   if (["1", "true", "yes", "y", "x"].includes(s)) return true;
   if (["0", "false", "no", "n"].includes(s)) return false;
   return undefined;
+}
+
+function formGender(raw: string): Gender {
+  if (!raw || isNumericToken(raw)) return "unknown";
+  return parseGender(raw);
 }
 
 function parseGender(raw: string): Gender {

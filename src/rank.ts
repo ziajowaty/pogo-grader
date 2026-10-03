@@ -1,4 +1,5 @@
-import type { LeagueRank, Mon, RaidIvRank } from "./types";
+import { evolutionGenderOk } from "./genderForm";
+import type { Gender, LeagueRank, Mon, RaidIvRank } from "./types";
 // @ts-ignore Vite JSON snapshots
 import baseStatsJson from "../data/base-stats.json";
 // @ts-ignore Vite JSON snapshots
@@ -57,9 +58,11 @@ export function lookupBaseStats(speciesId: string, gm: RankGm): BaseStats | unde
   return gm.baseStats[id] ?? gm.baseStats[stripShadow(id)];
 }
 
-export function resolveGlSpeciesId(speciesId: string, gm: RankGm): string {
+export function resolveGlSpeciesId(speciesId: string, gm: RankGm, gender: Gender = "unknown"): string {
   const id = canonId(speciesId);
-  return gm.glEvolution[id] ?? id;
+  const mapped = gm.glEvolution[id] ?? id;
+  if (mapped !== id && !evolutionGenderOk(mapped, gender)) return id;
+  return mapped;
 }
 
 function ivsOf(mon: Mon): { atk: number; def: number; sta: number } | null {
@@ -181,7 +184,7 @@ function rankAt(
 
 /** Great League 1500 CP rank for unique IVs, as the family GL evo when mapped. */
 export function rankGreatLeague(mon: Mon, gm: RankGm): LeagueRank | null {
-  return rankGreatLeagueAs(mon, gm, resolveGlSpeciesId(mon.speciesId, gm));
+  return rankGreatLeagueAs(mon, gm, resolveGlSpeciesId(mon.speciesId, gm, mon.gender));
 }
 
 /** Rank this copy as an explicit species (pre-evo scored as each listed family stage). */

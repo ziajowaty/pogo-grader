@@ -8,6 +8,7 @@ import type {
   PvpJob,
   PvpokeRankRow,
   Verdict,
+  Gender,
 } from "./types";
 import {
   clampFamilyKeep,
@@ -27,6 +28,7 @@ import {
   LC_LIST_CAP,
   prettySpeciesId,
 } from "./types";
+import { evolutionGenderOk } from "./genderForm";
 import { canonId } from "./meta";
 import {
   fitsLeagueCap,
@@ -81,14 +83,20 @@ function gatedGlSet(meta: Meta, listKeep: number): Set<string> {
   return meta.glTop500;
 }
 
-function raidGateId(speciesId: string, meta: Meta): string | null {
+function raidGateId(speciesId: string, meta: Meta, gender: Gender): string | null {
   const id = canonId(speciesId);
   if (meta.raidAttackers.has(id)) return id;
   if (id.endsWith("_shadow") && meta.raidAttackers.has(id.slice(0, -7))) return id.slice(0, -7);
   const mapped = meta.raidEvolution?.[id];
-  if (mapped && (meta.raidAttackers.has(mapped) || hasId(meta.raidAttackers, mapped))) return mapped;
+  if (
+    mapped &&
+    evolutionGenderOk(mapped, gender) &&
+    (meta.raidAttackers.has(mapped) || hasId(meta.raidAttackers, mapped))
+  ) {
+    return mapped;
+  }
   if (id.endsWith("_shadow")) {
-    const inner = raidGateId(id.slice(0, -7), meta);
+    const inner = raidGateId(id.slice(0, -7), meta, gender);
     if (!inner) return null;
     const shadowEvo = inner.endsWith("_shadow") ? inner : `${inner}_shadow`;
     if (meta.raidAttackers.has(shadowEvo)) return shadowEvo;
@@ -134,10 +142,11 @@ function familyMembers(
   return [canonId(speciesId)];
 }
 
-function canBecome(from: string, target: string, meta: Meta): boolean {
+function canBecome(from: string, target: string, meta: Meta, gender: Gender): boolean {
   const a = canonId(from);
   const b = canonId(target);
   if (a === b) return true;
+  if (!evolutionGenderOk(b, gender)) return false;
   if (meta.evoReach?.[a]?.includes(b)) return true;
   if (meta.glEvolution[a] === b) return true;
   if (meta.raidEvolution?.[a] === b) return true;
@@ -557,7 +566,7 @@ function roleMissReason(
     if (g.lc.rank > cutoff) return `LC ${g.lc.rank}/${g.lc.of} worse than keep ≤${cutoff}`;
     return extraJobReason("Little Cup", prettySpeciesId(role.speciesId), g.lc.rank, g.lc.of, winners, (row) => row.lc);
   }
-  if (!canBecome(g.mon.speciesId, role.speciesId, meta)) return null;
+  if (!canBecome(g.mon.speciesId, role.speciesId, meta, g.mon.gender)) return null;
   const over = glCapMiss(g, role.speciesId, gm);
   if (over) return over;
   const iv = rankAs(g, role.speciesId);
@@ -670,7 +679,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const graded: GradedMon[] = mons.map((mon) => {
     const ind = independentsOf(mon.speciesId);
     const glTargets = ind.listedGl.filter(
-      (t) => !isMegaStage(t) && canBecome(mon.speciesId, t, meta),
+      (t) => !isMegaStage(t) && canBecome(mon.speciesId, t, meta, mon.gender),
     );
     const glAs = glTargets
       .map((t) => rankGreatLeagueAs(mon, gm, t))
@@ -687,7 +696,9 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     const lc = pvpAny ? ind.lc.includes(canonId(mon.speciesId)) : isLcSpecies(mon.speciesId, meta);
     const lcRow = lookupRank(mon.speciesId, lcIndex);
     const raidTarget =
-      raidGateId(mon.speciesId, meta) ?? ind.raid.find((t) => canBecome(mon.speciesId, t, meta)) ?? null;
+      raidGateId(mon.speciesId, meta, mon.gender) ??
+      ind.raid.find((t) => canBecome(mon.speciesId, t, meta, mon.gender)) ??
+      null;
     return {
       mon,
       verdict: "LOOK" as Verdict,
@@ -733,7 +744,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     });
 
     const raidRows = raidIds.length
-      ? rows.filter((g) => raidIds.some((t) => canBecome(g.mon.speciesId, t, meta)))
+      ? rows.filter((g) => raidIds.some((t) => canBecome(g.mon.speciesId, t, meta, g.mon.gender)))
       : [];
     const raidEligible = raidRows.filter((g) => raidIvMeets(g, raidIvKeep));
     const raidOrdered = [...raidEligible].sort(raidOrder);
@@ -759,7 +770,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
 
     const jobs = assignFamilyJobs(rows, roles, (g, role) => {
       if (role.kind === "gl") {
-        if (!canBecome(g.mon.speciesId, role.speciesId, meta)) return null;
+        if (!canBecome(g.mon.speciesId, role.speciesId, meta, g.mon.gender)) return null;
         if (!glFitsCap(g, role.speciesId, gm)) return null;
         const iv = rankAs(g, role.speciesId);
         if (!rankMeets(iv, cutoff)) return null;
@@ -771,7 +782,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
         if (!rankMeets(g.lc, cutoff)) return null;
         return g.lc!.rank;
       }
-      if (!raidIds.some((t) => canBecome(g.mon.speciesId, t, meta))) return null;
+      if (!raidIds.some((t) => canBecome(g.mon.speciesId, t, meta, g.mon.gender))) return null;
       if (!raidIvMeets(g, raidIvKeep)) return null;
       const pct = g.raidIv?.percent ?? 0;
       return Math.round((100 - pct) * 100);
@@ -814,8 +825,8 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (
         limited &&
         (raidKeep.has(g) ||
-          raidIds.some((t) => canBecome(g.mon.speciesId, t, meta)) ||
-          Boolean(raidGateId(g.mon.speciesId, meta))) &&
+          raidIds.some((t) => canBecome(g.mon.speciesId, t, meta, g.mon.gender)) ||
+          Boolean(raidGateId(g.mon.speciesId, meta, g.mon.gender))) &&
         !classes.includes("raid")
       ) {
         classes.push("raid");
