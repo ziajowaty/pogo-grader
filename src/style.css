@@ -17,9 +17,9 @@
   --focus: #c5d45b;
   --chip: #2c3528;
   --crowd: #d4b45a;
-  --gl: #7ec8f8;
-  --ul: #d2b0ff;
-  --ml: #ffcf70;
+  --gl: #5eb6ff;
+  --ul: #ffe14a;
+  --ml: #c792ff;
   --lc: #8ee0b0;
   --raid: #ff9a62;
   --shiny: #f4b8e4;
@@ -802,17 +802,17 @@ body {
 }
 
 .chip--gl {
-  background: #152838;
+  background: #102840;
   color: var(--gl);
 }
 
 .chip--ul {
-  background: #2a2040;
+  background: #3a3208;
   color: var(--ul);
 }
 
 .chip--ml {
-  background: #3a3014;
+  background: #2a1844;
   color: var(--ml);
 }
 
@@ -868,18 +868,18 @@ body {
 }
 
 .chip--gl-miss {
-  background: #10243f;
-  color: #4d8dff;
+  background: #0c2244;
+  color: #3d8eff;
 }
 
 .chip--ul-miss {
-  background: #2e1040;
-  color: #d56bff;
+  background: #3a2808;
+  color: #ffc233;
 }
 
 .chip--ml-miss {
-  background: #3a220c;
-  color: #ff9a2e;
+  background: #301048;
+  color: #d07aff;
 }
 
 .chip--lc-miss {
@@ -898,33 +898,33 @@ body {
 }
 
 .chip--gl-better {
-  background: #1c3014;
-  color: #b6ff8a;
+  background: #152c48;
+  color: #c5e2ff;
 }
 
 .chip--ul-better {
-  background: #3a1830;
-  color: #ffd0f0;
+  background: #3a3412;
+  color: #fff3b0;
 }
 
 .chip--ml-better {
-  background: #182038;
-  color: #c8d4ff;
+  background: #2a1840;
+  color: #e6d0ff;
 }
 
 .chip--gl-cap {
-  background: #0e3030;
-  color: #3ad6c8;
+  background: #0e3048;
+  color: #7ad4ff;
 }
 
 .chip--ul-cap {
-  background: #3a1830;
-  color: #ff7eb3;
+  background: #3a2c08;
+  color: #f0b429;
 }
 
 .chip--ml-cap {
-  background: #0c3034;
-  color: #5dffe8;
+  background: #241040;
+  color: #a66bff;
 }
 
 .chip--lc-cap {
@@ -933,18 +933,18 @@ body {
 }
 
 .chip--gl-seat {
-  background: #103028;
-  color: #7dffe0;
+  background: #182848;
+  color: #8eb0ff;
 }
 
 .chip--ul-seat {
-  background: #3a2418;
-  color: #ffc2a0;
+  background: #3a3010;
+  color: #ffe07a;
 }
 
 .chip--ml-seat {
-  background: #142038;
-  color: #9ec0ff;
+  background: #281840;
+  color: #c9a4ff;
 }
 
 .chip--lc-seat {
@@ -953,18 +953,18 @@ body {
 }
 
 .chip--gl-unknown {
-  background: #1a2830;
-  color: #9ec8d8;
+  background: #1a2834;
+  color: #8eacc4;
 }
 
 .chip--ul-unknown {
-  background: #281830;
-  color: #d0b0d8;
+  background: #2e2814;
+  color: #c8b47a;
 }
 
 .chip--ml-unknown {
-  background: #3a2418;
-  color: #e09060;
+  background: #221c30;
+  color: #a898c4;
 }
 
 .chip--lc-unknown {
@@ -1031,17 +1031,17 @@ body {
 }
 
 .badge-job--gl {
-  background: #152838;
+  background: #102840;
   color: var(--gl);
 }
 
 .badge-job--ul {
-  background: #2a2040;
+  background: #3a3208;
   color: var(--ul);
 }
 
 .badge-job--ml {
-  background: #3a3014;
+  background: #2a1844;
   color: var(--ml);
 }
 
@@ -1520,9 +1520,13 @@ button.type-chip.is-active {
 
 .track--box .box-detail {
   flex: 0 0 auto;
-  max-height: 9rem;
+  height: 9rem;
   overflow-y: auto;
   margin: 8px 0 0;
+}
+
+.box-detail.is-empty {
+  visibility: hidden;
 }
 
 .box-detail {

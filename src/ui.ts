@@ -1183,7 +1183,7 @@ export function mountApp(root: HTMLElement): void {
                   <button type="button" class="btn btn--preset${state.boxFilter.LOOK ? " is-active" : ""}" data-box-filter="LOOK" aria-pressed="${state.boxFilter.LOOK ? "true" : "false"}" title="Show LOOK copies in this grid. Turn off to drop them.">LOOK</button>
                   <button type="button" class="btn btn--preset${state.boxFilter.DUMP ? " is-active" : ""}" data-box-filter="DUMP" aria-pressed="${state.boxFilter.DUMP ? "true" : "false"}" title="Show DUMP copies in this grid. Turn off to drop them.">DUMP</button>
                 </div>
-                <div id="box-detail" class="box-detail hidden"></div>
+                <div id="box-detail" class="box-detail is-empty"></div>
               </div>
               <div class="mode-row box-sort" role="group" aria-label="List sort">
                 <button type="button" class="btn btn--preset is-active" data-box-sort="scan" aria-pressed="true">Scan</button>
@@ -1766,10 +1766,10 @@ export function mountApp(root: HTMLElement): void {
     const item = selected == null ? undefined : findGraded(selected);
     const hiddenByFilter = item != null && !state.boxFilter[item.verdict];
     if (!item || gone.has(item.mon.sourceRow) || hiddenByFilter) {
-      boxDetailEl.classList.add("hidden");
+      boxDetailEl.classList.add("is-empty");
       boxDetailEl.innerHTML = "";
     } else {
-      boxDetailEl.classList.remove("hidden");
+      boxDetailEl.classList.remove("is-empty");
       boxDetailEl.innerHTML = renderBoxDetail(item);
     }
     placeBoxDetail();
