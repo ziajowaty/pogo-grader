@@ -20,7 +20,8 @@ Not an overlay. Not a game client. CalcyIV / Poke Genie scan; this app decides.
 | `src/types.ts` | orchestrator (locked) | shared types only |
 | `src/parseCsv.ts` | csv agent | `parseInventoryCsv(text: string): ParseResult` |
 | `src/rank.ts` | grade agent | `rankGreatLeague(mon, gm): { rank: number, of: number, statProduct: number } \| null` plus Little Cup |
-| `src/meta.ts` | grade agent | load PvPoke GL/LC lists + Pokébattler raid attackers (24h `localStorage`) + vendored rank gates |
+| `src/dittobase.ts` | grade agent | parse Dittobase best-attackers pages and map slugs to species ids |
+| `src/meta.ts` | grade agent | load PvPoke GL/LC lists + Dittobase raid attackers (24h `localStorage`) + vendored rank gates |
 | `src/grade.ts` | grade agent | `gradeBox(mons: Mon[], meta: Meta): GradeResult` |
 | `src/search.ts` | ui agent | `dumpPreviewString(mons: Mon[]): string` |
 | `src/ui.ts` | ui agent | `mountApp(root: HTMLElement): void` |
@@ -40,7 +41,7 @@ KEEP if any class fires. DUMP only if every keep class fails and the copy is not
 - **KR-RAID:** Limited → KEEP all. Default cap **6** non-limited raid copies; `keepAllGood` keeps every raid attacker. Extra 4\* are dupes unless `keepAllGood` (then keep all hundos). Always keep at least one hundo per species when any exist.
 - **DUMP fuel:** extras of a `species+form+shadow` that already has a KEEP or a 4096-floor copy; plus ungated junk extras (not the last copy). **CSV stream order** (KEEP / LOOK / DUMP tracks are a partition of the export, never re-sorted).
 
-Fetch the two PvPoke ranking JSON files (extract IDs) and Pokébattler aggregated attacker rankings (unique `speciesId`, union into the vendored raid KEEP set). 24h browser cache. Keep `data/base-stats.json`, CPM, `gl-evolution.json`, raid attackers snapshot, and limited/legendary/mythical vendored. Fail closed: live → stale cache → bundled snapshot. Node tests skip fetch. Vite `/pb-api` proxy for local CORS; GitHub Pages uses the CI-pinned snapshot.
+Fetch the two PvPoke ranking JSON files (extract IDs) and Dittobase best-attackers pages (eDPS per move type; A tier and better are raid KEEP). 24h browser cache. Keep `data/base-stats.json`, CPM, `gl-evolution.json`, the Dittobase raid snapshot, and limited/legendary/mythical vendored. Fail closed: live → stale cache → bundled snapshot. Node tests skip fetch. Vite `/ditto` proxy for local CORS; GitHub Pages uses the CI-pinned snapshot.
 
 ## Forbidden
 

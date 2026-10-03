@@ -383,12 +383,16 @@ function openOrderAs(a: GradedMon, b: GradedMon, kind: CappedKind, speciesId: st
   return a.mon.sourceRow - b.mon.sourceRow;
 }
 
-function betterAsReason(g: GradedMon, ranks: LeagueRank[] | undefined = g.glAs): string | null {
+function betterAsReason(
+  g: GradedMon,
+  ranks: LeagueRank[] | undefined = g.glAs,
+  league = "GL",
+): string | null {
   if (!ranks || ranks.length < 2) return null;
   const sorted = [...ranks].sort((a, b) => a.rank - b.rank || b.statProduct - a.statProduct);
   if (sorted[0].evoSpeciesId === sorted[1].evoSpeciesId) return null;
   if (sorted[0].rank === sorted[1].rank) return null;
-  return `Better as ${prettySpeciesId(sorted[0].evoSpeciesId)} (${sorted[0].rank}/${sorted[0].of}) than ${prettySpeciesId(sorted[1].evoSpeciesId)} (${sorted[1].rank}/${sorted[1].of})`;
+  return `${league} better as ${prettySpeciesId(sorted[0].evoSpeciesId)} (${sorted[0].rank}/${sorted[0].of}) than ${prettySpeciesId(sorted[1].evoSpeciesId)} (${sorted[1].rank}/${sorted[1].of})`;
 }
 
 function isLcSpecies(speciesId: string, meta: Meta): boolean {
@@ -1090,11 +1094,11 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
           if (better) pushReason(g, better);
         }
         if (keepUl) {
-          const better = betterAsReason(g, g.ulAs);
+          const better = betterAsReason(g, g.ulAs, "UL");
           if (better) pushReason(g, better);
         }
         if (keepMl) {
-          const better = betterAsReason(g, g.mlAs);
+          const better = betterAsReason(g, g.mlAs, "ML");
           if (better) pushReason(g, better);
         }
         for (const role of roles) {

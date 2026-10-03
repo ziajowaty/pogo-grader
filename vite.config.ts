@@ -4,10 +4,10 @@ export default defineConfig({
   base: "./",
   server: {
     proxy: {
-      "/pb-api": {
-        target: "https://www.pokebattler.com",
+      "/ditto": {
+        target: "https://www.dittobase.com",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/pb-api/, "/api"),
+        rewrite: (path) => path.replace(/^\/ditto/, ""),
       },
     },
   },

@@ -727,8 +727,8 @@ body {
 }
 
 .chip--lock {
-  background: #322a12;
-  color: #f0d878;
+  background: #24303c;
+  color: #d5e4f2;
 }
 
 .chip--unknown {
@@ -865,6 +865,146 @@ body {
 .chip--junk {
   background: #2c2418;
   color: #d4b896;
+}
+
+.chip--gl-miss {
+  background: #10243f;
+  color: #4d8dff;
+}
+
+.chip--ul-miss {
+  background: #2e1040;
+  color: #d56bff;
+}
+
+.chip--ml-miss {
+  background: #3a220c;
+  color: #ff9a2e;
+}
+
+.chip--lc-miss {
+  background: #0c3024;
+  color: #3ee08a;
+}
+
+.chip--raid-miss {
+  background: #3a1218;
+  color: #ff5c6a;
+}
+
+.chip--raid-unknown {
+  background: #243028;
+  color: #b7d8a8;
+}
+
+.chip--gl-better {
+  background: #1c3014;
+  color: #b6ff8a;
+}
+
+.chip--ul-better {
+  background: #3a1830;
+  color: #ffd0f0;
+}
+
+.chip--ml-better {
+  background: #182038;
+  color: #c8d4ff;
+}
+
+.chip--gl-cap {
+  background: #0e3030;
+  color: #3ad6c8;
+}
+
+.chip--ul-cap {
+  background: #3a1830;
+  color: #ff7eb3;
+}
+
+.chip--ml-cap {
+  background: #0c3034;
+  color: #5dffe8;
+}
+
+.chip--lc-cap {
+  background: #381430;
+  color: #ff8ae8;
+}
+
+.chip--gl-seat {
+  background: #103028;
+  color: #7dffe0;
+}
+
+.chip--ul-seat {
+  background: #3a2418;
+  color: #ffc2a0;
+}
+
+.chip--ml-seat {
+  background: #142038;
+  color: #9ec0ff;
+}
+
+.chip--lc-seat {
+  background: #2c3010;
+  color: #e0f070;
+}
+
+.chip--gl-unknown {
+  background: #1a2830;
+  color: #9ec8d8;
+}
+
+.chip--ul-unknown {
+  background: #281830;
+  color: #d0b0d8;
+}
+
+.chip--ml-unknown {
+  background: #3a2418;
+  color: #e09060;
+}
+
+.chip--lc-unknown {
+  background: #183028;
+  color: #a8d8c0;
+}
+
+.chip--nojob {
+  background: #3a3014;
+  color: #f0d48a;
+}
+
+.chip--extra-keep {
+  background: #1c2430;
+  color: #f5f8ff;
+}
+
+.chip--extra-spare {
+  background: #143024;
+  color: #7dffa8;
+}
+
+.chip--raid-copies {
+  background: #243008;
+  color: #c6ff4a;
+}
+
+.chip--family-open {
+  background: #2a3010;
+  color: #e4f56a;
+}
+
+.chip--junk-best {
+  background: #2c2414;
+  color: #e6c56a;
+}
+
+.chip--unlisted {
+  background: #241830;
+  color: #c8b4e6;
 }
 
 .badge-crowd {

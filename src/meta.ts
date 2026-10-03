@@ -1,3 +1,13 @@
+import {
+  dittobaseTypeUrl,
+  DITTOBASE_UA,
+  entriesFromRaidFile,
+  entryIsViable,
+  parseDittobaseTypePage,
+  raidFileFromPages,
+  type DittoRaidEntry,
+  type DittoRaidFile,
+} from "./dittobase";
 import type { Meta, PokemonType, PvpokeRankRow, RaidAttackerRow } from "./types";
 import { GL_LIST_CAP, isPokemonType, LC_LIST_CAP, ML_LIST_CAP, POKEMON_TYPES, prettySpeciesId, UL_LIST_CAP } from "./types";
 // @ts-ignore Vite JSON snapshots
@@ -22,7 +32,7 @@ import speciesTypesJson from "../data/species-types.json";
 const PVPOKE_TTL_MS = 24 * 60 * 60 * 1000;
 const PVPOKE_CACHE_KEY = "pogo-grader.pvpokeLists";
 const RAID_TTL_MS = 24 * 60 * 60 * 1000;
-const RAID_CACHE_KEY = "pogo-grader.raidAttackers";
+const RAID_CACHE_KEY = "pogo-grader.raidAttackers.dittobase";
 const RAID_LIVE_MIN = 40;
 const GL_RANKINGS_URL =
   "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-1500.json";
@@ -34,27 +44,6 @@ const ML_RANKINGS_URL =
   "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-10000.json";
 const UL_CACHE_KEY = "pogo-grader.pvpokeUltra";
 const ML_CACHE_KEY = "pogo-grader.pvpokeMaster";
-const POKEBATTLER_ATTACKERS_QUERY =
-  "shadow=true&mega=true&legendary=true&partyPower=false&sort=points&selectedType=POKEMON_TYPE_ALL&moveType=POKEMON_TYPE_ALL";
-export const POKEBATTLER_ATTACKERS_URL = `https://www.pokebattler.com/api/attackers.json?${POKEBATTLER_ATTACKERS_QUERY}`;
-export const POKEBATTLER_UA = "pogo-grader/0.1 (raid attacker cache; https://github.com/ziajowaty/pogo-grader)";
-
-/** Pokébattler omits the default form suffix that PvPoke-style ids use. */
-const POKEBATTLER_DEFAULT_FORM: Record<string, string> = {
-  giratina: "giratina_altered",
-  landorus: "landorus_incarnate",
-  thundurus: "thundurus_incarnate",
-  tornadus: "tornadus_incarnate",
-  keldeo: "keldeo_ordinary",
-  shaymin: "shaymin_land",
-  hoopa: "hoopa_confined",
-  meloetta: "meloetta_aria",
-  zacian: "zacian_hero",
-  zamazenta: "zamazenta_hero",
-  enamorus: "enamorus_incarnate",
-  darmanitan: "darmanitan_standard",
-};
-
 interface NamedListFile {
   comment?: string;
   speciesIds: string[];
@@ -85,73 +74,11 @@ export function canonId(id: string): string {
     .replace(/_+/g, "_");
 }
 
-/** Map a Pokébattler `pokemonId` (e.g. `MACHAMP_SHADOW_FORM`) onto grader `speciesId`. */
-export function pokebattlerToCanonId(raw: string): string {
-  let id = canonId(raw);
-  if (!id) return "";
-  const shadow = /_shadow(?:_form)?$/.test(id);
-  id = id.replace(/_shadow_form$/, "").replace(/_shadow$/, "");
-  id = id.replace(/_form$/, "");
-  id = id.replace(/_alola(?=_|$)/g, "_alolan");
-  id = id.replace(/_galar(?=_|$)/g, "_galarian");
-  id = id.replace(/_hisui(?=_|$)/g, "_hisuian");
-  id = id.replace(/_paldea(?=_|$)/g, "_paldean");
-  if (POKEBATTLER_DEFAULT_FORM[id]) id = POKEBATTLER_DEFAULT_FORM[id];
-  if (shadow && !id.endsWith("_shadow")) id = `${id}_shadow`;
-  return id;
-}
-
-function pokebattlerType(raw: unknown): PokemonType | null {
-  if (typeof raw !== "string") return null;
-  const t = raw.replace(/^pokemon_type_/i, "").toLowerCase();
-  return isPokemonType(t) ? t : null;
-}
-
-export interface PokebattlerAttackers {
-  ids: string[];
-  types: Record<string, PokemonType[]>;
-}
-
-/** Unique species from Pokébattler `/api/attackers.json`, first occurrence wins. */
-export function parsePokebattlerAttackers(raw: unknown): PokebattlerAttackers {
-  if (!Array.isArray(raw)) return { ids: [], types: {} };
-  const ids: string[] = [];
-  const seen = new Set<string>();
-  const types: Record<string, PokemonType[]> = {};
-  for (const row of raw) {
-    if (!row || typeof row !== "object" || !("pokemonId" in row)) continue;
-    const id = pokebattlerToCanonId(String((row as { pokemonId?: unknown }).pokemonId ?? ""));
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    ids.push(id);
-    const rec = row as { type?: unknown; type2?: unknown };
-    const t1 = pokebattlerType(rec.type);
-    const t2 = pokebattlerType(rec.type2);
-    const pair = [t1, t2].filter((t): t is PokemonType => t != null);
-    if (pair.length && !id.endsWith("_shadow")) types[id] = pair;
-  }
-  return { ids, types };
-}
-
-export function unionUniqueIds(...lists: string[][]): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const list of lists) {
-    for (const raw of list) {
-      const id = canonId(raw);
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      out.push(id);
-    }
-  }
-  return out;
-}
-
-function pokebattlerAttackersUrl(): string {
+function dittobaseTypeFetchUrl(type: PokemonType): string {
   if (typeof window !== "undefined" && import.meta.env?.DEV) {
-    return `/pb-api/attackers.json?${POKEBATTLER_ATTACKERS_QUERY}`;
+    return `/ditto/pokemon-go/best-attackers/${type}`;
   }
-  return POKEBATTLER_ATTACKERS_URL;
+  return dittobaseTypeUrl(type);
 }
 
 function toSet(ids: string[]): Set<string> {
@@ -441,31 +368,23 @@ function compareRaidRows(a: RaidAttackerRow, b: RaidAttackerRow): number {
   return a.speciesName.localeCompare(b.speciesName) || a.speciesId.localeCompare(b.speciesId);
 }
 
-function fillTypeRanks(rows: RaidAttackerRow[]): void {
-  for (const row of rows) row.typeRanks = {};
-  const finals = rows.filter((row) => !row.asSpeciesId);
+function moveRanksOf(entry: DittoRaidEntry): {
+  typeRanks: Partial<Record<PokemonType, number>>;
+  typeTiers: Partial<Record<PokemonType, string>>;
+} {
+  const typeRanks: Partial<Record<PokemonType, number>> = {};
+  const typeTiers: Partial<Record<PokemonType, string>> = {};
   for (const type of POKEMON_TYPES) {
-    let n = 0;
-    const byId = new Map<string, number>();
-    for (const row of finals) {
-      if (!row.types.includes(type)) continue;
-      n += 1;
-      byId.set(row.speciesId, n);
-      row.typeRanks[type] = n;
-    }
-    for (const row of rows) {
-      if (!row.asSpeciesId) continue;
-      const inherited = byId.get(row.asSpeciesId);
-      if (inherited == null) continue;
-      if (row.asTypes?.includes(type) || row.types.includes(type)) {
-        row.typeRanks[type] = inherited;
-      }
-    }
+    const info = entry.typeRanks[type];
+    if (!info) continue;
+    typeRanks[type] = info.rank;
+    typeTiers[type] = info.tier;
   }
+  return { typeRanks, typeTiers };
 }
 
 function buildRaidRankings(
-  ids: string[],
+  entries: DittoRaidEntry[],
   raidEvolution: Record<string, string>,
   limited: Set<string>,
   legendary: Set<string>,
@@ -474,17 +393,23 @@ function buildRaidRankings(
 ): RaidAttackerRow[] {
   const seen = new Set<string>();
   const rankOf = new Map<string, number>();
+  const inherited = new Map<string, ReturnType<typeof moveRanksOf> & { viable: boolean }>();
   const rows: RaidAttackerRow[] = [];
   let rank = 0;
-  for (const raw of ids) {
-    const speciesId = canonId(raw);
+  for (const entry of entries) {
+    const speciesId = canonId(entry.speciesId);
     if (!speciesId || seen.has(speciesId)) continue;
     seen.add(speciesId);
     rank += 1;
     rankOf.set(speciesId, rank);
+    const moves = moveRanksOf(entry);
+    const viable = entryIsViable(entry);
+    inherited.set(speciesId, { ...moves, viable });
     rows.push({
       rank,
-      typeRanks: {},
+      typeRanks: moves.typeRanks,
+      typeTiers: moves.typeTiers,
+      viable,
       speciesId,
       speciesName: prettySpeciesId(speciesId),
       tags: raidTags(speciesId, limited, legendary, mythical),
@@ -494,9 +419,12 @@ function buildRaidRankings(
   for (const [from, to] of Object.entries(raidEvolution)) {
     if (!from || seen.has(from)) continue;
     seen.add(from);
+    const parent = inherited.get(to);
     rows.push({
       rank: rankOf.get(to) ?? rank + 1,
-      typeRanks: {},
+      typeRanks: { ...(parent?.typeRanks ?? {}) },
+      typeTiers: { ...(parent?.typeTiers ?? {}) },
+      viable: parent?.viable !== false,
       speciesId: from,
       speciesName: prettySpeciesId(from),
       tags: raidTags(from, limited, legendary, mythical),
@@ -507,7 +435,6 @@ function buildRaidRankings(
     });
   }
   rows.sort(compareRaidRows);
-  fillTypeRanks(rows);
   return rows;
 }
 
@@ -656,88 +583,87 @@ async function loadPvpokeLists(): Promise<PvpokeLists> {
   return pvpokeInflight;
 }
 
-interface CachedRaidList {
-  ids: string[];
-  types: Record<string, PokemonType[]>;
+interface CachedRaidFile extends DittoRaidFile {
   fetchedAt: number;
 }
 
 type RaidLists = {
-  ids: string[];
-  types: Record<string, PokemonType[]>;
+  file: DittoRaidFile;
   source: NonNullable<Meta["raidSource"]>;
   fetchedAt: number;
 };
 
 let raidInflight: Promise<RaidLists> | null = null;
 
-function raidCacheUsable(cached: CachedRaidList | null): cached is CachedRaidList {
-  return Boolean(cached && cached.ids.length >= RAID_LIVE_MIN);
+function bundledRaidFile(): DittoRaidFile {
+  return raidAttackersJson as DittoRaidFile;
 }
 
-function readRaidCache(): CachedRaidList | null {
+function raidFileUsable(file: DittoRaidFile | null): file is DittoRaidFile {
+  if (!file?.lists) return false;
+  if (!POKEMON_TYPES.every((type) => (file.lists[type]?.length ?? 0) >= 20)) return false;
+  return entriesFromRaidFile(file).filter(entryIsViable).length >= RAID_LIVE_MIN;
+}
+
+function readRaidCache(): CachedRaidFile | null {
   try {
     const raw = localStorage.getItem(RAID_CACHE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { ids?: unknown; types?: unknown; fetchedAt?: unknown };
-    if (!Array.isArray(parsed.ids) || !Number.isFinite(parsed.fetchedAt)) return null;
-    const ids = parsed.ids.map((id) => canonId(String(id))).filter(Boolean);
-    if (ids.length < RAID_LIVE_MIN) return null;
-    const types: Record<string, PokemonType[]> = {};
-    if (parsed.types && typeof parsed.types === "object") {
-      for (const [key, val] of Object.entries(parsed.types as Record<string, unknown>)) {
-        if (!Array.isArray(val)) continue;
-        const cleaned = val.filter((t): t is PokemonType => typeof t === "string" && isPokemonType(t));
-        if (cleaned.length) types[canonId(key)] = cleaned;
-      }
-    }
-    return { ids, types, fetchedAt: Number(parsed.fetchedAt) };
+    const parsed = JSON.parse(raw) as CachedRaidFile;
+    if (!Number.isFinite(parsed.fetchedAt) || !raidFileUsable(parsed)) return null;
+    return parsed;
   } catch {
     return null;
   }
 }
 
-function writeRaidCache(list: CachedRaidList): void {
+function writeRaidCache(file: DittoRaidFile, fetchedAt: number): void {
   try {
-    localStorage.setItem(RAID_CACHE_KEY, JSON.stringify(list));
+    localStorage.setItem(RAID_CACHE_KEY, JSON.stringify({ ...file, fetchedAt }));
   } catch {
     /* quota / private mode */
   }
 }
 
-async function fetchPokebattlerAttackers(): Promise<PokebattlerAttackers> {
+async function fetchDittobaseRaidFile(): Promise<DittoRaidFile> {
   const headers: Record<string, string> = {};
-  if (typeof window === "undefined") headers["User-Agent"] = POKEBATTLER_UA;
-  const res = await fetch(pokebattlerAttackersUrl(), { cache: "no-cache", headers });
-  if (!res.ok) throw new Error(`Pokébattler ${res.status}`);
-  const parsed = parsePokebattlerAttackers(await res.json());
-  if (parsed.ids.length < RAID_LIVE_MIN) throw new Error("Pokébattler attacker list too small");
-  return parsed;
+  if (typeof window === "undefined") headers["User-Agent"] = DITTOBASE_UA;
+  const pages = await Promise.all(
+    POKEMON_TYPES.map(async (type) => {
+      const res = await fetch(dittobaseTypeFetchUrl(type), { cache: "no-cache", headers });
+      if (!res.ok) throw new Error(`Dittobase ${type} ${res.status}`);
+      const page = parseDittobaseTypePage(await res.text());
+      if (page.type !== type) throw new Error(`Dittobase asked for ${type}, got ${page.type}`);
+      return page;
+    }),
+  );
+  const file = raidFileFromPages(pages, new Date().toISOString().slice(0, 10));
+  if (!raidFileUsable(file)) throw new Error("Dittobase attacker list too small");
+  return file;
 }
 
-async function fetchLiveRaid(stale: CachedRaidList | null): Promise<RaidLists> {
+async function fetchLiveRaid(stale: CachedRaidFile | null): Promise<RaidLists> {
   try {
-    const live = await fetchPokebattlerAttackers();
+    const live = await fetchDittobaseRaidFile();
     const fetchedAt = Date.now();
-    writeRaidCache({ ids: live.ids, types: live.types, fetchedAt });
-    return { ids: live.ids, types: live.types, fetchedAt, source: "live" };
+    writeRaidCache(live, fetchedAt);
+    return { file: live, fetchedAt, source: "live" };
   } catch {
-    if (raidCacheUsable(stale)) {
-      return { ids: stale.ids, types: stale.types, fetchedAt: stale.fetchedAt, source: "cache" };
+    if (stale && raidFileUsable(stale)) {
+      return { file: stale, fetchedAt: stale.fetchedAt, source: "cache" };
     }
-    return { ids: [], types: {}, fetchedAt: 0, source: "bundled" };
+    return { file: bundledRaidFile(), fetchedAt: 0, source: "bundled" };
   }
 }
 
 async function loadRaidLists(): Promise<RaidLists> {
+  const bundled = { file: bundledRaidFile(), fetchedAt: 0, source: "bundled" as const };
   const canFetch = typeof fetch === "function" && typeof localStorage !== "undefined";
-  if (!canFetch) {
-    return { ids: [], types: {}, fetchedAt: 0, source: "bundled" };
-  }
+  if (!canFetch) return bundled;
 
   const cached = readRaidCache();
-  if (raidCacheUsable(cached) && Date.now() - cached.fetchedAt < RAID_TTL_MS) {
-    return { ids: cached.ids, types: cached.types, fetchedAt: cached.fetchedAt, source: "cache" };
+  if (cached && Date.now() - cached.fetchedAt < RAID_TTL_MS) {
+    return { file: cached, fetchedAt: cached.fetchedAt, source: "cache" };
   }
 
   if (!raidInflight) {
@@ -826,7 +752,6 @@ export async function loadMeta(request?: LeagueListRequest): Promise<Meta> {
   const limited = toSet(listFile(limitedJson as NamedListFile));
   const legendary = toSet(legendaryJson as string[]);
   const mythical = toSet(mythicalJson as string[]);
-  const bundledRaidIds = listFile(raidAttackersJson);
   const evoEdges = loadEvolutionEdges(evolutionsJson);
   const typeMap = loadSpeciesTypes(speciesTypesJson);
   const { familyOf, evoReach } = buildFamilyIndex(evoEdges);
@@ -838,9 +763,10 @@ export async function loadMeta(request?: LeagueListRequest): Promise<Meta> {
     wantUltra ? loadOptionalLeague("ultra") : Promise.resolve(null),
     wantMaster ? loadOptionalLeague("master") : Promise.resolve(null),
   ]);
-  const raidIds = unionUniqueIds(raidLive.ids, bundledRaidIds);
-  const raidAttackers = toSet(raidIds);
-  const raidTypeMap = { ...typeMap, ...raidLive.types };
+  const raidEntries = entriesFromRaidFile(raidLive.file);
+  const raidAttackers = toSet(
+    raidEntries.filter(entryIsViable).map((entry) => entry.speciesId),
+  );
   const raidEvolution = buildRaidEvolution(raidAttackers, evoEdges);
   return {
     glTop500: toSet(lists.gl.map((row) => row.speciesId)),
@@ -854,7 +780,7 @@ export async function loadMeta(request?: LeagueListRequest): Promise<Meta> {
       ? { mlRankings: master.rows, mlSource: master.source, mlFetchedAt: master.fetchedAt || undefined }
       : {}),
     raidAttackers,
-    raidRankings: buildRaidRankings(raidIds, raidEvolution, limited, legendary, mythical, raidTypeMap),
+    raidRankings: buildRaidRankings(raidEntries, raidEvolution, limited, legendary, mythical, typeMap),
     raidEvolution,
     familyOf,
     evoReach,

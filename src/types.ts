@@ -99,11 +99,15 @@ export function prettyPokemonType(type: PokemonType): string {
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
-/** Raid KEEP list row. `rank` is Pokébattler unique-species order (1 = best). */
+/** Raid ranking row. `rank` is best Dittobase eDPS across types (1 = best). */
 export interface RaidAttackerRow {
   rank: number;
-  /** 1 = best among KEEP attackers of that type. Pre-evos inherit the target's ranks. */
+  /** Dittobase rank for that attacking move type (1 = best). Not renumbered. Pre-evos inherit the target. */
   typeRanks: Partial<Record<PokemonType, number>>;
+  /** Dittobase tier for that move type. Pre-evos inherit the target. */
+  typeTiers?: Partial<Record<PokemonType, string>>;
+  /** False when every listed type is below A. Omitted rows count as raid KEEP. */
+  viable?: boolean;
   speciesId: string;
   speciesName: string;
   tags: string[];
@@ -236,7 +240,7 @@ export interface Meta {
   ulFetchedAt?: number;
   mlFetchedAt?: number;
   raidAttackers: Set<string>;
-  /** Ordered raid KEEP list for the rankings table (Pokébattler rank, then pre-evos). */
+  /** Dittobase raid rankings (eDPS order, then pre-evos). Includes rows below the A-tier KEEP line. */
   raidRankings?: RaidAttackerRow[];
   /** unevolved -> family raid attacker id */
   raidEvolution?: Record<string, string>;
@@ -335,7 +339,7 @@ export interface Meta {
   /** How KEEP PvP species lists were loaded. */
   pvpokeSource?: "live" | "cache" | "bundled";
   pvpokeFetchedAt?: number;
-  /** How the raid KEEP set was loaded (Pokébattler union, then vendored). */
+  /** How the raid list was loaded (Dittobase live, then cache, then the vendored snapshot). */
   raidSource?: "live" | "cache" | "bundled";
   raidFetchedAt?: number;
 }

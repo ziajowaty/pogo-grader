@@ -8,6 +8,7 @@ import type {
   RaidAttackerRow,
   Verdict,
 } from "./types";
+import { viableRaidTier } from "./dittobase";
 import {
   clampFamilyKeep,
   clampPvpKeep,
@@ -351,7 +352,12 @@ function raidTypeFilterButtons(): string {
 }
 
 function raidRowHasType(row: RaidAttackerRow, type: PokemonType): boolean {
-  return row.types.includes(type) || Boolean(row.asTypes?.includes(type));
+  return row.typeRanks[type] != null;
+}
+
+function raidRowCut(row: RaidAttackerRow, type: PokemonType | ""): boolean {
+  if (type) return !viableRaidTier(row.typeTiers?.[type] ?? "");
+  return row.viable === false;
 }
 
 function raidFinalRow(meta: Meta | null, speciesId: string, evoSpeciesId?: string): RaidAttackerRow | undefined {
@@ -548,17 +554,15 @@ function jobLabel(item: GradedMon): string {
 
 function reasonClass(reason: string): string {
   const r = reason.toLowerCase();
-  if (r.includes("no pvp/raid job")) return "chip chip--dupe";
-  if (r.includes("stay ") && r.includes("little cup")) return "chip chip--lc";
-  if (r.includes("stay ") && r.includes("ultra league")) return "chip chip--ul";
-  if (r.includes("stay ") && r.includes("master league")) return "chip chip--ml";
-  if (r.includes("stay ") && r.includes("great league")) return "chip chip--gl";
-  if (r.includes("evolve to") && r.includes("little cup")) return "chip chip--lc";
-  if (r.includes("evolve to") && r.includes("ultra league")) return "chip chip--ul";
-  if (r.includes("evolve to") && r.includes("master league")) return "chip chip--ml";
-  if (r.includes("evolve to") && r.includes("great league")) return "chip chip--gl";
-  if (r.includes("evolve to") && r.includes("raid")) return "chip chip--raid";
-  if (r.includes("raid attacker")) return "chip chip--raid";
+  if (r.includes("no pvp/raid job")) return "chip chip--nojob";
+  if (r.startsWith("stay ") || r.startsWith("evolve to ")) {
+    if (r.includes("little cup")) return "chip chip--lc";
+    if (r.includes("ultra league")) return "chip chip--ul";
+    if (r.includes("master league")) return "chip chip--ml";
+    if (r.includes("great league")) return "chip chip--gl";
+    if (r.includes("raid")) return "chip chip--raid";
+  }
+  if (r.startsWith("raid attacker")) return "chip chip--raid";
   if (r.includes("shiny")) return "chip chip--shiny";
   if (r.includes("lucky")) return "chip chip--lucky";
   if (r.includes("costume")) return "chip chip--costume";
@@ -570,46 +574,53 @@ function reasonClass(reason: string): string {
   if (r.includes("dynamax") || r.includes("gigantamax")) return "chip chip--max";
   if (r.includes("legendary")) return "chip chip--legendary";
   if (r.includes("mythical")) return "chip chip--mythical";
-  if (r.includes("% iv worse") || r.includes("raid iv unavailable")) return "chip chip--miss";
-  if (r.includes("not gl/lc/raid")) return "chip chip--junk";
-  if (r.includes("limited")) return "chip chip--limited";
-  if (r.includes("ultra league")) return "chip chip--ul";
-  if (r.includes("master league")) return "chip chip--ml";
-  if (r.includes("great league") || r.includes("better as")) return "chip chip--gl";
-  if (r.includes("little cup")) return "chip chip--lc";
-  if (r.includes("rank unknown") || r.includes("ivs not unique") || r.includes("unavailable")) {
-    return "chip chip--unknown";
+  if (r.includes("% iv worse")) return "chip chip--raid-miss";
+  if (r.includes("raid iv unavailable")) return "chip chip--raid-unknown";
+  if (r.startsWith("gl better as")) return "chip chip--gl-better";
+  if (r.startsWith("ul better as")) return "chip chip--ul-better";
+  if (r.startsWith("ml better as")) return "chip chip--ml-better";
+  if (r.includes("better as")) return "chip chip--gl-better";
+  if (r.includes("over ultra league")) return "chip chip--ul-cap";
+  if (r.includes("over master league")) return "chip chip--ml-cap";
+  if (r.includes("over great league")) return "chip chip--gl-cap";
+  if (r.includes("over little cup")) return "chip chip--lc-cap";
+  if (r.startsWith("gl rank unknown")) return "chip chip--gl-unknown";
+  if (r.startsWith("ul rank unknown")) return "chip chip--ul-unknown";
+  if (r.startsWith("ml rank unknown")) return "chip chip--ml-unknown";
+  if (r.startsWith("lc rank unknown")) return "chip chip--lc-unknown";
+  if (r.includes("never dump") || r.includes("cannot dump") || r.includes("ivs not unique")) {
+    return "chip chip--lock";
   }
-  if (r.includes("never dump") || r.includes("cannot dump")) return "chip chip--lock";
-  if (r.includes("worse than keep")) return "chip chip--miss";
-  if (r.includes("pvp/raid family")) return "chip chip--family";
+  if (r.startsWith("gl ") && r.includes("worse than keep")) return "chip chip--gl-miss";
+  if (r.startsWith("ul ") && r.includes("worse than keep")) return "chip chip--ul-miss";
+  if (r.startsWith("ml ") && r.includes("worse than keep")) return "chip chip--ml-miss";
+  if (r.startsWith("lc ") && r.includes("worse than keep")) return "chip chip--lc-miss";
+  if (r.includes("worse than keep")) return "chip chip--raid-miss";
+  if (r.startsWith("great league as ")) return "chip chip--gl-seat";
+  if (r.startsWith("ultra league as ")) return "chip chip--ul-seat";
+  if (r.startsWith("master league as ")) return "chip chip--ml-seat";
+  if (r.startsWith("little cup as ")) return "chip chip--lc-seat";
+  if (r.startsWith("pvp/raid family") && r.includes("no keeper")) return "chip chip--family-open";
+  if (r.startsWith("pvp/raid family")) return "chip chip--family";
   if (r.includes("useless for pvp") || r.includes("keep 0 per family")) return "chip chip--junk";
-  if (r.includes("only copy") || r.includes("best junk")) return "chip chip--solo";
-  if (r.includes("not gl/lc/raid")) return "chip chip--junk";
-  if (
-    r.includes("duplicate") ||
-    r.includes("extra") ||
-    r.includes("copies") ||
-    r.includes("copy")
-  ) {
-    return "chip chip--dupe";
-  }
+  if (r === "only copy") return "chip chip--solo";
+  if (r.includes("best junk")) return "chip chip--junk-best";
+  if (r.includes("not gl/lc/raid")) return "chip chip--unlisted";
+  if (r.startsWith("limited")) return "chip chip--limited";
+  if (r.includes("already has a keeper")) return "chip chip--extra-keep";
+  if (r.startsWith("extra copy")) return "chip chip--extra-spare";
+  if (r.startsWith("raid copies")) return "chip chip--raid-copies";
   return "chip chip--loud";
 }
 
 function isNegativeReason(reason: string): boolean {
   const r = reason.toLowerCase();
   if (r.includes("no pvp/raid job")) return false;
-  const cls = reasonClass(reason);
-  if (
-    cls.includes("chip--miss") ||
-    cls.includes("chip--dupe") ||
-    cls.includes("chip--junk") ||
-    cls.includes("chip--halt")
-  ) {
-    return true;
-  }
-  return /^(gl|lc) rank unknown/.test(r);
+  if (r.includes("% iv worse") || r.includes("raid iv unavailable") || r.includes("worse than keep")) return true;
+  if (r.includes("useless for pvp") || r.includes("keep 0 per family") || r.includes("not gl/lc/raid")) return true;
+  if (/^(gl|lc) rank unknown/.test(r)) return true;
+  if (r.startsWith("extra copy") || r.startsWith("raid copies") || r.includes("duplicate")) return true;
+  return false;
 }
 
 function isBetterAsReason(reason: string): boolean {
@@ -697,11 +708,11 @@ function pvpokeStatus(meta: Meta | null): string {
 }
 
 function raidListStatus(meta: Meta | null): string {
-  if (!meta?.raidSource || meta.raidSource === "bundled") return "Pokébattler bundled";
+  if (!meta?.raidSource || meta.raidSource === "bundled") return "Dittobase bundled";
   const at = meta.raidFetchedAt ?? 0;
   const hours = Math.max(0, Math.floor((Date.now() - at) / 3_600_000));
   const age = hours < 1 ? "<1h" : `${hours}h`;
-  return meta.raidSource === "live" ? "Pokébattler live" : `Pokébattler ${age}`;
+  return meta.raidSource === "live" ? "Dittobase live" : `Dittobase ${age}`;
 }
 
 function isTab(value: string | null): value is Tab {
@@ -962,7 +973,7 @@ export function mountApp(root: HTMLElement): void {
               <input id="rankings-filter-raid" class="rankings-filter" type="search" placeholder="Name, family, id, or tag" autocomplete="off" aria-label="Filter raid attackers" data-rankings-filter />
             </div>
             <nav class="rankings-types" aria-label="Filter raid attackers by type">${raidTypeFilterButtons()}</nav>
-            <p class="note rankings-raid-note" id="rankings-raid-note">KEEP list sorted by Pokébattler aggregated rank (1 = best). Pre-evolutions sit with the attacker they count as.</p>
+            <p class="note rankings-raid-note" id="rankings-raid-note">Dittobase eDPS (1 = best). A tier and better are raid KEEP. Dimmed rows are ranked but not kept. Pre-evolutions sit with the attacker they count as.</p>
             <div id="rankings-raid" class="rankings-table-wrap"></div>
           </div>
         </div>
@@ -1568,16 +1579,27 @@ export function mountApp(root: HTMLElement): void {
     }
     const type = state.rankingsRaidType;
     const typed = type ? rows.filter((row) => raidRowHasType(row, type)) : rows;
+    const ordered = [...typed].sort((a, b) => {
+      if (type) {
+        const ar = a.typeRanks[type] ?? Number.MAX_SAFE_INTEGER;
+        const br = b.typeRanks[type] ?? Number.MAX_SAFE_INTEGER;
+        if (ar !== br) return ar - br;
+      } else if (a.rank !== b.rank) return a.rank - b.rank;
+      const ap = a.asSpeciesId ? 1 : 0;
+      const bp = b.asSpeciesId ? 1 : 0;
+      if (ap !== bp) return ap - bp;
+      return a.speciesName.localeCompare(b.speciesName) || a.speciesId.localeCompare(b.speciesId);
+    });
     const q = state.rankingsFilter.trim().toLowerCase();
     const familyIds = rankingsFamilyIds(state.rankingsFilter);
-    const shown = typed.filter((row) => rankingsRowMatches(row, q, familyIds));
+    const shown = ordered.filter((row) => rankingsRowMatches(row, q, familyIds));
     if (shown.length === 0) {
       const typeLabel = type ? prettyPokemonType(type) : "";
       if (q) {
         const inType = typeLabel ? ` in ${typeLabel}` : "";
         return `<p class="empty">No species match “${escapeHtml(state.rankingsFilter.trim())}”${inType}</p>`;
       }
-      return `<p class="empty">No ${escapeHtml(typeLabel || "raid")} KEEP attackers</p>`;
+      return `<p class="empty">No ${escapeHtml(typeLabel || "raid")} attackers on the Dittobase list</p>`;
     }
     const body = shown
       .map((row) => {
@@ -1590,7 +1612,8 @@ export function mountApp(root: HTMLElement): void {
         }
         const tags = chips.length === 0 ? "" : `<div class="rankings-tags">${chips.join("")}</div>`;
         const displayRank = type ? (row.typeRanks[type] ?? row.rank) : row.rank;
-        return `<tr>
+        const cut = raidRowCut(row, type);
+        return `<tr class="${cut ? "is-cut" : ""}">
           <td class="rankings-num">${displayRank}</td>
           <td>${escapeHtml(row.speciesName)}</td>
           <td>${tags}</td>
@@ -1619,8 +1642,8 @@ export function mountApp(root: HTMLElement): void {
     const ml = meta.mlRankings ?? [];
     const lc = meta.lcRankings ?? [];
     const raid = meta.raidRankings ?? [];
-    const raidFinals = raid.filter((row) => !row.asSpeciesId).length;
-    const raidPre = raid.length - raidFinals;
+    const raidKeepCount = raid.filter((row) => !row.asSpeciesId && row.viable !== false).length;
+    const raidPre = raid.filter((row) => Boolean(row.asSpeciesId)).length;
     const glIn = state.pvpAny ? gl.length : gl.filter((row) => row.rank <= state.pvpListKeep).length;
     const ulIn = state.pvpAny ? ul.length : ul.filter((row) => row.rank <= state.pvpListKeep).length;
     const mlIn = state.pvpAny ? ml.length : ml.filter((row) => row.rank <= state.pvpListKeep).length;
@@ -1656,13 +1679,13 @@ export function mountApp(root: HTMLElement): void {
           : state.pvpAny
             ? "ML any species"
             : `ML ${mlIn}/${ml.length || ML_LIST_CAP} in play`;
-    rankingsStatusEl.textContent = [pvpokeStatus(meta), raidListStatus(meta), glStatus, ulStatus, mlStatus, lcStatus, `${raidFinals} raid attackers`, `${raidPre} pre-evos${typeStatus}`]
+    rankingsStatusEl.textContent = [pvpokeStatus(meta), raidListStatus(meta), glStatus, ulStatus, mlStatus, lcStatus, `${raidKeepCount} raid KEEP`, `${raidPre} pre-evos${typeStatus}`]
       .filter(Boolean)
       .join(" · ");
     rankingsRaidTitleEl.textContent = raidType ? `${raidTypeLabel} raid attackers` : "Raid attackers";
     rankingsRaidNoteEl.textContent = raidType
-      ? `${raidTypeLabel}-type KEEP attackers numbered 1 = best ${raidTypeLabel}. Pre-evos share that attacker’s type rank.`
-      : "KEEP list sorted by Pokébattler aggregated rank (1 = best). Pre-evolutions sit with the attacker they count as.";
+      ? `${raidTypeLabel} attackers by Dittobase eDPS (1 = best). A tier and better are raid KEEP. Dimmed rows are below A on ${raidTypeLabel}. Pre-evos share that attacker’s rank.`
+      : "Dittobase eDPS (1 = best across types). A tier and better are raid KEEP. Dimmed rows are ranked but not kept. Pre-evolutions sit with the attacker they count as.";
     rankingsGlEl.innerHTML = renderRankingTable(
       gl,
       state.pvpAny ? null : state.pvpListKeep,

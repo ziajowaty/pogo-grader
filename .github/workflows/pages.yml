@@ -26,7 +26,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npx --yes tsx src/smokeGrade.ts
-      - name: Refresh raid attackers from Pokébattler
+      - name: Refresh raid attackers from Dittobase
         continue-on-error: true
         run: npm run pin:raid
       - run: npm run build

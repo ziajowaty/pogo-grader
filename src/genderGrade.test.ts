@@ -98,8 +98,8 @@ const raid = gradeBox([mon("ralts", "female"), mon("ralts", "male")], { ...base,
 const raidRows = [...raid.keep, ...raid.look, ...raid.dump];
 const raidFemale = raidRows.find((g) => g.mon.gender === "female");
 const raidMale = raidRows.find((g) => g.mon.gender === "male");
-must(raidFemale?.raidIv?.evoSpeciesId !== "gallade", `female Ralts raid ${raidFemale?.raidIv?.evoSpeciesId}`);
+must(raidFemale?.raidIv?.evoSpeciesId === "gardevoir", `female Ralts raid ${raidFemale?.raidIv?.evoSpeciesId}`);
 must(!raidFemale?.raidIv?.evoSpeciesId?.startsWith("gallade"), "female Ralts raid is not a Gallade form");
-must(raidMale?.raidIv?.evoSpeciesId === "gallade", `male Ralts raid ${raidMale?.raidIv?.evoSpeciesId}`);
+must(raidMale?.raidIv?.evoSpeciesId === "gardevoir", `male Ralts raid ${raidMale?.raidIv?.evoSpeciesId}`);
 
 console.log("genderGrade tests passed");

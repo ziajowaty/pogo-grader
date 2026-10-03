@@ -336,15 +336,16 @@ must(!favMachop?.keepClasses.includes("lucky"), "Lucky off drops lucky class eve
 const noFavChip = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, keepFavorite: false });
 must(noFavChip.keepFavorite === false, "echo keepFavorite false");
 must(
-  noFavChip.dump.every((g) => !g.mon.favorite),
-  "history favorite is lucky, so Can dump still leaves it off DUMP",
+  noFavChip.dump.some((g) => g.mon.favorite && g.mon.speciesId === "machop"),
+  "Favorite off DUMPs the Machop that has no other keep class",
 );
 const machopFavOff = [...noFavChip.keep, ...noFavChip.look, ...noFavChip.dump].find((g) => g.mon.favorite);
 must(
   machopFavOff != null && !machopFavOff.keepClasses.includes("favorite"),
   "Favorite off drops favorite class on Machop",
 );
-must(machopFavOff?.verdict === "KEEP", "lucky Machop still KEEP with Favorite off");
+must(machopFavOff?.keepClasses.includes("raid") !== true, "that Machop is not raid KEEP while Machamp is below A");
+must(machopFavOff?.verdict === "DUMP", "favorite Machop DUMPs when Favorite is off and Machamp is not a raid attacker");
 for (const lucky of luckies) {
   const g = [...noLucky.keep, ...noLucky.look, ...noLucky.dump].find(
     (row) => row.mon.sourceRow === lucky.sourceRow,
