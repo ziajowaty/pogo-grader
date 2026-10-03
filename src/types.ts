@@ -133,22 +133,37 @@ export interface GradedMon {
   reasons: string[];
   keepClasses: string[];
   gl?: LeagueRank | null;
+  ul?: LeagueRank | null;
+  ml?: LeagueRank | null;
   lc?: LeagueRank | null;
   /** Every independent GL stage this copy can become, best IV-rank first. */
   glAs?: LeagueRank[];
+  /** Every independent Ultra League stage this copy can become, best IV-rank first. */
+  ulAs?: LeagueRank[];
+  /** Every independent Master League stage this copy can become, best IV-rank first. */
+  mlAs?: LeagueRank[];
   /** PvPoke Great League overall placement (1 = best), even if outside the species cutoff. */
   glMeta?: MetaLeagueRank | null;
+  /** PvPoke Ultra League overall placement (1 = best), even if outside the species cutoff. */
+  ulMeta?: MetaLeagueRank | null;
+  /** PvPoke Master League overall placement (1 = best), even if outside the species cutoff. */
+  mlMeta?: MetaLeagueRank | null;
   /** PvPoke Little Cup overall placement (1 = best), even if outside the species cutoff. */
   lcMeta?: MetaLeagueRank | null;
   /** PvPoke GL placement for each independent stage in `glAs`. */
   glMetaAs?: MetaLeagueRank[];
+  /** PvPoke Ultra placement for each independent stage in `ulAs`. */
+  ulMetaAs?: MetaLeagueRank[];
+  /** PvPoke Master placement for each independent stage in `mlAs`. */
+  mlMetaAs?: MetaLeagueRank[];
   /** IV% for raid KEEP ((atk+def+sta)/45). */
   raidIv?: RaidIvRank | null;
   /**
    * Exclusive PvP/raid job for this copy (one job per Pokémon).
-   * Great League fills before Little Cup; within a league, higher PvPoke
-   * species fill first (Dragonair before Dragonite). Raid leftovers last.
-   * A league with `keepGl` or `keepLc` off is not a job.
+   * Great League fills before Ultra, then Master, then Little Cup; within a
+   * league, higher PvPoke species fill first (Dragonair before Dragonite).
+   * Raid leftovers last. A league that is off is not a job. Ultra and Master
+   * stay off until selected.
    */
   pvpJob?: PvpJob | null;
   copiesInGroup: number;
@@ -157,7 +172,7 @@ export interface GradedMon {
 
 /** One PvP or raid identity this copy is assigned to. */
 export interface PvpJob {
-  kind: "gl" | "lc" | "raid";
+  kind: "gl" | "ul" | "ml" | "lc" | "raid";
   speciesId: string;
   /** 1-based seat among copies assigned this same job. */
   seat: number;
@@ -168,8 +183,6 @@ export interface GradeResult {
   keep: GradedMon[];
   look: GradedMon[];
   dump: GradedMon[];
-  dumpCap: number;
-  dumpCapped: boolean;
   /** GL/LC KEEP only if 4096-rank is this or better (1 = best). */
   pvpRankKeep: number;
   /** Species in PvPoke GL overall this far down count as PvP. Rank 1 is best. */
@@ -180,7 +193,7 @@ export interface GradeResult {
   pvpKeep: number;
   /** Copies kept of each family's raid attacker. Independent of `pvpKeep`. */
   raidKeep: number;
-  /** LOOK this many best copies of a PvP/raid family with no KEEP; extras DUMP. 0 dumps junk too. */
+  /** LOOK this many best copies of a PvP/raid family with no KEEP. 0 leaves that family on LOOK and DUMPs only non-meta junk. */
   familyKeep: number;
   /** Raid KEEP only if IV% is this or better. 0 keeps any IV. */
   raidIvKeep: number;
@@ -196,6 +209,10 @@ export interface GradeResult {
   keepGl: boolean;
   /** When true, Little Cup is a KEEP job. When false, good LC IVs do not KEEP. */
   keepLc: boolean;
+  /** When true, Ultra League is a KEEP job. Default false. */
+  keepUl: boolean;
+  /** When true, Master League is a KEEP job. Default false. */
+  keepMl: boolean;
   groups: Array<{
     key: string;
     size: number;
@@ -210,6 +227,14 @@ export interface Meta {
   glRankings?: PvpokeRankRow[];
   /** Ordered PvPoke Little Cup overall list (up to 100 unique species). */
   lcRankings?: PvpokeRankRow[];
+  /** Ordered PvPoke Ultra League overall list. Present only after Ultra is selected. */
+  ulRankings?: PvpokeRankRow[];
+  /** Ordered PvPoke Master League overall list. Present only after Master is selected. */
+  mlRankings?: PvpokeRankRow[];
+  ulSource?: "live" | "cache" | "missing";
+  mlSource?: "live" | "cache" | "missing";
+  ulFetchedAt?: number;
+  mlFetchedAt?: number;
   raidAttackers: Set<string>;
   /** Ordered raid KEEP list for the rankings table (Pokébattler rank, then pre-evos). */
   raidRankings?: RaidAttackerRow[];
@@ -224,7 +249,6 @@ export interface Meta {
   familyOf?: Record<string, string>;
   /** Forward-reachable evo ids including self. */
   evoReach?: Record<string, string[]>;
-  dumpCap: number;
   /** Keep GL/LC IVs at this rank or better. Rank 1 is best. Default 500. */
   pvpRankKeep?: number;
   /** Keep PvPoke GL overall species this far down. Rank 1 is best. Default 500. Ignored when `pvpAny`. */
@@ -250,7 +274,8 @@ export interface Meta {
   raidKeep?: number;
   /**
    * When a PvP/raid family has no KEEP, LOOK this many best copies and DUMP the rest.
-   * 0 DUMPs those copies and ungated junk (not useful for PvP or raids), still
+   * 0 does not DUMP that family: a listed species stays LOOK even when every copy
+   * misses the IV floor. 0 DUMPs only ungated junk (not useful for PvP or raids), still
    * never dumping limited / special / non-unique IVs. A favorite is included
    * in that junk when `keepFavorite` is off. A shadow is included when
    * `keepShadow` is off.
@@ -297,6 +322,16 @@ export interface Meta {
    * and do not count as a PvP floor. Default true.
    */
   keepLc?: boolean;
+  /**
+   * When true, Ultra League is a KEEP job. Good UL IVs can KEEP and count as a
+   * PvP floor. Default false. Rankings are fetched only while this is on.
+   */
+  keepUl?: boolean;
+  /**
+   * When true, Master League is a KEEP job. Good ML IVs can KEEP and count as a
+   * PvP floor. Default false. Rankings are fetched only while this is on.
+   */
+  keepMl?: boolean;
   /** How KEEP PvP species lists were loaded. */
   pvpokeSource?: "live" | "cache" | "bundled";
   pvpokeFetchedAt?: number;
@@ -311,6 +346,8 @@ export const PVP_RANK_OF = 4096;
 
 /** How far down PvPoke GL overall a species still counts as PvP. */
 export const GL_LIST_CAP = 500;
+export const UL_LIST_CAP = 500;
+export const ML_LIST_CAP = 500;
 export const LC_LIST_CAP = 100;
 export const DEFAULT_PVP_LIST_KEEP = 500;
 /** Off: only the PvPoke GL/LC lists count. On: any species with stats can be PvP. */
@@ -326,7 +363,7 @@ export const DEFAULT_RAID_KEEP = 1;
 export const RAID_KEEP_MIN = 1;
 export const RAID_KEEP_MAX = 12;
 
-/** Best copies to LOOK in a PvP/raid family that has no KEEP. 0 dumps junk too. */
+/** Best copies to LOOK in a PvP/raid family that has no KEEP. 0 LOOKs the whole family and DUMPs only non-meta junk. */
 export const DEFAULT_FAMILY_KEEP = 2;
 export const DEFAULT_KEEP_LUCKY = true;
 export const DEFAULT_KEEP_FAVORITE = true;
@@ -334,6 +371,9 @@ export const DEFAULT_KEEP_SHADOW = true;
 /** Great League and Little Cup both KEEP until faded. */
 export const DEFAULT_KEEP_GL = true;
 export const DEFAULT_KEEP_LC = true;
+/** Ultra League and Master League stay off until selected. */
+export const DEFAULT_KEEP_UL = false;
+export const DEFAULT_KEEP_ML = false;
 export const FAMILY_KEEP_MIN = 0;
 export const FAMILY_KEEP_MAX = 99;
 export const DEFAULT_RAID_IV_KEEP = 90;

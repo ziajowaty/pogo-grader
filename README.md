@@ -25,7 +25,7 @@ npm run preview  # serve the production build
 1. **Skip-scan in GO** (copy the search on the page). Do not add `!shadow`.
 2. AutoScan the rest in Calcy IV or Poke Genie, export CSV.
 3. Drop the CSV here. Nothing is uploaded.
-4. Three tracks in CSV order: **KEEP**, **LOOK**, **DUMP** (DUMP cap 100; overflow goes to LOOK).
+4. Three tracks in CSV order: **KEEP**, **LOOK**, **DUMP**.
 5. **KEEP PvP ≤** (default 500/4096). Bright **Lucky**, **Shadow**, and **Favorite** keep those tags. Fade a chip and that tag no longer protects the copy. **All 4\*** starts faded: one 4\* per family. Brighten it to keep every 4\*.
 6. Read the DUMP grid, then transfer those copies yourself in GO.
 

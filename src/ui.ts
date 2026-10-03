@@ -19,6 +19,8 @@ import {
   DEFAULT_KEEP_FAVORITE,
   DEFAULT_KEEP_GL,
   DEFAULT_KEEP_LC,
+  DEFAULT_KEEP_ML,
+  DEFAULT_KEEP_UL,
   DEFAULT_KEEP_LUCKY,
   DEFAULT_KEEP_SHADOW,
   DEFAULT_PVP_ANY,
@@ -32,6 +34,8 @@ import {
   GL_LIST_CAP,
   isPokemonType,
   LC_LIST_CAP,
+  ML_LIST_CAP,
+  UL_LIST_CAP,
   POKEMON_TYPES,
   prettyPokemonType,
   prettySpeciesId,
@@ -46,7 +50,7 @@ import {
 import { compareScanStream } from "./grade";
 import { familyIdsMatchingQuery, rankingsRowMatches } from "./meta";
 import { clearLastCsv, loadLastCsv, saveLastCsv } from "./lastCsv";
-import { fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP } from "./rank";
+import { fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, MASTER_LEAGUE_CAP, ULTRA_LEAGUE_CAP } from "./rank";
 
 function skipScanString(opts: { keepLucky?: boolean; keepFavorite?: boolean } = {}): string {
   const keepLucky = opts.keepLucky !== false;
@@ -68,7 +72,6 @@ function skipScanString(opts: { keepLucky?: boolean; keepFavorite?: boolean } = 
 }
 
 const SKIP_SCAN = skipScanString();
-const DUMP_LIST_MAX = 100;
 const LIST_PAINT_MAX = 200;
 const RANK_PRESETS = [50, 150, 500, 4096] as const;
 const LIST_KEEP_PRESETS = [100, 200, 300, 500] as const;
@@ -90,19 +93,26 @@ const KEEP_FAVORITE_KEY = "pogo-grader.keepFavorite";
 const KEEP_SHADOW_KEY = "pogo-grader.keepShadow";
 const KEEP_GL_KEY = "pogo-grader.keepGl";
 const KEEP_LC_KEY = "pogo-grader.keepLc";
+const KEEP_UL_KEY = "pogo-grader.keepUl";
+const KEEP_ML_KEY = "pogo-grader.keepMl";
 const PIN_DETAIL_KEY = "pogo-grader.pinDetail";
 const TAB_KEY = "pogo-grader.tab";
+const BOX_FILTER_KEY = "pogo-grader.boxFilter";
+const LOOK_FILTER_KEY = "pogo-grader.lookFilter";
 
 type Tab = Verdict | "BOX";
-type RankingsTab = "gl" | "lc" | "raid";
+type RankingsTab = "gl" | "ul" | "ml" | "lc" | "raid";
 type BoxSort = "cp" | "scan";
+type BoxFilter = Record<Verdict, boolean>;
+type LookKind = "family" | "junk" | "lock";
+type LookFilter = Record<LookKind, boolean>;
 
 const BOX_DISMISS_PREFIX = "pogo-grader.boxDismissed.";
 
 interface Engine {
   parseInventoryCsv: (text: string) => ParseResult;
   gradeBox: (mons: ParseResult["mons"], meta: Meta) => GradeResult;
-  loadMeta: () => Promise<Meta>;
+  loadMeta: (request?: { ultra?: boolean; master?: boolean }) => Promise<Meta>;
 }
 
 interface AppState {
@@ -127,11 +137,17 @@ interface AppState {
   keepShadow: boolean;
   keepGl: boolean;
   keepLc: boolean;
+  keepUl: boolean;
+  keepMl: boolean;
   pinDetail: boolean;
   rankingsTab: RankingsTab;
   rankingsFilter: string;
   rankingsRaidType: PokemonType | "";
   boxSort: BoxSort;
+  /** Which verdicts the LIST preview draws. Off hides those tiles. */
+  boxFilter: BoxFilter;
+  /** Which LOOK reasons the LOOK table draws. Off hides those rows. */
+  lookFilter: LookFilter;
   /** sourceRow values removed from the list and tracks. Last removed is last. */
   dismissed: number[];
   boxSelected: number | null;
@@ -251,6 +267,62 @@ function readStoredPinDetail(): boolean {
   }
 }
 
+function defaultBoxFilter(): BoxFilter {
+  return { KEEP: true, LOOK: true, DUMP: true };
+}
+
+function readStoredBoxFilter(): BoxFilter {
+  const next = defaultBoxFilter();
+  try {
+    const raw = localStorage.getItem(BOX_FILTER_KEY);
+    if (!raw) return next;
+    const parsed = JSON.parse(raw) as Partial<BoxFilter>;
+    if (parsed.KEEP === false) next.KEEP = false;
+    if (parsed.LOOK === false) next.LOOK = false;
+    if (parsed.DUMP === false) next.DUMP = false;
+    return next;
+  } catch {
+    return defaultBoxFilter();
+  }
+}
+
+function defaultLookFilter(): LookFilter {
+  return { family: true, junk: true, lock: true };
+}
+
+function isLookKind(value: string | undefined): value is LookKind {
+  return value === "family" || value === "junk" || value === "lock";
+}
+
+function readStoredLookFilter(): LookFilter {
+  const next = defaultLookFilter();
+  try {
+    const raw = localStorage.getItem(LOOK_FILTER_KEY);
+    if (!raw) return next;
+    const parsed = JSON.parse(raw) as Partial<LookFilter>;
+    if (parsed.family === false) next.family = false;
+    if (parsed.junk === false) next.junk = false;
+    if (parsed.lock === false) next.lock = false;
+    return next;
+  } catch {
+    return defaultLookFilter();
+  }
+}
+
+/** Why a LOOK row is held. Junk is the last-copy noise; lock cannot dump. */
+function lookKind(item: GradedMon): LookKind {
+  for (const reason of item.reasons) {
+    const text = reason.toLowerCase();
+    if (text.includes("only copy") || text.includes("best junk")) return "junk";
+    if (text.includes("pvp/raid family")) return "family";
+  }
+  return "lock";
+}
+
+function visibleLookRows(rows: GradedMon[]): GradedMon[] {
+  return rows.filter((row) => state.lookFilter[lookKind(row)]);
+}
+
 function readStoredKeepShadow(): boolean {
   try {
     const raw = localStorage.getItem(KEEP_SHADOW_KEY);
@@ -293,11 +365,15 @@ const state: AppState = {
   keepShadow: readStoredKeepShadow(),
   keepGl: readStoredFlag(KEEP_GL_KEY, DEFAULT_KEEP_GL),
   keepLc: readStoredFlag(KEEP_LC_KEY, DEFAULT_KEEP_LC),
+  keepUl: readStoredFlag(KEEP_UL_KEY, DEFAULT_KEEP_UL),
+  keepMl: readStoredFlag(KEEP_ML_KEY, DEFAULT_KEEP_ML),
   pinDetail: readStoredPinDetail(),
   rankingsTab: "gl",
   rankingsFilter: "",
   rankingsRaidType: "",
   boxSort: "scan",
+  boxFilter: readStoredBoxFilter(),
+  lookFilter: readStoredLookFilter(),
   dismissed: [],
   boxSelected: null,
   boxFileKey: "",
@@ -436,7 +512,7 @@ function formatIvs(mon: GradedMon["mon"]): string {
 }
 
 function formatLeagueBits(
-  kind: "GL" | "LC",
+  kind: "GL" | "UL" | "ML" | "LC",
   metaRank: GradedMon["glMeta"],
   iv: GradedMon["gl"],
   asSpeciesId?: string,
@@ -453,32 +529,53 @@ function formatLeagueBits(
   return "";
 }
 
-function glOverCapNote(mon: GradedMon["mon"], speciesId: string, meta: Meta | null): string {
-  if (!meta || !speciesId) return "";
-  const fit = fitsLeagueCap(mon, speciesId, GREAT_LEAGUE_CAP, getRankGm(meta.glEvolution));
+function leagueOverCapNote(
+  mon: GradedMon["mon"],
+  speciesId: string,
+  meta: Meta | null,
+  cap: number,
+): string {
+  if (!meta || !speciesId || cap >= MASTER_LEAGUE_CAP) return "";
+  const fit = fitsLeagueCap(mon, speciesId, cap, getRankGm(meta.glEvolution));
   if (fit.fits || fit.cp == null) return "";
-  return ` over ${GREAT_LEAGUE_CAP} (${fit.cp} CP)`;
+  return ` over ${cap} (${fit.cp} CP)`;
+}
+
+function cappedBits(
+  on: boolean,
+  kind: "GL" | "UL" | "ML",
+  ranks: GradedMon["glAs"],
+  primary: GradedMon["gl"],
+  metas: GradedMon["glMetaAs"],
+  primaryMeta: GradedMon["glMeta"],
+  mon: GradedMon["mon"],
+  meta: Meta | null,
+  cap: number,
+): string[] {
+  if (!on) return [];
+  const list = ranks?.length ? ranks : primary ? [primary] : [];
+  if (list.length === 0) {
+    const bit = formatLeagueBits(kind, primaryMeta, primary);
+    return bit ? [bit] : [];
+  }
+  return list.map((iv) => {
+    const metaRank =
+      metas?.find((row) => row.speciesId === iv.evoSpeciesId) ??
+      (primaryMeta?.speciesId === iv.evoSpeciesId ? primaryMeta : null);
+    const as = iv.evoSpeciesId && iv.evoSpeciesId !== mon.speciesId ? iv.evoSpeciesId : "";
+    return formatLeagueBits(kind, metaRank, iv, as) + leagueOverCapNote(mon, iv.evoSpeciesId, meta, cap);
+  });
 }
 
 function formatRanks(item: GradedMon, meta: Meta | null): string {
-  const glRanks = item.glAs?.length ? item.glAs : item.gl ? [item.gl] : [];
-  const glBits = state.keepGl
-    ? glRanks.length > 0
-      ? glRanks.map((iv) => {
-          const metaRank =
-            item.glMetaAs?.find((m) => m.speciesId === iv.evoSpeciesId) ??
-            (item.glMeta?.speciesId === iv.evoSpeciesId ? item.glMeta : null);
-          const as =
-            iv.evoSpeciesId && iv.evoSpeciesId !== item.mon.speciesId ? iv.evoSpeciesId : "";
-          return formatLeagueBits("GL", metaRank, iv, as) + glOverCapNote(item.mon, iv.evoSpeciesId, meta);
-        })
-      : [formatLeagueBits("GL", item.glMeta, item.gl) + glOverCapNote(item.mon, item.gl?.evoSpeciesId ?? item.mon.speciesId, meta)]
-    : [];
+  const glBits = cappedBits(state.keepGl, "GL", item.glAs, item.gl, item.glMetaAs, item.glMeta, item.mon, meta, GREAT_LEAGUE_CAP);
+  const ulBits = cappedBits(state.keepUl, "UL", item.ulAs, item.ul, item.ulMetaAs, item.ulMeta, item.mon, meta, ULTRA_LEAGUE_CAP);
+  const mlBits = cappedBits(state.keepMl, "ML", item.mlAs, item.ml, item.mlMetaAs, item.mlMeta, item.mon, meta, MASTER_LEAGUE_CAP);
   const lcBit = state.keepLc ? formatLeagueBits("LC", item.lcMeta, item.lc) : "";
   const raid = item.raidIv
     ? `Raid${item.raidIv.evoSpeciesId !== item.mon.speciesId ? ` as ${prettySpeciesId(item.raidIv.evoSpeciesId)}` : ""} ${item.raidIv.percent}% IV`
     : "";
-  return [...glBits, lcBit, raid].filter(Boolean).join(" · ");
+  return [...glBits, ...ulBits, ...mlBits, lcBit, raid].filter(Boolean).join(" · ");
 }
 
 function jobLabel(item: GradedMon): string {
@@ -486,17 +583,22 @@ function jobLabel(item: GradedMon): string {
   if (!job) return "";
   const name = prettySpeciesId(job.speciesId);
   if (job.kind === "lc") return `LC ${name}`;
+  if (job.kind === "ul") return `UL ${name}`;
+  if (job.kind === "ml") return `ML ${name}`;
   if (job.kind === "raid") return `Raid ${name}`;
   return `GL ${name}`;
 }
 
 function reasonClass(reason: string): string {
   const r = reason.toLowerCase();
-  if (r.includes("dump-cap") || r.includes("dump cap")) return "chip chip--halt";
   if (r.includes("no pvp/raid job")) return "chip chip--dupe";
   if (r.includes("stay ") && r.includes("little cup")) return "chip chip--lc";
+  if (r.includes("stay ") && r.includes("ultra league")) return "chip chip--ul";
+  if (r.includes("stay ") && r.includes("master league")) return "chip chip--ml";
   if (r.includes("stay ") && r.includes("great league")) return "chip chip--gl";
   if (r.includes("evolve to") && r.includes("little cup")) return "chip chip--lc";
+  if (r.includes("evolve to") && r.includes("ultra league")) return "chip chip--ul";
+  if (r.includes("evolve to") && r.includes("master league")) return "chip chip--ml";
   if (r.includes("evolve to") && r.includes("great league")) return "chip chip--gl";
   if (r.includes("evolve to") && r.includes("raid")) return "chip chip--raid";
   if (r.includes("raid attacker")) return "chip chip--raid";
@@ -514,6 +616,8 @@ function reasonClass(reason: string): string {
   if (r.includes("% iv worse") || r.includes("raid iv unavailable")) return "chip chip--miss";
   if (r.includes("not gl/lc/raid")) return "chip chip--junk";
   if (r.includes("limited")) return "chip chip--limited";
+  if (r.includes("ultra league")) return "chip chip--ul";
+  if (r.includes("master league")) return "chip chip--ml";
   if (r.includes("great league") || r.includes("better as")) return "chip chip--gl";
   if (r.includes("little cup")) return "chip chip--lc";
   if (r.includes("rank unknown") || r.includes("ivs not unique") || r.includes("unavailable")) {
@@ -615,9 +719,10 @@ function paintTrack(
   verdict: Tab,
   cap: number,
   meta: Meta | null,
+  empty = "None",
 ): void {
   if (rows.length === 0) {
-    listEl.innerHTML = `<p class="empty">None</p>`;
+    listEl.innerHTML = `<p class="empty">${escapeHtml(empty)}</p>`;
     return;
   }
   const shown = rows.slice(0, cap);
@@ -665,7 +770,6 @@ function persistTab(tab: Tab): void {
 }
 
 function pickDefaultTab(result: GradeResult): Tab {
-  if (result.dumpCapped) return "LOOK";
   if (result.dump.length > 0) return "DUMP";
   if (result.look.length > 0) return "LOOK";
   return "KEEP";
@@ -704,14 +808,27 @@ function shownRows(rows: GradedMon[]): GradedMon[] {
   return rows.filter((row) => !gone.has(row.mon.sourceRow));
 }
 
+function boxPool(result: GradeResult): GradedMon[] {
+  return shownRows([...result.keep, ...result.look, ...result.dump]);
+}
+
 function boxRows(result: GradeResult): GradedMon[] {
-  const rows = shownRows([...result.keep, ...result.look, ...result.dump]);
+  const rows = boxPool(result).filter((row) => state.boxFilter[row.verdict]);
   const byCp = state.boxSort === "cp";
   rows.sort((a, b) => {
     if (byCp && a.mon.cp !== b.mon.cp) return b.mon.cp - a.mon.cp;
     return compareScanStream(a.mon, b.mon);
   });
   return rows;
+}
+
+function boxEmptyNote(result: GradeResult): string {
+  if (boxPool(result).length === 0) {
+    return state.dismissed.length > 0
+      ? "All removed. Restore to show the list again."
+      : "None";
+  }
+  return "None match these filters.";
 }
 
 function findGraded(sourceRow: number): GradedMon | undefined {
@@ -746,7 +863,9 @@ function boxLabel(item: GradedMon): { title: string; sub: string } {
 function mainBoxReason(item: GradedMon): string {
   const reasons = item.reasons;
   if (item.verdict === "KEEP") {
-    const job = reasons.find((reason) => /for great league|for little cup|for raids|raid attacker/i.test(reason));
+    const job = reasons.find((reason) =>
+      /for great league|for ultra league|for master league|for little cup|for raids|raid attacker/i.test(reason),
+    );
     if (job) return job;
     const identity = reasons.find((reason) =>
       /^(shiny|lucky|costume|background|4\* \/ hundo|favorite|special \/ legacy move|shadow|dynamax \/ gigantamax|legendary|mythical|limited)/i.test(
@@ -759,9 +878,8 @@ function mainBoxReason(item: GradedMon): string {
   }
   if (item.verdict === "LOOK") {
     const deciding = reasons.find((reason) =>
-      /never dump|cannot dump|only copy|best junk|pvp\/raid family|dump-cap/i.test(reason),
+      /never dump|cannot dump|only copy|best junk|pvp\/raid family/i.test(reason),
     );
-    if (deciding === "dump-cap") return "Dump list is full";
     return deciding ?? reasons[reasons.length - 1] ?? "Worth a look";
   }
   const deciding = [...reasons].reverse().find((reason) =>
@@ -843,6 +961,8 @@ export function mountApp(root: HTMLElement): void {
         </summary>
         <nav class="rankings-tabs" aria-label="Rankings lists">
           <button type="button" class="btn btn--preset" data-rankings-tab="gl">Great League</button>
+          <button type="button" class="btn btn--preset" data-rankings-tab="ul" hidden>Ultra League</button>
+          <button type="button" class="btn btn--preset" data-rankings-tab="ml" hidden>Master League</button>
           <button type="button" class="btn btn--preset" data-rankings-tab="lc">Little Cup</button>
           <button type="button" class="btn btn--preset" data-rankings-tab="raid">Raids</button>
         </nav>
@@ -854,6 +974,22 @@ export function mountApp(root: HTMLElement): void {
               <input id="rankings-filter-gl" class="rankings-filter" type="search" placeholder="Name, family, or id" autocomplete="off" aria-label="Filter Great League rankings" data-rankings-filter />
             </div>
             <div id="rankings-gl" class="rankings-table-wrap"></div>
+          </div>
+          <div class="rankings-pane" data-rankings-pane="ul" hidden>
+            <div class="rankings-pane-head">
+              <h3 class="rankings-pane-title rankings-pane-title--ul">Ultra League</h3>
+              <label class="file-label rankings-filter-label" for="rankings-filter-ul">Filter</label>
+              <input id="rankings-filter-ul" class="rankings-filter" type="search" placeholder="Name, family, or id" autocomplete="off" aria-label="Filter Ultra League rankings" data-rankings-filter />
+            </div>
+            <div id="rankings-ul" class="rankings-table-wrap"></div>
+          </div>
+          <div class="rankings-pane" data-rankings-pane="ml" hidden>
+            <div class="rankings-pane-head">
+              <h3 class="rankings-pane-title rankings-pane-title--ml">Master League</h3>
+              <label class="file-label rankings-filter-label" for="rankings-filter-ml">Filter</label>
+              <input id="rankings-filter-ml" class="rankings-filter" type="search" placeholder="Name, family, or id" autocomplete="off" aria-label="Filter Master League rankings" data-rankings-filter />
+            </div>
+            <div id="rankings-ml" class="rankings-table-wrap"></div>
           </div>
           <div class="rankings-pane" data-rankings-pane="lc">
             <div class="rankings-pane-head">
@@ -881,7 +1017,6 @@ export function mountApp(root: HTMLElement): void {
 
       <div id="results" class="hidden">
         <p class="banner banner--lock hidden" id="transfer-lock"></p>
-        <div id="dump-cap" class="banner banner--warn hidden"></div>
       </div>
 
       <section class="card card--rules" aria-labelledby="rank-title">
@@ -905,11 +1040,13 @@ export function mountApp(root: HTMLElement): void {
             <div class="rule">
               <div class="rule-copy">
                 <p class="rule-title" id="rules-leagues">Leagues</p>
-                <p class="rule-hint">Bright leagues KEEP. Fade one and good IVs in that league no longer keep a copy.</p>
+                <p class="rule-hint">Bright leagues KEEP. Ultra League and Master League start faded and fetch their lists only after you brighten them.</p>
               </div>
               <div class="rule-control">
                 <div class="keep-chips" role="group" aria-labelledby="rules-leagues">
                   <button type="button" class="chip chip--gl keep-chip" data-league="gl" aria-pressed="true" title="KEEP Great League. Click to fade — good Great League IVs no longer keep a copy.">Great League</button>
+                  <button type="button" class="chip chip--ul keep-chip is-off" data-league="ul" aria-pressed="false" title="Ultra League starts off. Click to fetch its list and KEEP good Ultra League IVs.">Ultra League</button>
+                  <button type="button" class="chip chip--ml keep-chip is-off" data-league="ml" aria-pressed="false" title="Master League starts off. Click to fetch its list and KEEP good Master League IVs.">Master League</button>
                   <button type="button" class="chip chip--lc keep-chip" data-league="lc" aria-pressed="true" title="KEEP Little Cup. Click to fade — good Little Cup IVs no longer keep a copy.">Little Cup</button>
                 </div>
               </div>
@@ -926,10 +1063,10 @@ export function mountApp(root: HTMLElement): void {
                 </div>
                 <div id="pvp-list-cutoff">
                   <div class="rank-row">
-                    <input id="pvp-list-keep" type="number" inputmode="numeric" min="1" max="${GL_LIST_CAP}" step="1" value="${state.pvpListKeep}" aria-label="Great League rank cutoff" />
+                    <input id="pvp-list-keep" type="number" inputmode="numeric" min="1" max="${GL_LIST_CAP}" step="1" value="${state.pvpListKeep}" aria-label="PvPoke species cutoff" />
                     <span class="rank-suffix">/ ${GL_LIST_CAP}</span>
                   </div>
-                  <div class="rank-presets" role="group" aria-label="Great League species cutoff">
+                  <div class="rank-presets" role="group" aria-label="PvPoke species cutoff">
                     ${LIST_KEEP_PRESETS.map(
                       (n) =>
                         `<button type="button" class="btn btn--preset" data-list-keep="${n}">${n}</button>`,
@@ -1021,7 +1158,7 @@ export function mountApp(root: HTMLElement): void {
             <div class="rule">
               <div class="rule-copy">
                 <label class="rule-title" for="family-keep">Spares with no keeper</label>
-                <p class="rule-hint">If a family has no KEEP, LOOK this many best copies. 0 dumps anything useless for PvP and raids.</p>
+                <p class="rule-hint">If a PvP or raid family has no KEEP, LOOK this many best copies. 0 leaves that family on LOOK and dumps only species that are not useful for PvP or raids.</p>
               </div>
               <div class="rule-control">
                 <div class="rank-row">
@@ -1055,6 +1192,11 @@ export function mountApp(root: HTMLElement): void {
           </section>
           <section class="track track--look" data-track="LOOK">
             <header class="track-head">LOOK <span class="count" id="count-look">0</span></header>
+            <div class="mode-row look-filter" role="group" aria-label="LOOK filters">
+              <button type="button" class="btn btn--preset${state.lookFilter.family ? " is-active" : ""}" data-look-filter="family" aria-pressed="${state.lookFilter.family ? "true" : "false"}" title="Show PvP and raid families with no keeper">Family</button>
+              <button type="button" class="btn btn--preset${state.lookFilter.junk ? " is-active" : ""}" data-look-filter="junk" aria-pressed="${state.lookFilter.junk ? "true" : "false"}" title="Show last copies and best junk. Turn off to leave the family spares.">Junk</button>
+              <button type="button" class="btn btn--preset${state.lookFilter.lock ? " is-active" : ""}" data-look-filter="lock" aria-pressed="${state.lookFilter.lock ? "true" : "false"}" title="Show copies that cannot dump">Lock</button>
+            </div>
             <div id="list-look" class="list"></div>
           </section>
           <section class="track track--dump" data-track="DUMP">
@@ -1073,6 +1215,11 @@ export function mountApp(root: HTMLElement): void {
                   <p class="note box-cleared" id="box-cleared"></p>
                   <button type="button" class="btn hidden" id="box-undo">Undo</button>
                   <button type="button" class="btn hidden" id="box-restore">Restore all</button>
+                </div>
+                <div class="mode-row box-filter" role="group" aria-label="List filters">
+                  <button type="button" class="btn btn--preset${state.boxFilter.KEEP ? " is-active" : ""}" data-box-filter="KEEP" aria-pressed="${state.boxFilter.KEEP ? "true" : "false"}" title="Show green KEEP copies">KEEP</button>
+                  <button type="button" class="btn btn--preset${state.boxFilter.LOOK ? " is-active" : ""}" data-box-filter="LOOK" aria-pressed="${state.boxFilter.LOOK ? "true" : "false"}" title="Show yellow LOOK copies">LOOK</button>
+                  <button type="button" class="btn btn--preset${state.boxFilter.DUMP ? " is-active" : ""}" data-box-filter="DUMP" aria-pressed="${state.boxFilter.DUMP ? "true" : "false"}" title="Show DUMP copies. Turn off to leave green and yellow.">DUMP</button>
                 </div>
                 <div id="box-detail" class="box-detail hidden"></div>
               </div>
@@ -1095,7 +1242,6 @@ export function mountApp(root: HTMLElement): void {
   const gradeTablesEl = root.querySelector("#grade-tables") as HTMLElement;
   const statusEl = root.querySelector("#status") as HTMLElement;
   const issuesEl = root.querySelector("#issues") as HTMLElement;
-  const dumpCapEl = root.querySelector("#dump-cap") as HTMLElement;
   const listKeepEl = root.querySelector("#list-keep") as HTMLElement;
   const listLookEl = root.querySelector("#list-look") as HTMLElement;
   const listDumpEl = root.querySelector("#list-dump") as HTMLElement;
@@ -1126,6 +1272,8 @@ export function mountApp(root: HTMLElement): void {
   const skipScanEl = root.querySelector("#skip-scan") as HTMLElement;
   const rankingsStatusEl = root.querySelector("#rankings-status") as HTMLElement;
   const rankingsGlEl = root.querySelector("#rankings-gl") as HTMLElement;
+  const rankingsUlEl = root.querySelector("#rankings-ul") as HTMLElement;
+  const rankingsMlEl = root.querySelector("#rankings-ml") as HTMLElement;
   const rankingsLcEl = root.querySelector("#rankings-lc") as HTMLElement;
   const rankingsRaidEl = root.querySelector("#rankings-raid") as HTMLElement;
   const rankingsRaidTitleEl = root.querySelector("#rankings-raid-title") as HTMLElement;
@@ -1143,6 +1291,8 @@ export function mountApp(root: HTMLElement): void {
       pvpKeep: state.pvpKeep,
       keepGl: state.keepGl,
       keepLc: state.keepLc,
+      keepUl: state.keepUl,
+      keepMl: state.keepMl,
       raidKeep: state.raidKeep,
       familyKeep: state.familyKeep,
       raidIvKeep: state.raidIvKeep,
@@ -1249,34 +1399,50 @@ export function mountApp(root: HTMLElement): void {
     }
   }
 
+  function selectedLeagueNames(): string[] {
+    return [
+      state.keepGl ? "Great League" : "",
+      state.keepUl ? "Ultra League" : "",
+      state.keepMl ? "Master League" : "",
+      state.keepLc ? "Little Cup" : "",
+    ].filter(Boolean);
+  }
+
   function pvpSpeciesNote(): string {
-    if (!state.keepGl && !state.keepLc) return "Both leagues are off. Good PvP IVs do not keep a copy.";
+    const open = [state.keepGl ? "Great League" : "", state.keepUl ? "Ultra League" : "", state.keepMl ? "Master League" : ""].filter(Boolean);
+    if (!open.length && !state.keepLc) return "Every league is off. Good PvP IVs do not keep a copy.";
     if (state.pvpAny) {
       const bits: string[] = [];
-      if (state.keepGl) bits.push("Every species can be Great League.");
+      if (open.length === 1) bits.push(`Every species can be ${open[0]}.`);
+      else if (open.length > 1) bits.push(`Every species can be ${open.join(", ")}.`);
       if (state.keepLc) bits.push("Little Cup is every unevolved Pokémon that can still evolve.");
       return bits.join(" ");
     }
     const bits: string[] = [];
-    if (state.keepGl) bits.push("Great League species through this PvPoke rank.");
+    if (open.length === 1) bits.push(`${open[0]} species through this PvPoke rank.`);
+    else if (open.length > 1) bits.push(`${open.join(", ")} species through this PvPoke rank.`);
     if (state.keepLc) bits.push(`Little Cup stays the top ${LC_LIST_CAP}.`);
     return bits.join(" ");
   }
 
   function pvpIvNote(): string {
-    if (!state.keepGl && !state.keepLc) return "No league is on, so this floor is idle.";
-    const which =
-      state.keepGl && state.keepLc ? "Great League and Little Cup" : state.keepGl ? "Great League" : "Little Cup";
+    const names = selectedLeagueNames();
+    if (names.length === 0) return "No league is on, so this floor is idle.";
+    const which = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
     return `Keep this rank or better. 1 is the best of ${PVP_RANK_OF} ${which} spreads.`;
   }
 
   function pvpCopiesNote(): string {
-    if (!state.keepGl && !state.keepLc) return "No league is on, so these seats are idle.";
-    if (state.keepGl && state.keepLc) {
-      return "Seats for each Great League stage and each Little Cup species. Better PvPoke species fill first.";
-    }
-    if (state.keepGl) return "Seats for each Great League stage. Better PvPoke species fill first.";
-    return "Seats for each Little Cup species.";
+    const stages = [state.keepGl ? "Great League" : "", state.keepUl ? "Ultra League" : "", state.keepMl ? "Master League" : ""].filter(Boolean);
+    if (!stages.length && !state.keepLc) return "No league is on, so these seats are idle.";
+    const bits: string[] = [];
+    if (stages.length === 1) bits.push(`Seats for each ${stages[0]} stage.`);
+    else if (stages.length > 1) bits.push(`Seats for each ${stages.join(", ")} stage.`);
+    if (state.keepLc) bits.push("Seats for each Little Cup species.");
+    bits.push("Better PvPoke species fill first.");
+    const order = selectedLeagueNames();
+    if (order.length > 1) bits.push(`Fill order: ${order.join(", then ")}.`);
+    return bits.join(" ");
   }
 
   function keepChipOn(chip: string | null): boolean {
@@ -1298,8 +1464,9 @@ export function mountApp(root: HTMLElement): void {
       const n = Number(btn.getAttribute("data-rank"));
       btn.classList.toggle("is-active", n === state.pvpRankKeep);
     });
-    const pvpLeaguesOn = state.keepGl || state.keepLc;
-    const glListOff = state.pvpAny || !state.keepGl;
+    const pvpLeaguesOn = state.keepGl || state.keepUl || state.keepMl || state.keepLc;
+    const openLeagueOn = state.keepGl || state.keepUl || state.keepMl;
+    const glListOff = state.pvpAny || !openLeagueOn;
     listKeepInput.disabled = glListOff;
     listCutoffEl.classList.toggle("is-hidden", glListOff);
     listNoteEl.textContent = pvpSpeciesNote();
@@ -1326,10 +1493,24 @@ export function mountApp(root: HTMLElement): void {
     });
     root.querySelectorAll("[data-league]").forEach((btn) => {
       const league = btn.getAttribute("data-league");
-      const on = league === "lc" ? state.keepLc : state.keepGl;
+      const on =
+        league === "lc" ? state.keepLc : league === "ul" ? state.keepUl : league === "ml" ? state.keepMl : state.keepGl;
       btn.classList.toggle("is-off", !on);
       btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    root.querySelectorAll("[data-rankings-tab]").forEach((btn) => {
+      const tab = btn.getAttribute("data-rankings-tab");
+      if (tab === "ul") btn.toggleAttribute("hidden", !state.keepUl);
+      if (tab === "ml") btn.toggleAttribute("hidden", !state.keepMl);
+    });
+    root.querySelectorAll("[data-rankings-pane]").forEach((pane) => {
+      const tab = pane.getAttribute("data-rankings-pane");
+      if (tab === "ul") pane.toggleAttribute("hidden", !state.keepUl);
+      if (tab === "ml") pane.toggleAttribute("hidden", !state.keepMl);
+    });
+    if ((state.rankingsTab === "ul" && !state.keepUl) || (state.rankingsTab === "ml" && !state.keepMl)) {
+      state.rankingsTab = "gl";
+    }
     root.querySelectorAll("[data-pvp-keep]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-pvp-keep"));
       btn.classList.toggle("is-active", n === state.pvpKeep);
@@ -1476,16 +1657,22 @@ export function mountApp(root: HTMLElement): void {
     if (!meta) {
       rankingsStatusEl.textContent = "Loading lists…";
       rankingsGlEl.innerHTML = `<p class="empty">Waiting for PvPoke lists</p>`;
+      rankingsUlEl.innerHTML = `<p class="empty">Waiting for PvPoke lists</p>`;
+      rankingsMlEl.innerHTML = `<p class="empty">Waiting for PvPoke lists</p>`;
       rankingsLcEl.innerHTML = `<p class="empty">Waiting for PvPoke lists</p>`;
       rankingsRaidEl.innerHTML = `<p class="empty">Waiting for raid list</p>`;
       return;
     }
     const gl = meta.glRankings ?? [];
+    const ul = meta.ulRankings ?? [];
+    const ml = meta.mlRankings ?? [];
     const lc = meta.lcRankings ?? [];
     const raid = meta.raidRankings ?? [];
     const raidFinals = raid.filter((row) => !row.asSpeciesId).length;
     const raidPre = raid.length - raidFinals;
     const glIn = state.pvpAny ? gl.length : gl.filter((row) => row.rank <= state.pvpListKeep).length;
+    const ulIn = state.pvpAny ? ul.length : ul.filter((row) => row.rank <= state.pvpListKeep).length;
+    const mlIn = state.pvpAny ? ml.length : ml.filter((row) => row.rank <= state.pvpListKeep).length;
     const raidType = state.rankingsRaidType;
     const raidTypeLabel = raidType ? prettyPokemonType(raidType) : "";
     const raidTyped = raidType ? raid.filter((row) => raidRowHasType(row, raidType)).length : 0;
@@ -1500,7 +1687,27 @@ export function mountApp(root: HTMLElement): void {
       : state.pvpAny
         ? "LC any unevolved"
         : `LC top ${lc.length || LC_LIST_CAP}`;
-    rankingsStatusEl.textContent = `${pvpokeStatus(meta)} · ${raidListStatus(meta)} · ${glStatus} · ${lcStatus} · ${raidFinals} raid attackers · ${raidPre} pre-evos${typeStatus}`;
+    const ulStatus = !state.keepUl
+      ? ""
+      : openLeagueBusy === "ul"
+        ? "UL loading…"
+        : ul.length === 0
+          ? "UL list missing"
+          : state.pvpAny
+            ? "UL any species"
+            : `UL ${ulIn}/${ul.length || UL_LIST_CAP} in play`;
+    const mlStatus = !state.keepMl
+      ? ""
+      : openLeagueBusy === "ml"
+        ? "ML loading…"
+        : ml.length === 0
+          ? "ML list missing"
+          : state.pvpAny
+            ? "ML any species"
+            : `ML ${mlIn}/${ml.length || ML_LIST_CAP} in play`;
+    rankingsStatusEl.textContent = [pvpokeStatus(meta), raidListStatus(meta), glStatus, ulStatus, mlStatus, lcStatus, `${raidFinals} raid attackers`, `${raidPre} pre-evos${typeStatus}`]
+      .filter(Boolean)
+      .join(" · ");
     rankingsRaidTitleEl.textContent = raidType ? `${raidTypeLabel} raid attackers` : "Raid attackers";
     rankingsRaidNoteEl.textContent = raidType
       ? `${raidTypeLabel}-type KEEP attackers numbered 1 = best ${raidTypeLabel}. Pre-evos share that attacker’s type rank.`
@@ -1510,6 +1717,20 @@ export function mountApp(root: HTMLElement): void {
       state.pvpAny ? null : state.pvpListKeep,
       "Great League list missing",
     );
+    rankingsUlEl.innerHTML = state.keepUl
+      ? renderRankingTable(
+          ul,
+          state.pvpAny ? null : state.pvpListKeep,
+          openLeagueBusy === "ul" ? "Loading Ultra League rankings…" : "Ultra League list missing",
+        )
+      : "";
+    rankingsMlEl.innerHTML = state.keepMl
+      ? renderRankingTable(
+          ml,
+          state.pvpAny ? null : state.pvpListKeep,
+          openLeagueBusy === "ml" ? "Loading Master League rankings…" : "Master League list missing",
+        )
+      : "";
     rankingsLcEl.innerHTML = renderRankingTable(lc, null, "Little Cup list missing");
     rankingsRaidEl.innerHTML = renderRaidTable(raid, "Raid attacker list missing");
   }
@@ -1536,8 +1757,29 @@ export function mountApp(root: HTMLElement): void {
       track.classList.toggle("is-active", track.getAttribute("data-track") === state.tab);
     });
     paintTrack(listKeepEl, shownRows(result.keep), "KEEP", LIST_PAINT_MAX, state.meta);
-    paintTrack(listLookEl, shownRows(result.look), "LOOK", LIST_PAINT_MAX, state.meta);
-    paintTrack(listDumpEl, shownRows(result.dump), "DUMP", DUMP_LIST_MAX, state.meta);
+    const lookPool = shownRows(result.look);
+    const lookShown = visibleLookRows(lookPool);
+    paintTrack(
+      listLookEl,
+      lookShown,
+      "LOOK",
+      LIST_PAINT_MAX,
+      state.meta,
+      lookPool.length > 0 ? "None match these filters." : "None",
+    );
+    const lookCount = String(lookShown.length);
+    const lookCountEl = root.querySelector("#count-look");
+    const lookTabCountEl = root.querySelector("#count-look-tab");
+    if (lookCountEl) lookCountEl.textContent = lookCount;
+    if (lookTabCountEl) lookTabCountEl.textContent = lookCount;
+    for (const btn of root.querySelectorAll<HTMLButtonElement>("[data-look-filter]")) {
+      if (!isLookKind(btn.dataset.lookFilter)) continue;
+      const on = state.lookFilter[btn.dataset.lookFilter];
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    }
+    const dumpRows = shownRows(result.dump);
+    paintTrack(listDumpEl, dumpRows, "DUMP", dumpRows.length, state.meta);
   }
 
   function listScrolls(): { box: number; keep: number; look: number; dump: number } {
@@ -1568,7 +1810,8 @@ export function mountApp(root: HTMLElement): void {
       el.closest(".box-tile")?.classList.toggle("is-selected", on);
     }
     const item = selected == null ? undefined : findGraded(selected);
-    if (!item || gone.has(item.mon.sourceRow)) {
+    const hiddenByFilter = item != null && !state.boxFilter[item.verdict];
+    if (!item || gone.has(item.mon.sourceRow) || hiddenByFilter) {
       boxDetailEl.classList.add("hidden");
       boxDetailEl.innerHTML = "";
     } else {
@@ -1577,6 +1820,13 @@ export function mountApp(root: HTMLElement): void {
     }
     placeBoxDetail();
     placeBoxTip();
+    for (const btn of root.querySelectorAll<HTMLButtonElement>("[data-box-filter]")) {
+      const verdict = btn.dataset.boxFilter;
+      if (verdict !== "KEEP" && verdict !== "LOOK" && verdict !== "DUMP") continue;
+      const on = state.boxFilter[verdict];
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    }
     for (const btn of root.querySelectorAll<HTMLButtonElement>("[data-box-sort]")) {
       const on = btn.dataset.boxSort === state.boxSort;
       btn.classList.toggle("is-active", on);
@@ -1596,7 +1846,7 @@ export function mountApp(root: HTMLElement): void {
     boxGridEl.innerHTML =
       rows.length > 0
         ? rows.map((row) => renderBoxTile(row, row.mon.sourceRow === selected)).join("")
-        : `<p class="empty">${state.dismissed.length > 0 ? "All removed. Restore to show the list again." : "None"}</p>`;
+        : `<p class="empty">${boxEmptyNote(result)}</p>`;
     const shown = String(rows.length);
     const boxCount = root.querySelector("#count-box");
     const boxTabCount = root.querySelector("#count-box-tab");
@@ -1746,15 +1996,22 @@ export function mountApp(root: HTMLElement): void {
     gradeTablesEl.classList.remove("hidden");
     statusEl.classList.remove("hidden");
     const removedNote = state.dismissed.length > 0 ? ` · ${state.dismissed.length} removed from list` : "";
-    const leagueStatus = `${result.keepGl ? "KEEP GL" : "GL off"} · ${result.keepLc ? "KEEP LC" : "LC off"}`;
+    const leagueStatus = [
+      result.keepGl ? "KEEP GL" : "GL off",
+      result.keepUl ? "KEEP UL" : "",
+      result.keepMl ? "KEEP ML" : "",
+      result.keepLc ? "KEEP LC" : "LC off",
+    ]
+      .filter(Boolean)
+      .join(" · ");
     const pvpStatus =
-      result.keepGl || result.keepLc
+      result.keepGl || result.keepUl || result.keepMl || result.keepLc
         ? [
             `KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF}`,
-            result.keepGl
+            result.keepGl || result.keepUl || result.keepMl
               ? result.pvpAny
                 ? "PvP any species"
-                : `PvPoke GL top ${result.pvpListKeep}/${GL_LIST_CAP}`
+                : `PvPoke top ${result.pvpListKeep}/${GL_LIST_CAP}`
               : null,
             `Keep ${result.pvpKeep} PvP/identity`,
           ]
@@ -1764,7 +2021,7 @@ export function mountApp(root: HTMLElement): void {
     statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · ${leagueStatus} · ${pvpStatus} · Keep ${result.raidKeep} raid · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "All 4*" : "One 4*"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "Favorite can dump"} · ${result.keepShadow ? "KEEP shadow" : "Shadow can dump"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
     const counts: Array<[string, number]> = [
       ["keep", shownRows(result.keep).length],
-      ["look", shownRows(result.look).length],
+      ["look", visibleLookRows(shownRows(result.look)).length],
       ["dump", shownRows(result.dump).length],
     ];
     for (const [id, n] of counts) {
@@ -1791,13 +2048,6 @@ export function mountApp(root: HTMLElement): void {
       issuesEl.innerHTML = "";
     }
 
-    if (result.dumpCapped) {
-      dumpCapEl.classList.remove("hidden");
-      dumpCapEl.innerHTML = `<p><strong>DUMP cap ${result.dumpCap}.</strong> Later candy moved to LOOK (dump-cap). Stop Transfer and read LOOK.</p>`;
-    } else {
-      dumpCapEl.classList.add("hidden");
-      dumpCapEl.textContent = "";
-    }
 
     paintList();
     paintBox();
@@ -1923,7 +2173,7 @@ export function mountApp(root: HTMLElement): void {
     let meta: Meta;
     try {
       showBusy("Loading meta gates…");
-      meta = await engine.loadMeta();
+      meta = await engine.loadMeta({ ultra: state.keepUl, master: state.keepMl });
     } catch (err) {
       await fail(`loadMeta failed: ${errMsg(err)}`);
       return;
@@ -2112,6 +2362,69 @@ export function mountApp(root: HTMLElement): void {
     regradeLive();
   }
 
+  let leagueEpoch = 0;
+  let openLeagueBusy: "ul" | "ml" | "" = "";
+
+  async function applyOpenLeague(which: "ul" | "ml", on: boolean): Promise<void> {
+    if (which === "ul") state.keepUl = on;
+    else state.keepMl = on;
+    persistLeague(which === "ul" ? KEEP_UL_KEY : KEEP_ML_KEY, on);
+    const epoch = ++leagueEpoch;
+    const label = which === "ul" ? "Ultra League" : "Master League";
+    if (on) {
+      openLeagueBusy = which;
+      showBusy(`Loading ${label} rankings…`);
+    } else if (openLeagueBusy === which) {
+      openLeagueBusy = "";
+      showBusy("");
+    }
+    paintRankControls();
+    if (on) {
+      try {
+        const engine = state.engine ?? (await loadEngine());
+        state.engine = engine;
+        if (epoch !== leagueEpoch) return;
+        const fresh = await engine.loadMeta({ ultra: state.keepUl, master: state.keepMl });
+        if (epoch !== leagueEpoch) return;
+        state.meta = state.meta
+          ? {
+              ...state.meta,
+              ulRankings: state.keepUl ? fresh.ulRankings : undefined,
+              ulSource: state.keepUl ? fresh.ulSource : undefined,
+              ulFetchedAt: state.keepUl ? fresh.ulFetchedAt : undefined,
+              mlRankings: state.keepMl ? fresh.mlRankings : undefined,
+              mlSource: state.keepMl ? fresh.mlSource : undefined,
+              mlFetchedAt: state.keepMl ? fresh.mlFetchedAt : undefined,
+            }
+          : fresh;
+        const loaded = which === "ul" ? state.meta.ulRankings : state.meta.mlRankings;
+        const source = which === "ul" ? state.meta.ulSource : state.meta.mlSource;
+        if (!loaded?.length || source === "missing") {
+          showError(`Could not load ${label} rankings. That league will not KEEP until the list loads.`);
+        } else {
+          showError("");
+        }
+      } catch (err) {
+        if (epoch === leagueEpoch) showError(`Could not load ${label} rankings: ${errMsg(err)}`);
+      } finally {
+        if (epoch === leagueEpoch) {
+          openLeagueBusy = "";
+          showBusy("");
+        }
+      }
+    } else if (state.meta) {
+      state.meta = {
+        ...state.meta,
+        ...(which === "ul"
+          ? { ulRankings: undefined, ulSource: undefined, ulFetchedAt: undefined }
+          : { mlRankings: undefined, mlSource: undefined, mlFetchedAt: undefined }),
+      };
+    }
+    if (epoch !== leagueEpoch) return;
+    paintRankControls();
+    regradeLive();
+  }
+
   paintRankControls();
 
   rankInput.addEventListener("change", () => {
@@ -2203,6 +2516,14 @@ export function mountApp(root: HTMLElement): void {
       applyKeepGl(!state.keepGl);
       return;
     }
+    if (leagueBtn?.dataset.league === "ul") {
+      void applyOpenLeague("ul", !state.keepUl);
+      return;
+    }
+    if (leagueBtn?.dataset.league === "ml") {
+      void applyOpenLeague("ml", !state.keepMl);
+      return;
+    }
     if (leagueBtn?.dataset.league === "lc") {
       applyKeepLc(!state.keepLc);
       return;
@@ -2223,6 +2544,8 @@ export function mountApp(root: HTMLElement): void {
     const rankingsTabBtn = target.closest("[data-rankings-tab]") as HTMLElement | null;
     if (
       rankingsTabBtn?.dataset.rankingsTab === "gl" ||
+      rankingsTabBtn?.dataset.rankingsTab === "ul" ||
+      rankingsTabBtn?.dataset.rankingsTab === "ml" ||
       rankingsTabBtn?.dataset.rankingsTab === "lc" ||
       rankingsTabBtn?.dataset.rankingsTab === "raid"
     ) {
@@ -2300,6 +2623,36 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
 
+    const lookFilterBtn = target.closest("[data-look-filter]") as HTMLElement | null;
+    if (isLookKind(lookFilterBtn?.dataset.lookFilter)) {
+      const kind = lookFilterBtn.dataset.lookFilter;
+      state.lookFilter[kind] = !state.lookFilter[kind];
+      try {
+        localStorage.setItem(LOOK_FILTER_KEY, JSON.stringify(state.lookFilter));
+      } catch {
+        /* private mode */
+      }
+      const saved = listScrolls();
+      paintResults();
+      restoreListScrolls(saved);
+      return;
+    }
+
+    const boxFilterBtn = target.closest("[data-box-filter]") as HTMLElement | null;
+    const filterVerdict = boxFilterBtn?.dataset.boxFilter;
+    if (filterVerdict === "KEEP" || filterVerdict === "LOOK" || filterVerdict === "DUMP") {
+      state.boxFilter[filterVerdict] = !state.boxFilter[filterVerdict];
+      try {
+        localStorage.setItem(BOX_FILTER_KEY, JSON.stringify(state.boxFilter));
+      } catch {
+        /* private mode */
+      }
+      const saved = listScrolls();
+      paintBox();
+      restoreListScrolls(saved);
+      return;
+    }
+
     const boxSortBtn = target.closest("[data-box-sort]") as HTMLElement | null;
     if (boxSortBtn?.dataset.boxSort === "cp" || boxSortBtn?.dataset.boxSort === "scan") {
       const next = boxSortBtn.dataset.boxSort;
@@ -2344,8 +2697,13 @@ export function mountApp(root: HTMLElement): void {
   placeBoxDetail();
 
   void loadEngine()
-    .then((engine) => engine.loadMeta())
-    .then((fresh) => {
+    .then((engine) => {
+      state.engine = engine;
+      const bootEpoch = leagueEpoch;
+      return engine.loadMeta({ ultra: state.keepUl, master: state.keepMl }).then((fresh) => ({ fresh, bootEpoch }));
+    })
+    .then(({ fresh, bootEpoch }) => {
+      if (bootEpoch !== leagueEpoch) return;
       state.meta = fresh;
       paintRankControls();
       if (state.parse) regradeLive();

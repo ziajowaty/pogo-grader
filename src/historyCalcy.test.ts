@@ -176,8 +176,6 @@ const result = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500 });
 const all = [...result.keep, ...result.look, ...result.dump];
 must(all.length === 134, "KEEP/LOOK/DUMP partition the box");
 must(result.keep.length + result.look.length + result.dump.length === 134, "no dropped rows");
-must(result.dump.length <= result.dumpCap, "dump cap respected");
-must(result.dumpCapped === false, "134-row box should not hit dump-cap 100");
 must(
   result.keep.length === 38 && result.look.length === 43 && result.dump.length === 53,
   `verdict snapshot keep/look/dump 38/43/53, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
@@ -317,7 +315,7 @@ must(
   "useless faded shadows follow normal LOOK/DUMP rules",
 );
 must(
-  fadedUseless.some((g) => g.verdict === "DUMP" || g.reasons.includes("dump-cap")),
+  fadedUseless.some((g) => g.verdict === "DUMP"),
   "faded Shadow lets a useless history shadow reach DUMP",
 );
 
@@ -393,7 +391,12 @@ must(
 const zero = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, familyKeep: 0 });
 must(zero.familyKeep === 0, "echo familyKeep 0");
 must(zero.keep.length === result.keep.length, "familyKeep 0 does not drop KEEP");
-must(zero.dump.length >= result.dump.length, "familyKeep 0 dumps at least as much");
+must(
+  zero.dump.every((g) =>
+    g.reasons.some((r) => /useless for pvp|extra copy — family already has a keeper/i.test(r)),
+  ),
+  "familyKeep 0 dumps only non-meta junk or extras of a keeper",
+);
 must(
   zero.dump.every((g) => !g.mon.shadow),
   "familyKeep 0 with bright Shadow still never dumps shadows",
@@ -402,8 +405,12 @@ const zeroGibles = [...zero.keep, ...zero.look, ...zero.dump].filter((g) => g.mo
 const zeroGibleKeep = zeroGibles.filter((g) => g.verdict === "KEEP");
 if (zeroGibleKeep.length === 0) {
   must(
-    zeroGibles.every((g) => g.verdict === "DUMP" || g.reasons.includes("dump-cap")),
-    "familyKeep 0 dumps a no-keeper Gible family (dump-cap overflow stays LOOK)",
+    zeroGibles.every((g) => g.verdict === "LOOK"),
+    "familyKeep 0 leaves a no-keeper Gible family on LOOK",
+  );
+  must(
+    zeroGibles.every((g) => g.reasons.some((r) => /pvp\/raid family/i.test(r))),
+    "familyKeep 0 explains the Gible family is still PvP or raid",
   );
 }
 must(

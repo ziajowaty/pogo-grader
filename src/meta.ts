@@ -1,5 +1,5 @@
 import type { Meta, PokemonType, PvpokeRankRow, RaidAttackerRow } from "./types";
-import { GL_LIST_CAP, isPokemonType, LC_LIST_CAP, POKEMON_TYPES, prettySpeciesId } from "./types";
+import { GL_LIST_CAP, isPokemonType, LC_LIST_CAP, ML_LIST_CAP, POKEMON_TYPES, prettySpeciesId, UL_LIST_CAP } from "./types";
 // @ts-ignore Vite JSON snapshots
 import glTop500Json from "../data/gl-top500.json";
 // @ts-ignore Vite JSON snapshots
@@ -19,7 +19,6 @@ import evolutionsJson from "../data/evolutions.json";
 // @ts-ignore Vite JSON snapshots
 import speciesTypesJson from "../data/species-types.json";
 
-const DUMP_CAP = 100;
 const PVPOKE_TTL_MS = 24 * 60 * 60 * 1000;
 const PVPOKE_CACHE_KEY = "pogo-grader.pvpokeLists";
 const RAID_TTL_MS = 24 * 60 * 60 * 1000;
@@ -29,6 +28,12 @@ const GL_RANKINGS_URL =
   "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-1500.json";
 const LC_RANKINGS_URL =
   "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/little/overall/rankings-500.json";
+const UL_RANKINGS_URL =
+  "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-2500.json";
+const ML_RANKINGS_URL =
+  "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-10000.json";
+const UL_CACHE_KEY = "pogo-grader.pvpokeUltra";
+const ML_CACHE_KEY = "pogo-grader.pvpokeMaster";
 const POKEBATTLER_ATTACKERS_QUERY =
   "shadow=true&mega=true&legendary=true&partyPower=false&sort=points&selectedType=POKEMON_TYPE_ALL&moveType=POKEMON_TYPE_ALL";
 export const POKEBATTLER_ATTACKERS_URL = `https://www.pokebattler.com/api/attackers.json?${POKEBATTLER_ATTACKERS_QUERY}`;
@@ -743,8 +748,81 @@ async function loadRaidLists(): Promise<RaidLists> {
   return raidInflight;
 }
 
-/** PvPoke GL/LC lists (24h browser cache) plus vendored rank/raid gates. */
-export async function loadMeta(): Promise<Meta> {
+export interface LeagueListRequest {
+  /** Fetch PvPoke Ultra League overall. Default false. */
+  ultra?: boolean;
+  /** Fetch PvPoke Master League overall. Default false. */
+  master?: boolean;
+}
+
+interface LoadedOptional {
+  rows: PvpokeRankRow[];
+  source: NonNullable<Meta["ulSource"]>;
+  fetchedAt: number;
+}
+
+interface CachedOptional {
+  rows: PvpokeRankRow[];
+  fetchedAt: number;
+}
+
+function readOptionalCache(key: string, cap: number): CachedOptional | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { rows?: unknown; fetchedAt?: unknown };
+    const rows = coerceRankRows(parsed.rows, cap);
+    if (!rows || !Number.isFinite(parsed.fetchedAt)) return null;
+    return { rows, fetchedAt: Number(parsed.fetchedAt) };
+  } catch {
+    return null;
+  }
+}
+
+function writeOptionalCache(key: string, list: CachedOptional): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+const optionalInflight = new Map<string, Promise<LoadedOptional>>();
+
+async function loadOptionalLeague(which: "ultra" | "master"): Promise<LoadedOptional> {
+  const pending = optionalInflight.get(which);
+  if (pending) return pending;
+  const job = fetchOptionalLeague(which).finally(() => {
+    optionalInflight.delete(which);
+  });
+  optionalInflight.set(which, job);
+  return job;
+}
+
+async function fetchOptionalLeague(which: "ultra" | "master"): Promise<LoadedOptional> {
+  const cap = which === "ultra" ? UL_LIST_CAP : ML_LIST_CAP;
+  const key = which === "ultra" ? UL_CACHE_KEY : ML_CACHE_KEY;
+  const url = which === "ultra" ? UL_RANKINGS_URL : ML_RANKINGS_URL;
+  const canFetch = typeof fetch === "function" && typeof localStorage !== "undefined";
+  if (!canFetch) return { rows: [], source: "missing", fetchedAt: 0 };
+
+  const cached = readOptionalCache(key, cap);
+  if (cached && Date.now() - cached.fetchedAt < PVPOKE_TTL_MS) {
+    return { rows: cached.rows, source: "cache", fetchedAt: cached.fetchedAt };
+  }
+  try {
+    const rows = await fetchRankingRows(url, cap);
+    const fetchedAt = Date.now();
+    writeOptionalCache(key, { rows, fetchedAt });
+    return { rows, source: "live", fetchedAt };
+  } catch {
+    if (cached) return { rows: cached.rows, source: "cache", fetchedAt: cached.fetchedAt };
+    return { rows: [], source: "missing", fetchedAt: 0 };
+  }
+}
+
+/** PvPoke GL/LC lists (24h browser cache) plus vendored rank/raid gates. Ultra and Master lists load only when requested. */
+export async function loadMeta(request?: LeagueListRequest): Promise<Meta> {
   const limited = toSet(listFile(limitedJson as NamedListFile));
   const legendary = toSet(legendaryJson as string[]);
   const mythical = toSet(mythicalJson as string[]);
@@ -752,7 +830,14 @@ export async function loadMeta(): Promise<Meta> {
   const evoEdges = loadEvolutionEdges(evolutionsJson);
   const typeMap = loadSpeciesTypes(speciesTypesJson);
   const { familyOf, evoReach } = buildFamilyIndex(evoEdges);
-  const [lists, raidLive] = await Promise.all([loadPvpokeLists(), loadRaidLists()]);
+  const wantUltra = request?.ultra === true;
+  const wantMaster = request?.master === true;
+  const [lists, raidLive, ultra, master] = await Promise.all([
+    loadPvpokeLists(),
+    loadRaidLists(),
+    wantUltra ? loadOptionalLeague("ultra") : Promise.resolve(null),
+    wantMaster ? loadOptionalLeague("master") : Promise.resolve(null),
+  ]);
   const raidIds = unionUniqueIds(raidLive.ids, bundledRaidIds);
   const raidAttackers = toSet(raidIds);
   const raidTypeMap = { ...typeMap, ...raidLive.types };
@@ -762,6 +847,12 @@ export async function loadMeta(): Promise<Meta> {
     lcTop100: toSet(lists.lc.map((row) => row.speciesId)),
     glRankings: lists.gl,
     lcRankings: lists.lc,
+    ...(ultra
+      ? { ulRankings: ultra.rows, ulSource: ultra.source, ulFetchedAt: ultra.fetchedAt || undefined }
+      : {}),
+    ...(master
+      ? { mlRankings: master.rows, mlSource: master.source, mlFetchedAt: master.fetchedAt || undefined }
+      : {}),
     raidAttackers,
     raidRankings: buildRaidRankings(raidIds, raidEvolution, limited, legendary, mythical, raidTypeMap),
     raidEvolution,
@@ -776,7 +867,6 @@ export async function loadMeta(): Promise<Meta> {
         canonId(v),
       ]),
     ),
-    dumpCap: DUMP_CAP,
     pvpokeSource: lists.source,
     pvpokeFetchedAt: lists.fetchedAt || undefined,
     raidSource: raidLive.source,

@@ -10,7 +10,7 @@ import {
 } from "./meta";
 import { gradeBox, compareScanStream } from "./grade";
 import { clampFamilyKeep, clampPvpKeep, clampRaidIvKeep, clampRaidKeep, FAMILY_KEEP_MIN, PVP_KEEP_MAX, PVP_KEEP_MIN, RAID_IV_KEEP_MIN, RAID_KEEP_MAX, RAID_KEEP_MIN, type Mon } from "./types";
-import { cpAsSpecies, fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, LITTLE_CUP_CAP } from "./rank";
+import { cpAsSpecies, fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, LITTLE_CUP_CAP, MASTER_LEAGUE_CAP, ULTRA_LEAGUE_CAP } from "./rank";
 
 function must(cond: boolean, message: string): void {
   if (!cond) throw new Error(message);
@@ -83,6 +83,19 @@ must(result.keepFavorite === true, "default KEEP favorites");
 must(result.keepShadow === true, "default KEEP every shadow");
 must(result.keepGl === true, "default KEEP Great League");
 must(result.keepLc === true, "default KEEP Little Cup");
+must(result.keepUl === false, "default Ultra League off");
+must(result.keepMl === false, "default Master League off");
+must(meta.ulRankings == null, "Ultra League list stays unloaded until selected");
+must(meta.mlRankings == null, "Master League list stays unloaded until selected");
+const askedLeagues = await loadMeta({ ultra: true, master: true });
+must(
+  Array.isArray(askedLeagues.ulRankings) && askedLeagues.ulRankings.length === 0,
+  "Node does not fetch Ultra League",
+);
+must(
+  Array.isArray(askedLeagues.mlRankings) && askedLeagues.mlRankings.length === 0,
+  "Node does not fetch Master League",
+);
 must(Array.isArray(meta.glRankings) && meta.glRankings.length === 500, "bundled GL rankings 500");
 must(Array.isArray(meta.lcRankings) && meta.lcRankings.length === 100, "bundled LC rankings 100");
 must(
@@ -331,12 +344,12 @@ const zeroToads = [...noFavZero.keep, ...noFavZero.look, ...noFavZero.dump].filt
 );
 if (zeroToads.every((g) => g.verdict !== "KEEP")) {
   must(
-    zeroToads.every((g) => g.verdict === "DUMP"),
-    "familyKeep 0 dumps a no-keeper GL family",
+    zeroToads.every((g) => g.verdict === "LOOK"),
+    "familyKeep 0 leaves a no-keeper GL family on LOOK",
   );
   must(
-    zeroToads.every((g) => g.reasons.some((r) => r.includes("keep 0 per family"))),
-    "familyKeep 0 dump reason",
+    zeroToads.every((g) => g.reasons.some((r) => /pvp\/raid family/i.test(r) && !/useless/i.test(r))),
+    "familyKeep 0 names the PvP family instead of calling it useless",
   );
 }
 
@@ -357,10 +370,10 @@ must(
   [...sampleZero.keep, ...sampleZero.look, ...sampleZero.dump].some(
     (g) =>
       g.mon.speciesId === "weedle" &&
-      g.verdict === "DUMP" &&
-      g.reasons.some((r) => /raid .*worse than keep/i.test(r) || r.includes("keep 0 per family")),
+      g.verdict === "LOOK" &&
+      g.reasons.some((r) => /pvp\/raid family/i.test(r) && !/useless/i.test(r)),
   ),
-  "familyKeep 0 dumps a low-IV raid pre-evo",
+  "familyKeep 0 leaves a low-IV raid pre-evo on LOOK",
 );
 must(
   sampleZero.keep.some((g) => g.mon.speciesId === "wooper" && g.keepClasses.includes("gl")),
@@ -415,8 +428,8 @@ const wooperZeroRows = [...wooperZero.keep, ...wooperZero.look, ...wooperZero.du
 );
 if (wooperZeroRows.every((g) => g.verdict !== "KEEP")) {
   must(
-    wooperZeroRows.every((g) => g.verdict === "DUMP"),
-    "familyKeep 0 dumps a no-keeper wooper family",
+    wooperZeroRows.every((g) => g.verdict === "LOOK"),
+    "familyKeep 0 leaves a no-keeper wooper family on LOOK",
   );
 }
 must(
@@ -567,6 +580,34 @@ function ivMon(
     purified: false,
   };
 }
+
+const tinkZero = gradeBox([ivMon("tinkatink", "Tinkatink", 901, 0, 0, 0)], {
+  ...meta,
+  pvpRankKeep: 1,
+  familyKeep: 0,
+  keepFavorite: false,
+});
+const tinkRow = [...tinkZero.keep, ...tinkZero.look, ...tinkZero.dump][0];
+must(tinkRow?.verdict === "LOOK", `bad Tinkatink stays LOOK at spares 0, got ${tinkRow?.verdict} ${tinkRow?.reasons.join(" | ")}`);
+must(
+  tinkRow?.reasons.some((r) => /tinkaton gl #5/i.test(r)) === true,
+  `Tinkatink should name Tinkaton GL #5, got ${tinkRow?.reasons.join(" | ")}`,
+);
+must(
+  tinkRow?.reasons.every((r) => !/useless for pvp/i.test(r)),
+  "Tinkatink is not labeled useless for PvP",
+);
+const bidoofZero = gradeBox([ivMon("bidoof", "Bidoof", 902, 0, 0, 0)], {
+  ...meta,
+  pvpRankKeep: 1,
+  familyKeep: 0,
+  keepFavorite: false,
+});
+must(bidoofZero.dump.length === 1, "spares 0 still dumps a non-meta Bidoof");
+must(
+  bidoofZero.dump[0]?.reasons.some((r) => r.includes("keep 0 per family")) === true,
+  "non-meta dump still says useless for PvP/raids",
+);
 
 const trashBulb = ivMon("bulbasaur", "Bulbasaur", 450, 0, 0, 0);
 const trashGrade = gradeBox([trashBulb], bulbMeta);
@@ -1097,6 +1138,66 @@ const anyNone = gradeBox([{ ...ivMon("bidoof", "Bidoof", 940, 0, 15, 15), cp: 40
 });
 must(anyNone.keepGl === false && anyNone.keepLc === false, "echo both leagues off");
 must(anyNone.keep.length === 0 && anyNone.dump.length === 1, "both leagues off dumps a lone PvP bidoof at familyKeep 0");
+
+const openOff = {
+  ...meta,
+  keepGl: false,
+  keepLc: false,
+  keepShadow: false,
+  keepLucky: false,
+  keepFavorite: false,
+  keepAllGood: false,
+  raidAttackers: new Set<string>(),
+  raidEvolution: {},
+  pvpRankKeep: 4096,
+  familyKeep: 0,
+};
+const ulList = [{ rank: 1, speciesId: "machamp", speciesName: "Machamp" }];
+const ulOn = gradeBox([ivMon("machop", "Machop", 950, 0, 15, 15)], {
+  ...openOff,
+  keepUl: true,
+  ulRankings: ulList,
+});
+must(ulOn.keepUl === true, "echo keepUl true");
+must(ulOn.keep[0]?.pvpJob?.kind === "ul" && ulOn.keep[0]?.pvpJob?.speciesId === "machamp", "Ultra League keeps Machop as Machamp");
+const ulIgnored = gradeBox([ivMon("machop", "Machop", 951, 0, 15, 15)], {
+  ...openOff,
+  ulRankings: ulList,
+});
+must(ulIgnored.keep.length === 0, "Ultra rankings do not KEEP while Ultra League is off");
+const ulFat = gradeBox([{ ...ivMon("machamp", "Machamp", 952, 0, 15, 15), cp: ULTRA_LEAGUE_CAP + 1 }], {
+  ...openOff,
+  keepUl: true,
+  ulRankings: ulList,
+});
+const ulFatRow = [...ulFat.keep, ...ulFat.look, ...ulFat.dump][0];
+must(ulFatRow?.pvpJob?.kind !== "ul", "a copy over 2500 CP is not an Ultra League job");
+must(
+  ulFatRow?.reasons.some((r) => r.includes(`over Ultra League ${ULTRA_LEAGUE_CAP}`)) === true,
+  `over-cap Ultra copy should explain the cap, got ${ulFatRow?.reasons.join(" | ")}`,
+);
+const mlOn = gradeBox([{ ...ivMon("machamp", "Machamp", 953, 0, 15, 15), cp: 4000 }], {
+  ...openOff,
+  keepMl: true,
+  mlRankings: [{ rank: 3, speciesId: "machamp", speciesName: "Machamp" }],
+});
+must(
+  mlOn.keep[0]?.pvpJob?.kind === "ml" && mlOn.keep[0]?.keepClasses.includes("ml") === true,
+  "Master League keeps a high-CP Machamp",
+);
+must(mlOn.keep[0]?.mon.cp < MASTER_LEAGUE_CAP, "Master League fixture is under the 10000 cap");
+const glBeforeUl = gradeBox([ivMon("machop", "Machop", 954, 0, 15, 15)], {
+  ...meta,
+  keepUl: true,
+  ulRankings: ulList,
+  pvpRankKeep: 4096,
+  raidAttackers: new Set<string>(),
+  raidEvolution: {},
+  keepShadow: false,
+  keepLucky: false,
+  keepFavorite: false,
+});
+must(glBeforeUl.keep[0]?.pvpJob?.kind === "gl", "Great League fills before Ultra League");
 
 console.log(
   JSON.stringify(

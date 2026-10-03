@@ -9,6 +9,8 @@ import glEvolutionJson from "../data/gl-evolution.json";
 
 export const IV_COMBOS = 4096;
 export const GREAT_LEAGUE_CAP = 1500;
+export const ULTRA_LEAGUE_CAP = 2500;
+export const MASTER_LEAGUE_CAP = 10000;
 export const LITTLE_CUP_CAP = 500;
 export const RANK_LEVEL_CAP = 50;
 
@@ -189,7 +191,12 @@ export function rankGreatLeague(mon: Mon, gm: RankGm): LeagueRank | null {
 
 /** Rank this copy as an explicit species (pre-evo scored as each listed family stage). */
 export function rankGreatLeagueAs(mon: Mon, gm: RankGm, speciesId: string): LeagueRank | null {
-  return rankAt(mon, gm, canonId(speciesId), GREAT_LEAGUE_CAP);
+  return rankCappedLeagueAs(mon, gm, speciesId, GREAT_LEAGUE_CAP);
+}
+
+/** Stat-product rank under a CP cap. Master League uses PvPoke's 10000 cap. */
+export function rankCappedLeagueAs(mon: Mon, gm: RankGm, speciesId: string, cap: number): LeagueRank | null {
+  return rankAt(mon, gm, canonId(speciesId), cap);
 }
 
 /** Little Cup 500 CP rank for the unevolved form (no evo remap). */
