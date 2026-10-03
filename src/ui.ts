@@ -98,14 +98,11 @@ const KEEP_ML_KEY = "pogo-grader.keepMl";
 const PIN_DETAIL_KEY = "pogo-grader.pinDetail";
 const TAB_KEY = "pogo-grader.tab";
 const BOX_FILTER_KEY = "pogo-grader.boxFilter";
-const LOOK_FILTER_KEY = "pogo-grader.lookFilter";
 
 type Tab = Verdict | "BOX";
 type RankingsTab = "gl" | "ul" | "ml" | "lc" | "raid";
 type BoxSort = "cp" | "scan";
 type BoxFilter = Record<Verdict, boolean>;
-type LookKind = "family" | "junk" | "lock";
-type LookFilter = Record<LookKind, boolean>;
 
 const BOX_DISMISS_PREFIX = "pogo-grader.boxDismissed.";
 
@@ -144,10 +141,8 @@ interface AppState {
   rankingsFilter: string;
   rankingsRaidType: PokemonType | "";
   boxSort: BoxSort;
-  /** Which verdicts the LIST preview draws. Off hides those tiles. */
+  /** Which verdicts the LIST grid draws. Off hides that group from this grid only. */
   boxFilter: BoxFilter;
-  /** Which LOOK reasons the LOOK table draws. Off hides those rows. */
-  lookFilter: LookFilter;
   /** sourceRow values removed from the list and tracks. Last removed is last. */
   dismissed: number[];
   boxSelected: number | null;
@@ -286,43 +281,6 @@ function readStoredBoxFilter(): BoxFilter {
   }
 }
 
-function defaultLookFilter(): LookFilter {
-  return { family: true, junk: true, lock: true };
-}
-
-function isLookKind(value: string | undefined): value is LookKind {
-  return value === "family" || value === "junk" || value === "lock";
-}
-
-function readStoredLookFilter(): LookFilter {
-  const next = defaultLookFilter();
-  try {
-    const raw = localStorage.getItem(LOOK_FILTER_KEY);
-    if (!raw) return next;
-    const parsed = JSON.parse(raw) as Partial<LookFilter>;
-    if (parsed.family === false) next.family = false;
-    if (parsed.junk === false) next.junk = false;
-    if (parsed.lock === false) next.lock = false;
-    return next;
-  } catch {
-    return defaultLookFilter();
-  }
-}
-
-/** Why a LOOK row is held. Junk is the last-copy noise; lock cannot dump. */
-function lookKind(item: GradedMon): LookKind {
-  for (const reason of item.reasons) {
-    const text = reason.toLowerCase();
-    if (text.includes("only copy") || text.includes("best junk")) return "junk";
-    if (text.includes("pvp/raid family")) return "family";
-  }
-  return "lock";
-}
-
-function visibleLookRows(rows: GradedMon[]): GradedMon[] {
-  return rows.filter((row) => state.lookFilter[lookKind(row)]);
-}
-
 function readStoredKeepShadow(): boolean {
   try {
     const raw = localStorage.getItem(KEEP_SHADOW_KEY);
@@ -373,7 +331,6 @@ const state: AppState = {
   rankingsRaidType: "",
   boxSort: "scan",
   boxFilter: readStoredBoxFilter(),
-  lookFilter: readStoredLookFilter(),
   dismissed: [],
   boxSelected: null,
   boxFileKey: "",
@@ -719,10 +676,9 @@ function paintTrack(
   verdict: Tab,
   cap: number,
   meta: Meta | null,
-  empty = "None",
 ): void {
   if (rows.length === 0) {
-    listEl.innerHTML = `<p class="empty">${escapeHtml(empty)}</p>`;
+    listEl.innerHTML = `<p class="empty">None</p>`;
     return;
   }
   const shown = rows.slice(0, cap);
@@ -1192,11 +1148,6 @@ export function mountApp(root: HTMLElement): void {
           </section>
           <section class="track track--look" data-track="LOOK">
             <header class="track-head">LOOK <span class="count" id="count-look">0</span></header>
-            <div class="mode-row look-filter" role="group" aria-label="LOOK filters">
-              <button type="button" class="btn btn--preset${state.lookFilter.family ? " is-active" : ""}" data-look-filter="family" aria-pressed="${state.lookFilter.family ? "true" : "false"}" title="Show PvP and raid families with no keeper">Family</button>
-              <button type="button" class="btn btn--preset${state.lookFilter.junk ? " is-active" : ""}" data-look-filter="junk" aria-pressed="${state.lookFilter.junk ? "true" : "false"}" title="Show last copies and best junk. Turn off to leave the family spares.">Junk</button>
-              <button type="button" class="btn btn--preset${state.lookFilter.lock ? " is-active" : ""}" data-look-filter="lock" aria-pressed="${state.lookFilter.lock ? "true" : "false"}" title="Show copies that cannot dump">Lock</button>
-            </div>
             <div id="list-look" class="list"></div>
           </section>
           <section class="track track--dump" data-track="DUMP">
@@ -1216,10 +1167,10 @@ export function mountApp(root: HTMLElement): void {
                   <button type="button" class="btn hidden" id="box-undo">Undo</button>
                   <button type="button" class="btn hidden" id="box-restore">Restore all</button>
                 </div>
-                <div class="mode-row box-filter" role="group" aria-label="List filters">
-                  <button type="button" class="btn btn--preset${state.boxFilter.KEEP ? " is-active" : ""}" data-box-filter="KEEP" aria-pressed="${state.boxFilter.KEEP ? "true" : "false"}" title="Show green KEEP copies">KEEP</button>
-                  <button type="button" class="btn btn--preset${state.boxFilter.LOOK ? " is-active" : ""}" data-box-filter="LOOK" aria-pressed="${state.boxFilter.LOOK ? "true" : "false"}" title="Show yellow LOOK copies">LOOK</button>
-                  <button type="button" class="btn btn--preset${state.boxFilter.DUMP ? " is-active" : ""}" data-box-filter="DUMP" aria-pressed="${state.boxFilter.DUMP ? "true" : "false"}" title="Show DUMP copies. Turn off to leave green and yellow.">DUMP</button>
+                <div class="mode-row box-filter" role="group" aria-label="List grid filters">
+                  <button type="button" class="btn btn--preset${state.boxFilter.KEEP ? " is-active" : ""}" data-box-filter="KEEP" aria-pressed="${state.boxFilter.KEEP ? "true" : "false"}" title="Show KEEP copies in this grid. Turn off to drop them.">KEEP</button>
+                  <button type="button" class="btn btn--preset${state.boxFilter.LOOK ? " is-active" : ""}" data-box-filter="LOOK" aria-pressed="${state.boxFilter.LOOK ? "true" : "false"}" title="Show LOOK copies in this grid. Turn off to drop them.">LOOK</button>
+                  <button type="button" class="btn btn--preset${state.boxFilter.DUMP ? " is-active" : ""}" data-box-filter="DUMP" aria-pressed="${state.boxFilter.DUMP ? "true" : "false"}" title="Show DUMP copies in this grid. Turn off to drop them.">DUMP</button>
                 </div>
                 <div id="box-detail" class="box-detail hidden"></div>
               </div>
@@ -1757,27 +1708,7 @@ export function mountApp(root: HTMLElement): void {
       track.classList.toggle("is-active", track.getAttribute("data-track") === state.tab);
     });
     paintTrack(listKeepEl, shownRows(result.keep), "KEEP", LIST_PAINT_MAX, state.meta);
-    const lookPool = shownRows(result.look);
-    const lookShown = visibleLookRows(lookPool);
-    paintTrack(
-      listLookEl,
-      lookShown,
-      "LOOK",
-      LIST_PAINT_MAX,
-      state.meta,
-      lookPool.length > 0 ? "None match these filters." : "None",
-    );
-    const lookCount = String(lookShown.length);
-    const lookCountEl = root.querySelector("#count-look");
-    const lookTabCountEl = root.querySelector("#count-look-tab");
-    if (lookCountEl) lookCountEl.textContent = lookCount;
-    if (lookTabCountEl) lookTabCountEl.textContent = lookCount;
-    for (const btn of root.querySelectorAll<HTMLButtonElement>("[data-look-filter]")) {
-      if (!isLookKind(btn.dataset.lookFilter)) continue;
-      const on = state.lookFilter[btn.dataset.lookFilter];
-      btn.classList.toggle("is-active", on);
-      btn.setAttribute("aria-pressed", on ? "true" : "false");
-    }
+    paintTrack(listLookEl, shownRows(result.look), "LOOK", LIST_PAINT_MAX, state.meta);
     const dumpRows = shownRows(result.dump);
     paintTrack(listDumpEl, dumpRows, "DUMP", dumpRows.length, state.meta);
   }
@@ -2021,7 +1952,7 @@ export function mountApp(root: HTMLElement): void {
     statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · ${leagueStatus} · ${pvpStatus} · Keep ${result.raidKeep} raid · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "All 4*" : "One 4*"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "Favorite can dump"} · ${result.keepShadow ? "KEEP shadow" : "Shadow can dump"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
     const counts: Array<[string, number]> = [
       ["keep", shownRows(result.keep).length],
-      ["look", visibleLookRows(shownRows(result.look)).length],
+      ["look", shownRows(result.look).length],
       ["dump", shownRows(result.dump).length],
     ];
     for (const [id, n] of counts) {
@@ -2620,21 +2551,6 @@ export function mountApp(root: HTMLElement): void {
 
     if (target.closest("#box-restore")) {
       restoreBox();
-      return;
-    }
-
-    const lookFilterBtn = target.closest("[data-look-filter]") as HTMLElement | null;
-    if (isLookKind(lookFilterBtn?.dataset.lookFilter)) {
-      const kind = lookFilterBtn.dataset.lookFilter;
-      state.lookFilter[kind] = !state.lookFilter[kind];
-      try {
-        localStorage.setItem(LOOK_FILTER_KEY, JSON.stringify(state.lookFilter));
-      } catch {
-        /* private mode */
-      }
-      const saved = listScrolls();
-      paintResults();
-      restoreListScrolls(saved);
       return;
     }
 

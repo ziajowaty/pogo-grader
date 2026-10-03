@@ -1340,50 +1340,13 @@ button.type-chip.is-active {
   color: #1c0c0c;
 }
 
-.box-filter .btn--preset:not(.is-active),
-.look-filter .btn--preset:not(.is-active) {
+.box-filter .btn--preset:not(.is-active) {
   opacity: 0.45;
 }
 
 .box-filter .btn--preset:not(.is-active):hover,
-.box-filter .btn--preset:not(.is-active):focus-visible,
-.look-filter .btn--preset:not(.is-active):hover,
-.look-filter .btn--preset:not(.is-active):focus-visible {
+.box-filter .btn--preset:not(.is-active):focus-visible {
   opacity: 0.75;
-}
-
-.look-filter {
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-  margin: 0;
-  padding: 8px;
-  border-bottom: 1px solid var(--line);
-}
-
-.look-filter .btn--preset {
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 36px;
-  padding: 6px 4px;
-  font-size: 0.75rem;
-}
-
-.look-filter [data-look-filter="family"].is-active {
-  background: var(--look);
-  border-color: var(--look);
-  color: #1c1808;
-}
-
-.look-filter [data-look-filter="junk"].is-active {
-  background: #d4b896;
-  border-color: #d4b896;
-  color: #1c140c;
-}
-
-.look-filter [data-look-filter="lock"].is-active {
-  background: #f0d878;
-  border-color: #f0d878;
-  color: #1c1808;
 }
 
 .box-sort {
