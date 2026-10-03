@@ -148,6 +148,7 @@ export interface GradedMon {
    * Exclusive PvP/raid job for this copy (one job per Pokémon).
    * Great League fills before Little Cup; within a league, higher PvPoke
    * species fill first (Dragonair before Dragonite). Raid leftovers last.
+   * A league with `keepGl` or `keepLc` off is not a job.
    */
   pvpJob?: PvpJob | null;
   copiesInGroup: number;
@@ -191,6 +192,10 @@ export interface GradeResult {
   keepFavorite: boolean;
   /** When true, every shadow KEEPs. When false, a shadow must earn KEEP another way; useless copies can DUMP. */
   keepShadow: boolean;
+  /** When true, Great League is a KEEP job. When false, good GL IVs do not KEEP. */
+  keepGl: boolean;
+  /** When true, Little Cup is a KEEP job. When false, good LC IVs do not KEEP. */
+  keepLc: boolean;
   groups: Array<{
     key: string;
     size: number;
@@ -253,6 +258,7 @@ export interface Meta {
    * `raidKeep` per raid attacker). Each copy gets at most one of those jobs. GL seats fill
    * before LC; within a league, higher PvPoke species exhaust their seats before
    * a worse evo. Raid is last. Unlisted forms (Dratini in GL) are not jobs.
+   * `keepGl` / `keepLc` false drops that league's jobs and floor.
    */
   familyKeep?: number;
   /**
@@ -281,6 +287,16 @@ export interface Meta {
    * Useless copies can DUMP. Other KEEP rules still apply. Default true.
    */
   keepShadow?: boolean;
+  /**
+   * When false, Great League is not a KEEP job. Good GL IVs do not KEEP
+   * and do not count as a PvP floor. Default true.
+   */
+  keepGl?: boolean;
+  /**
+   * When false, Little Cup is not a KEEP job. Good LC IVs do not KEEP
+   * and do not count as a PvP floor. Default true.
+   */
+  keepLc?: boolean;
   /** How KEEP PvP species lists were loaded. */
   pvpokeSource?: "live" | "cache" | "bundled";
   pvpokeFetchedAt?: number;
@@ -315,6 +331,9 @@ export const DEFAULT_FAMILY_KEEP = 2;
 export const DEFAULT_KEEP_LUCKY = true;
 export const DEFAULT_KEEP_FAVORITE = true;
 export const DEFAULT_KEEP_SHADOW = true;
+/** Great League and Little Cup both KEEP until faded. */
+export const DEFAULT_KEEP_GL = true;
+export const DEFAULT_KEEP_LC = true;
 export const FAMILY_KEEP_MIN = 0;
 export const FAMILY_KEEP_MAX = 99;
 export const DEFAULT_RAID_IV_KEEP = 90;

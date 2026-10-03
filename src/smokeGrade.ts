@@ -81,6 +81,8 @@ must(result.keepAllGood === false, "default extras as dupes");
 must(result.keepLucky === true, "default KEEP luckies");
 must(result.keepFavorite === true, "default KEEP favorites");
 must(result.keepShadow === true, "default KEEP every shadow");
+must(result.keepGl === true, "default KEEP Great League");
+must(result.keepLc === true, "default KEEP Little Cup");
 must(Array.isArray(meta.glRankings) && meta.glRankings.length === 500, "bundled GL rankings 500");
 must(Array.isArray(meta.lcRankings) && meta.lcRankings.length === 100, "bundled LC rankings 100");
 must(
@@ -375,6 +377,14 @@ const wooperTight = [...tight.keep, ...tight.look, ...tight.dump].find((g) => g.
 must(wooperTight?.keepClasses.includes("gl") !== true, "rank-1 floor must drop wooper GL keep");
 must(wooperTight?.keepClasses.includes("lc") === true, "0/15/15 wooper is LC rank 1 so LC still KEEPs at floor 1");
 must(wooperTight?.verdict === "KEEP", "LC rank-1 wooper KEEPs at PvP floor 1");
+const wooperLcOff = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 1, keepLc: false });
+const wooperLcOffRow = [...wooperLcOff.keep, ...wooperLcOff.look, ...wooperLcOff.dump].find(
+  (g) => g.mon.speciesId === "wooper",
+);
+must(wooperLcOff.keepLc === false, "echo keepLc false");
+must(wooperLcOffRow?.keepClasses.includes("lc") !== true, "Little Cup off drops the LC keep class");
+must(wooperLcOffRow?.pvpJob?.kind !== "lc", "Little Cup off assigns no LC job");
+must(wooperLcOffRow?.verdict !== "KEEP", "Little Cup off does not KEEP a rank-1 LC wooper");
 
 const extraWoopers: Mon[] = [1, 2, 3].map((i) => ({
   ...wooperMon!,
@@ -739,6 +749,23 @@ must(
   jobOneOf(713)?.kind === "gl" && jobOneOf(713)?.speciesId === "dragonite_shadow",
   "pvpKeep 1 still fills the Dragonite Shadow seat after one Dragonair",
 );
+const dratiniNoLc = gradeBox(dratiniLine, {
+  ...meta,
+  keepAllGood: false,
+  keepShadow: false,
+  keepLucky: false,
+  keepFavorite: false,
+  pvpRankKeep: 500,
+  pvpKeep: 1,
+  keepLc: false,
+});
+const noLcJob = (row: number) =>
+  [...dratiniNoLc.keep, ...dratiniNoLc.look, ...dratiniNoLc.dump].find((g) => g.mon.sourceRow === row);
+must(dratiniNoLc.keepLc === false && dratiniNoLc.keepGl === true, "echo Little Cup off with Great League still on");
+must(noLcJob(702)?.pvpJob?.kind === "gl", "Little Cup off still keeps the Dragonair seat");
+must(noLcJob(703)?.pvpJob?.kind !== "lc", "Little Cup off does not send the leftover Dratini to Little Cup");
+must(noLcJob(703)?.verdict !== "KEEP", "Little Cup off does not KEEP the leftover Dratini");
+must(noLcJob(710)?.keepClasses.includes("lc") !== true, "Little Cup off drops the shadow LC keep");
 
 const capGm = getRankGm(meta.glEvolution);
 const ninetales = parsed.mons.find((m) => m.speciesId === "ninetales_alolan_shadow");
@@ -843,6 +870,14 @@ const lcGate: typeof meta = {
 };
 const lcLegal = gradeBox([{ ...ivMon("wooper", "Wooper", 821, 0, 15, 15), cp: 500, level: 20 }], lcGate);
 must(lcLegal.keep[0]?.pvpJob?.kind === "lc", "500 CP wooper is Little Cup when GL is gated off");
+const lcOff = gradeBox([{ ...ivMon("wooper", "Wooper", 823, 0, 15, 15), cp: 500, level: 20 }], {
+  ...lcGate,
+  keepLc: false,
+  familyKeep: 0,
+});
+must(lcOff.keep.length === 0 && lcOff.dump.length === 1, "Little Cup off dumps a lone LC wooper when spares are 0");
+must(lcOff.dump[0]?.keepClasses.includes("lc") !== true, "dumped LC wooper has no LC keep class");
+must(lcOff.dump[0]?.pvpJob == null, "dumped LC wooper has no PvP job");
 const lcOver = gradeBox([{ ...ivMon("wooper", "Wooper", 822, 0, 15, 15), cp: 501, level: 20 }], lcGate);
 const lcOverRow = [...lcOver.keep, ...lcOver.look, ...lcOver.dump][0];
 must(lcOverRow?.pvpJob?.kind !== "lc", "501 CP wooper cannot Little Cup");
@@ -1033,6 +1068,35 @@ must(
   anyJobs.some((job) => job?.kind === "lc" && job.speciesId === "bidoof"),
   "third bidoof fills Little Cup when any species is viable",
 );
+const anyNoLc = gradeBox(
+  [0, 1, 2].map((i) => ({ ...ivMon("bidoof", "Bidoof", 920 + i, 0, 15, 15), cp: 400 })),
+  { ...anyMeta, keepLc: false },
+);
+must(
+  anyNoLc.keep.every((g) => g.pvpJob?.kind !== "lc") && anyNoLc.keep.filter((g) => g.pvpJob?.kind === "gl").length === 2,
+  "Little Cup off keeps the two Great League seats and no LC job",
+);
+must(
+  [...anyNoLc.keep, ...anyNoLc.look, ...anyNoLc.dump].filter((g) => g.verdict === "KEEP").length === 2,
+  "the third bidoof does not KEEP when Little Cup is off",
+);
+const anyNoGl = gradeBox(
+  [0, 1].map((i) => ({ ...ivMon("bidoof", "Bidoof", 930 + i, 0, 15, 15), cp: 400 })),
+  { ...anyMeta, keepGl: false },
+);
+must(anyNoGl.keepGl === false, "echo keepGl false");
+must(
+  anyNoGl.keep.length === 1 && anyNoGl.keep[0]?.pvpJob?.kind === "lc",
+  "Great League off keeps one Little Cup bidoof",
+);
+must(anyNoGl.keep.every((g) => !g.keepClasses.includes("gl")), "Great League off attaches no GL keep class");
+const anyNone = gradeBox([{ ...ivMon("bidoof", "Bidoof", 940, 0, 15, 15), cp: 400 }], {
+  ...anyMeta,
+  keepGl: false,
+  keepLc: false,
+});
+must(anyNone.keepGl === false && anyNone.keepLc === false, "echo both leagues off");
+must(anyNone.keep.length === 0 && anyNone.dump.length === 1, "both leagues off dumps a lone PvP bidoof at familyKeep 0");
 
 console.log(
   JSON.stringify(

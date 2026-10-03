@@ -360,6 +360,14 @@ function keepShadowOn(meta: Meta): boolean {
   return meta.keepShadow !== false;
 }
 
+function keepGlOn(meta: Meta): boolean {
+  return meta.keepGl !== false;
+}
+
+function keepLcOn(meta: Meta): boolean {
+  return meta.keepLc !== false;
+}
+
 function idKeepClasses(
   mon: Mon,
   meta: Meta,
@@ -482,8 +490,15 @@ function glFitsCap(g: GradedMon, speciesId: string, gm: RankGm): boolean {
   return fitsLeagueCap(g.mon, speciesId, GREAT_LEAGUE_CAP, gm).fits;
 }
 
-function pvpFloorLegal(g: GradedMon, cutoff: number, gm: RankGm): boolean {
-  if (rankMeets(g.lc, cutoff) && g.mon.cp <= LITTLE_CUP_CAP) return true;
+function pvpFloorLegal(
+  g: GradedMon,
+  cutoff: number,
+  gm: RankGm,
+  keepGl: boolean,
+  keepLc: boolean,
+): boolean {
+  if (keepLc && rankMeets(g.lc, cutoff) && g.mon.cp <= LITTLE_CUP_CAP) return true;
+  if (!keepGl) return false;
   const stages = g.glAs ?? (g.gl ? [g.gl] : []);
   return stages.some((r) => rankMeets(r, cutoff) && glFitsCap(g, r.evoSpeciesId, gm));
 }
@@ -636,6 +651,8 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const keepLucky = keepLuckyOn(meta);
   const keepFavorite = keepFavoriteOn(meta);
   const keepShadow = keepShadowOn(meta);
+  const keepGl = keepGlOn(meta);
+  const keepLc = keepLcOn(meta);
   const glSlots = pvpKeep;
   const lcSlots = pvpKeep;
   const raidSlots = raidKeep;
@@ -730,8 +747,8 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   for (const [key, rows] of groups) {
     const n = rows.length;
     const ind = independentsOf(rows[0].mon.speciesId);
-    const glIds = ind.gl;
-    const lcIds = ind.lc;
+    const glIds = keepGl ? ind.gl : [];
+    const lcIds = keepLc ? ind.lc : [];
     const raidIds = ind.raid;
     rows.sort((a, b) => {
       if (glIds.length) return glOrder(a, b);
@@ -868,8 +885,10 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (classes.includes("limited")) pushReason(g, "Limited (UB / Dialgadex-style)");
 
       if (!job) {
-        const better = betterAsReason(g);
-        if (better) pushReason(g, better);
+        if (keepGl) {
+          const better = betterAsReason(g);
+          if (better) pushReason(g, better);
+        }
         for (const role of roles) {
           if (role.kind === "raid") continue;
           const winners = winnersByRole.get(roleKey(role)) ?? [];
@@ -908,7 +927,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const groupAnchor = new Map<string, boolean>();
   for (const [key, rows] of groups) {
     const hasKeep = rows.some((row) => row.keepClasses.length > 0);
-    const hasFloor = rows.some((row) => pvpFloorLegal(row, cutoff, gm));
+    const hasFloor = rows.some((row) => pvpFloorLegal(row, cutoff, gm, keepGl, keepLc));
     groupAnchor.set(key, hasKeep || hasFloor);
   }
 
@@ -934,7 +953,8 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     const key = familyKey(g.mon.speciesId, meta);
     const anchored = groupAnchor.get(key) === true;
     const ind = independentsOf(g.mon.speciesId);
-    const pvpOrRaidFamily = ind.gl.length + ind.lc.length + ind.raid.length > 0;
+    const pvpOrRaidFamily =
+      (keepGl ? ind.gl.length : 0) + (keepLc ? ind.lc.length : 0) + ind.raid.length > 0;
 
     if (pvpOrRaidFamily && !anchored) {
       if (familyKeep > 0 && g.copyRankInGroup <= familyKeep) {
@@ -1025,6 +1045,8 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     keepLucky,
     keepFavorite,
     keepShadow,
+    keepGl,
+    keepLc,
     groups: groupSummaries,
   };
 }
