@@ -42,6 +42,7 @@ import {
   RAID_KEEP_MIN,
 } from "./types";
 import { compareScanStream } from "./grade";
+import { familyIdsMatchingQuery, rankingsRowMatches } from "./meta";
 import { clearLastCsv, loadLastCsv, saveLastCsv } from "./lastCsv";
 import { fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP } from "./rank";
 
@@ -830,7 +831,7 @@ export function mountApp(root: HTMLElement): void {
             <div class="rankings-pane-head">
               <h3 class="rankings-pane-title rankings-pane-title--gl">Great League</h3>
               <label class="file-label rankings-filter-label" for="rankings-filter-gl">Filter</label>
-              <input id="rankings-filter-gl" class="rankings-filter" type="search" placeholder="Species name or id" autocomplete="off" aria-label="Filter Great League rankings" data-rankings-filter />
+              <input id="rankings-filter-gl" class="rankings-filter" type="search" placeholder="Name, family, or id" autocomplete="off" aria-label="Filter Great League rankings" data-rankings-filter />
             </div>
             <div id="rankings-gl" class="rankings-table-wrap"></div>
           </div>
@@ -838,7 +839,7 @@ export function mountApp(root: HTMLElement): void {
             <div class="rankings-pane-head">
               <h3 class="rankings-pane-title rankings-pane-title--lc">Little Cup</h3>
               <label class="file-label rankings-filter-label" for="rankings-filter-lc">Filter</label>
-              <input id="rankings-filter-lc" class="rankings-filter" type="search" placeholder="Species name or id" autocomplete="off" aria-label="Filter Little Cup rankings" data-rankings-filter />
+              <input id="rankings-filter-lc" class="rankings-filter" type="search" placeholder="Name, family, or id" autocomplete="off" aria-label="Filter Little Cup rankings" data-rankings-filter />
             </div>
             <div id="rankings-lc" class="rankings-table-wrap"></div>
           </div>
@@ -846,7 +847,7 @@ export function mountApp(root: HTMLElement): void {
             <div class="rankings-pane-head">
               <h3 class="rankings-pane-title rankings-pane-title--raid" id="rankings-raid-title">Raid attackers</h3>
               <label class="file-label rankings-filter-label" for="rankings-filter-raid">Filter</label>
-              <input id="rankings-filter-raid" class="rankings-filter" type="search" placeholder="Species, id, or tag" autocomplete="off" aria-label="Filter raid attackers" data-rankings-filter />
+              <input id="rankings-filter-raid" class="rankings-filter" type="search" placeholder="Name, family, id, or tag" autocomplete="off" aria-label="Filter raid attackers" data-rankings-filter />
             </div>
             <nav class="rankings-types" aria-label="Filter raid attackers by type">${raidTypeFilterButtons()}</nav>
             <p class="note rankings-raid-note" id="rankings-raid-note">KEEP list sorted by Pokébattler aggregated rank (1 = best). Pre-evolutions sit with the attacker they count as.</p>
@@ -1288,30 +1289,10 @@ export function mountApp(root: HTMLElement): void {
     paintRankings();
   }
 
-  function rankingMatches(
-    row: {
-      speciesId: string;
-      speciesName: string;
-      tags?: string[];
-      asSpeciesId?: string;
-      asSpeciesName?: string;
-      types?: string[];
-      asTypes?: string[];
-    },
-    q: string,
-  ): boolean {
-    if (!q) return true;
-    if (
-      row.speciesName.toLowerCase().includes(q) ||
-      row.speciesId.includes(q) ||
-      prettySpeciesId(row.speciesId).toLowerCase().includes(q)
-    ) {
-      return true;
-    }
-    if (row.asSpeciesId?.includes(q) || row.asSpeciesName?.toLowerCase().includes(q)) return true;
-    if (row.types?.some((type) => type.includes(q))) return true;
-    if (row.asTypes?.some((type) => type.includes(q))) return true;
-    return Boolean(row.tags?.some((tag) => tag.toLowerCase().includes(q)));
+  function rankingsFamilyIds(query: string): Set<string> {
+    const q = query.trim();
+    if (!q) return new Set();
+    return familyIdsMatchingQuery(q, state.meta?.familyOf);
   }
 
   function raidTagClass(tag: string): string {
@@ -1333,7 +1314,8 @@ export function mountApp(root: HTMLElement): void {
       return `<p class="empty">${escapeHtml(empty)}</p>`;
     }
     const q = state.rankingsFilter.trim().toLowerCase();
-    const shown = rows.filter((row) => rankingMatches(row, q));
+    const familyIds = rankingsFamilyIds(state.rankingsFilter);
+    const shown = rows.filter((row) => rankingsRowMatches(row, q, familyIds));
     if (shown.length === 0) {
       return `<p class="empty">No species match “${escapeHtml(state.rankingsFilter.trim())}”</p>`;
     }
@@ -1364,7 +1346,8 @@ export function mountApp(root: HTMLElement): void {
     const type = state.rankingsRaidType;
     const typed = type ? rows.filter((row) => raidRowHasType(row, type)) : rows;
     const q = state.rankingsFilter.trim().toLowerCase();
-    const shown = typed.filter((row) => rankingMatches(row, q));
+    const familyIds = rankingsFamilyIds(state.rankingsFilter);
+    const shown = typed.filter((row) => rankingsRowMatches(row, q, familyIds));
     if (shown.length === 0) {
       const typeLabel = type ? prettyPokemonType(type) : "";
       if (q) {

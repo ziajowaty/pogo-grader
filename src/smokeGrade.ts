@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { parseInventoryCsv } from "./parseCsv";
-import { loadMeta, parsePokebattlerAttackers, pokebattlerToCanonId, unionUniqueIds } from "./meta";
+import {
+  familyIdsMatchingQuery,
+  loadMeta,
+  parsePokebattlerAttackers,
+  pokebattlerToCanonId,
+  rankingsRowMatches,
+  unionUniqueIds,
+} from "./meta";
 import { gradeBox, compareScanStream } from "./grade";
 import { clampFamilyKeep, clampPvpKeep, clampRaidIvKeep, clampRaidKeep, FAMILY_KEEP_MIN, PVP_KEEP_MAX, PVP_KEEP_MIN, RAID_IV_KEEP_MIN, RAID_KEEP_MAX, RAID_KEEP_MIN, type Mon } from "./types";
 import { cpAsSpecies, fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, LITTLE_CUP_CAP } from "./rank";
@@ -154,6 +161,49 @@ const fireKeep = meta.raidRankings?.filter(
 must((fireKeep?.length ?? 0) > 10, "Fire filter has KEEP attackers");
 must(fireKeep?.some((row) => row.speciesId === "charizard") === true, "Fire filter includes Charizard");
 must(fireKeep?.some((row) => row.speciesId === "machamp") !== true, "Fire filter excludes Machamp");
+
+function rankingsShown(
+  rows: { speciesId: string; speciesName: string; tags?: string[]; asSpeciesId?: string; asSpeciesName?: string; types?: string[]; asTypes?: string[] }[] | undefined,
+  query: string,
+): string[] {
+  const familyIds = familyIdsMatchingQuery(query, meta.familyOf);
+  return (rows ?? []).filter((row) => rankingsRowMatches(row, query, familyIds)).map((row) => row.speciesId);
+}
+
+const glVulpix = rankingsShown(meta.glRankings, "Vulpix");
+must(glVulpix.includes("ninetales"), "GL Vulpix search shows Ninetales");
+must(glVulpix.includes("ninetales_shadow"), "GL Vulpix search shows Shadow Ninetales");
+must(glVulpix.includes("ninetales_alolan"), "GL Vulpix search shows Alolan Ninetales");
+must(glVulpix.includes("ninetales_alolan_shadow"), "GL Vulpix search shows Alolan Shadow Ninetales");
+must(!glVulpix.includes("quagsire"), "GL Vulpix search skips other species");
+const lcNinetales = rankingsShown(meta.lcRankings, "Ninetales");
+must(lcNinetales.includes("vulpix"), "LC Ninetales search shows Vulpix");
+must(lcNinetales.includes("vulpix_alolan"), "LC Ninetales search shows Alolan Vulpix");
+must(lcNinetales.includes("vulpix_shadow"), "LC Ninetales search shows Shadow Vulpix");
+const alolanVulpix = rankingsShown(meta.glRankings, "Alolan Vulpix");
+must(alolanVulpix.includes("ninetales_alolan"), "Alolan Vulpix search shows Alolan Ninetales");
+must(!alolanVulpix.includes("ninetales"), "Alolan Vulpix search skips Kanto Ninetales");
+const shadowOnly = rankingsShown(meta.glRankings, "shadow");
+must(shadowOnly.includes("ninetales_shadow"), "shadow filter still shows Shadow Ninetales");
+must(!shadowOnly.includes("ninetales"), "shadow filter does not add regular Ninetales");
+must(shadowOnly.every((id) => id.includes("shadow")), "shadow filter stays on shadow rows");
+const glEevee = rankingsShown(meta.glRankings, "eevee");
+must(glEevee.includes("umbreon") && glEevee.includes("sylveon"), "GL Eevee search shows its evolutions");
+must(familyIdsMatchingQuery("oddish", meta.familyOf).has("bellossom"), "Oddish family includes Bellossom");
+must(familyIdsMatchingQuery("bellossom", meta.familyOf).has("vileplume"), "branching families stay together");
+must(familyIdsMatchingQuery("vileplume", meta.familyOf).has("oddish"), "Vileplume search includes Oddish");
+const raidCharmander = rankingsShown(meta.raidRankings, "charmander");
+must(
+  raidCharmander.some((id) => id === "charizard" || id.startsWith("charizard_")),
+  "raid Charmander search shows Charizard",
+);
+const raidBulbasaur = rankingsShown(meta.raidRankings, "bulbasaur");
+must(raidBulbasaur.includes("venusaur"), "raid Bulbasaur search shows Venusaur");
+must(raidBulbasaur.includes("ivysaur"), "raid Bulbasaur search shows Ivysaur");
+const raidFireText = rankingsShown(meta.raidRankings, "fire");
+must(raidFireText.includes("charizard"), "raid type word still matches Charizard");
+must(familyIdsMatchingQuery("mega", meta.familyOf).size === 0, "mega alone does not expand families");
+must(familyIdsMatchingQuery("shadow", meta.familyOf).size === 0, "shadow alone does not expand families");
 
 const fox = all.find((g) => g.mon.speciesId === "ninetales_alolan_shadow");
 must(fox?.verdict === "KEEP", "alolan shadow ninetales must KEEP");

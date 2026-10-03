@@ -300,6 +300,124 @@ function buildFamilyIndex(edges: Record<string, string[]>): {
   return { familyOf, evoReach };
 }
 
+/**
+ * Form words that show up on many species ids. They narrow which family member
+ * triggers a rankings search, and a query that is only these words stays a
+ * direct name/tag filter (so "shadow" does not pull in every relative).
+ */
+const RANKINGS_FORM_QUALIFIERS = new Set([
+  "shadow",
+  "mega",
+  "alolan",
+  "galarian",
+  "hisuian",
+  "paldean",
+  "primal",
+]);
+
+function speciesIdentity(id: string): string {
+  const parts = canonId(id).split("_");
+  const kept: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (!part || RANKINGS_FORM_QUALIFIERS.has(part)) continue;
+    if ((part === "x" || part === "y") && parts[i - 1] === "mega") continue;
+    kept.push(part);
+  }
+  return kept.join(" ");
+}
+
+function splitRankingsQuery(query: string): { identity: string; forms: Set<string> } {
+  const parts = query
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  const forms = new Set<string>();
+  const identityParts: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (RANKINGS_FORM_QUALIFIERS.has(part)) {
+      forms.add(part);
+      continue;
+    }
+    if ((part === "x" || part === "y") && parts[i - 1] === "mega") {
+      forms.add(part);
+      continue;
+    }
+    identityParts.push(part);
+  }
+  return { identity: identityParts.join(" "), forms };
+}
+
+function speciesHasForms(id: string, forms: Set<string>): boolean {
+  if (forms.size === 0) return true;
+  const parts = new Set(canonId(id).split("_"));
+  for (const form of forms) {
+    if (form === "x" || form === "y") {
+      if (!canonId(id).includes(`_mega_${form}`)) return false;
+      continue;
+    }
+    if (!parts.has(form)) return false;
+  }
+  return true;
+}
+
+/** Species ids in every evolutionary family touched by a rankings name query. */
+export function familyIdsMatchingQuery(
+  query: string,
+  familyOf: Record<string, string> | undefined,
+): Set<string> {
+  const ids = new Set<string>();
+  if (!familyOf) return ids;
+  const { identity, forms } = splitRankingsQuery(query);
+  if (!identity) return ids;
+  const families = new Set<string>();
+  for (const [id, family] of Object.entries(familyOf)) {
+    if (!speciesHasForms(id, forms)) continue;
+    if (speciesIdentity(id).includes(identity)) families.add(family);
+  }
+  if (families.size === 0) return ids;
+  for (const [id, family] of Object.entries(familyOf)) {
+    if (families.has(family)) ids.add(id);
+  }
+  return ids;
+}
+
+export interface RankingsFilterRow {
+  speciesId: string;
+  speciesName: string;
+  tags?: string[];
+  asSpeciesId?: string;
+  asSpeciesName?: string;
+  types?: string[];
+  asTypes?: string[];
+}
+
+/** Rankings text filter: the row, its raid target, or any evolutionary relative. */
+export function rankingsRowMatches(
+  row: RankingsFilterRow,
+  query: string,
+  familyIds: ReadonlySet<string>,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  if (familyIds.has(row.speciesId)) return true;
+  if (row.asSpeciesId && familyIds.has(row.asSpeciesId)) return true;
+  if (
+    row.speciesName.toLowerCase().includes(q) ||
+    row.speciesId.includes(q) ||
+    prettySpeciesId(row.speciesId).toLowerCase().includes(q)
+  ) {
+    return true;
+  }
+  if (row.asSpeciesId?.includes(q) || row.asSpeciesName?.toLowerCase().includes(q)) return true;
+  if (row.types?.some((type) => type.includes(q))) return true;
+  if (row.asTypes?.some((type) => type.includes(q))) return true;
+  return Boolean(row.tags?.some((tag) => tag.toLowerCase().includes(q)));
+}
+
 function buildRaidEvolution(raid: Set<string>, edges: Record<string, string[]>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const from of Object.keys(edges)) {
