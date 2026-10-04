@@ -400,7 +400,9 @@ function rowToMon(
   const chargedMove = parseMove(
     cell(row, cols.i("charge move", "charged move", "special move", "charge")),
   );
-  const chargedMove2 = parseMove(cell(row, cols.i("charge move 2", "charged move 2", "charge 2")));
+  const chargedMove2 = parseMove(
+    cell(row, cols.i("charge move 2", "charged move 2", "special move 2", "charge 2")),
+  );
   const hasSpecialMove = specialMoveFlag(fastMove, chargedMove, chargedMove2);
 
   const ivPercent = parsePercent(cell(row, cols.i("iv avg", "oiv", "iv percent")));
@@ -500,6 +502,7 @@ function assignOptionalFlag(
   }
   if (key === "costume") {
     const n = raw.toLowerCase();
+    if (n === "?" || n === "-") return;
     mon.costume = !(n === "0" || n === "false" || n === "no" || n === "none" || n === "normal");
     return;
   }

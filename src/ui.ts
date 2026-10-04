@@ -2,6 +2,7 @@ import type {
   GradeResult,
   GradedMon,
   Meta,
+  Mon,
   ParseResult,
   PokemonType,
   PvpLeague,
@@ -53,8 +54,27 @@ import {
   RAID_KEEP_MIN,
 } from "./types";
 import { compareScanStream } from "./grade";
+import {
+  coreExtendKey,
+  coreifyScan,
+  extendedDuplicates,
+  formatCoreCsv,
+  mergeCoreMons,
+  removeExtended,
+  splitCoreRows,
+} from "./coreExtend";
 import { familyIdsMatchingQuery, rankingsRowMatches } from "./meta";
-import { clearLastCsv, loadLastCsv, saveLastCsv } from "./lastCsv";
+import {
+  clearCoreCsv,
+  clearCoreExtended,
+  clearLastCsv,
+  loadCoreCsv,
+  loadCoreExtended,
+  loadLastCsv,
+  saveCoreCsv,
+  saveCoreExtended,
+  saveLastCsv,
+} from "./lastCsv";
 import { fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, MASTER_LEAGUE_CAP, ULTRA_LEAGUE_CAP } from "./rank";
 
 function skipScanString(opts: { keepLucky?: boolean; keepFavorite?: boolean } = {}): string {
@@ -105,7 +125,7 @@ const PIN_DETAIL_KEY = "pogo-grader.pinDetail";
 const TAB_KEY = "pogo-grader.tab";
 const BOX_FILTER_KEY = "pogo-grader.boxFilter";
 
-type Tab = Verdict | "BOX";
+type Tab = Verdict | "BOX" | "CORE" | "EXTENDED";
 type RankingsTab = "gl" | "ul" | "ml" | "lc" | "raid";
 type BoxSort = "cp" | "scan";
 type BoxFilter = Record<Verdict, boolean>;
@@ -114,7 +134,7 @@ const BOX_DISMISS_PREFIX = "pogo-grader.boxDismissed.";
 
 interface Engine {
   parseInventoryCsv: (text: string) => ParseResult;
-  gradeBox: (mons: ParseResult["mons"], meta: Meta) => GradeResult;
+  gradeBox: (mons: ParseResult["mons"], meta: Meta, core?: Mon[]) => GradeResult;
   loadMeta: (request?: { ultra?: boolean; master?: boolean }) => Promise<Meta>;
 }
 
@@ -123,6 +143,10 @@ interface AppState {
   result: GradeResult | null;
   parse: ParseResult | null;
   fileName: string;
+  coreParse: ParseResult | null;
+  coreFileName: string;
+  /** Scan rows saved on this device. Graded with the core file, shown on their own tab. */
+  extended: Mon[];
   error: string;
   busy: string;
   engine: Engine | null;
@@ -330,6 +354,9 @@ const state: AppState = {
   result: null,
   parse: null,
   fileName: "",
+  coreParse: null,
+  coreFileName: "",
+  extended: [],
   error: "",
   busy: "",
   engine: null,
@@ -578,6 +605,9 @@ function jobLabel(item: GradedMon): string {
 
 function reasonClass(reason: string): string {
   const r = reason.toLowerCase();
+  if (r.startsWith("core upgrade") || r.startsWith("scan upgrade")) return "chip chip--core-up";
+  if (r.startsWith("core holds") || r.startsWith("holds")) return "chip chip--core-hold";
+  if (r.startsWith("same pokémon") || r.startsWith("same pokemon")) return "chip chip--core-same";
   if (r.includes("no pvp/raid job")) return "chip chip--nojob";
   if (r.startsWith("stay ") || r.startsWith("evolve to ")) {
     if (r.includes("little cup")) return "chip chip--lc";
@@ -694,11 +724,17 @@ function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null): string {
     ? `<span class="badge-job badge-job--${item.pvpJob?.kind ?? "gl"}">${escapeHtml(job)}</span>`
     : "";
   const line = [speciesBit, `IVs ${formatIvs(mon)}`, flags, formatRanks(item, meta)].filter(Boolean).join(" · ");
+  const action =
+    verdict === "KEEP" || verdict === "LOOK" || verdict === "DUMP"
+      ? coreifyButton(mon)
+      : verdict === "EXTENDED"
+        ? extendDropButton(mon)
+        : "";
 
   return `<article class="row row--${verdict.toLowerCase()}${crowd ? " row--crowd" : ""}">
     <div class="row-top">
       <div class="species">${escapeHtml(title)}${jobBadge}${crowdBadge}</div>
-      <div class="cp">${mon.cp}</div>
+      <div class="row-end"><div class="cp">${mon.cp}</div>${action}</div>
     </div>
     <div class="meta">${escapeHtml(line)}</div>
     ${rowChips(item, verdict, meta)}
@@ -740,7 +776,32 @@ function raidListStatus(meta: Meta | null): string {
 }
 
 function isTab(value: string | null): value is Tab {
-  return value === "KEEP" || value === "LOOK" || value === "DUMP" || value === "BOX";
+  return (
+    value === "KEEP" ||
+    value === "LOOK" ||
+    value === "DUMP" ||
+    value === "BOX" ||
+    value === "CORE" ||
+    value === "EXTENDED"
+  );
+}
+
+function coreifyButton(mon: Mon): string {
+  const decision = coreifyScan(mon, state.coreParse?.mons ?? [], state.extended);
+  const label = mon.nickname?.trim() || mon.speciesName;
+  if (!decision.ok && decision.reason === "in-file") {
+    return `<button type="button" class="btn row-coreify" disabled title="Already in the core file">In core file</button>`;
+  }
+  if (!decision.ok && decision.reason === "in-extended") {
+    return `<button type="button" class="btn row-coreify" disabled title="Already in the extended core">In extended</button>`;
+  }
+  if (!decision.ok) return "";
+  return `<button type="button" class="btn row-coreify" data-coreify="${mon.sourceRow}" title="Save this Pokémon on this device" aria-label="Add ${escapeHtml(label)} CP ${mon.cp} to the extended core">Add to core</button>`;
+}
+
+function extendDropButton(mon: Mon): string {
+  const label = mon.nickname?.trim() || mon.speciesName;
+  return `<button type="button" class="btn row-coreify" data-extend-drop="${escapeHtml(coreExtendKey(mon))}" aria-label="Remove ${escapeHtml(label)} CP ${mon.cp} from the extended core">Remove</button>`;
 }
 
 function readStoredTab(): Tab | null {
@@ -888,7 +949,8 @@ function renderBoxDetail(item: GradedMon): string {
     .join(" · ");
   return `<div class="box-detail-title">${escapeHtml(title)} <span class="box-detail-verdict box-detail-verdict--${item.verdict.toLowerCase()}">${item.verdict}</span></div>
     <div class="meta">${escapeHtml(line)}</div>
-    ${rowChips(item, item.verdict, state.meta)}`;
+    ${rowChips(item, item.verdict, state.meta)}
+    <div class="row-end">${coreifyButton(mon)}</div>`;
 }
 
 function renderBoxTile(item: GradedMon, selected: boolean): string {
@@ -935,6 +997,21 @@ export function mountApp(root: HTMLElement): void {
           <p id="status" class="status-line csv-loaded hidden"></p>
           <ul id="issues" class="issues hidden"></ul>
           <p class="note">Kept on this device until you clear it. Skip-scan KEEP museum first — Calcy often omits shiny.</p>
+          <label class="file-label file-label--core" for="core-file">Core collection, optional</label>
+          <div class="csv-field csv-field--core" id="core-field">
+            <label class="csv-pick" for="core-file">
+              <span id="core-name" class="csv-name">Choose a core CSV</span>
+            </label>
+            <input id="core-file" class="csv-file" type="file" accept=".csv,text/csv" />
+            <button type="button" id="core-clear" class="csv-clear hidden" aria-label="Remove stored core CSV" title="Remove stored core CSV"></button>
+          </div>
+          <ul id="core-issues" class="issues hidden"></ul>
+          <p class="note">Pokémon you already keep. A strictly better scan copy goes to LOOK. This file stays on the CORE tab.</p>
+          <div class="extended-tools">
+            <button type="button" class="btn" id="core-export" hidden>Export core CSV</button>
+            <button type="button" class="btn" id="extended-clear" hidden>Clear extended</button>
+          </div>
+          <p class="note">Add to core saves a scanned Pokémon on this device. Export writes the core file plus those saves as one CSV this app can load again.</p>
         </section>
 
         <section class="card card--skip" aria-labelledby="skip-title">
@@ -1170,11 +1247,13 @@ export function mountApp(root: HTMLElement): void {
       </section>
 
       <div id="grade-tables" class="hidden">
-        <nav class="tabs" aria-label="Grade piles">
+        <nav class="tabs" id="grade-tabs" aria-label="Grade piles">
           <button type="button" class="tab" data-tab="KEEP">KEEP <span class="count" id="count-keep-tab">0</span></button>
           <button type="button" class="tab" data-tab="LOOK">LOOK <span class="count" id="count-look-tab">0</span></button>
           <button type="button" class="tab" data-tab="DUMP">DUMP <span class="count" id="count-dump-tab">0</span></button>
           <button type="button" class="tab" data-tab="BOX">LIST <span class="count" id="count-box-tab">0</span></button>
+          <button type="button" class="tab" data-tab="CORE" id="tab-core" hidden>CORE <span class="count" id="count-core-tab">0</span></button>
+          <button type="button" class="tab" data-tab="EXTENDED" id="tab-extended" hidden>EXT <span class="count" id="count-extended-tab">0</span></button>
         </nav>
 
         <div class="tracks">
@@ -1217,6 +1296,16 @@ export function mountApp(root: HTMLElement): void {
               <div id="box-grid" class="box-grid"></div>
             </div>
           </section>
+          <section class="track track--core" data-track="CORE">
+            <header class="track-head">CORE <span class="count" id="count-core">0</span></header>
+            <p class="note core-note">Already kept. Not part of the transfer list.</p>
+            <div id="list-core" class="list"></div>
+          </section>
+          <section class="track track--extended" data-track="EXTENDED">
+            <header class="track-head">EXTENDED <span class="count" id="count-extended">0</span></header>
+            <p class="note core-note">Saved from scans on this device. Not part of the transfer list.</p>
+            <div id="list-extended" class="list"></div>
+          </section>
         </div>
       </div>
       <div id="box-tip" class="box-tip hidden" role="tooltip"></div>
@@ -1232,6 +1321,13 @@ export function mountApp(root: HTMLElement): void {
   const listKeepEl = root.querySelector("#list-keep") as HTMLElement;
   const listLookEl = root.querySelector("#list-look") as HTMLElement;
   const listDumpEl = root.querySelector("#list-dump") as HTMLElement;
+  const listCoreEl = root.querySelector("#list-core") as HTMLElement;
+  const listExtendedEl = root.querySelector("#list-extended") as HTMLElement;
+  const gradeTabsEl = root.querySelector("#grade-tabs") as HTMLElement;
+  const tabCoreEl = root.querySelector("#tab-core") as HTMLButtonElement;
+  const tabExtendedEl = root.querySelector("#tab-extended") as HTMLButtonElement;
+  const coreExportEl = root.querySelector("#core-export") as HTMLButtonElement;
+  const extendedClearEl = root.querySelector("#extended-clear") as HTMLButtonElement;
   const boxScrollEl = root.querySelector("#box-scroll") as HTMLElement;
   const boxGridEl = root.querySelector("#box-grid") as HTMLElement;
   const boxStickyEl = root.querySelector(".box-sticky") as HTMLElement;
@@ -1246,6 +1342,11 @@ export function mountApp(root: HTMLElement): void {
   const csvField = root.querySelector("#csv-field") as HTMLElement;
   const csvName = root.querySelector("#csv-name") as HTMLElement;
   const csvClear = root.querySelector("#csv-clear") as HTMLButtonElement;
+  const coreFileInput = root.querySelector("#core-file") as HTMLInputElement;
+  const coreField = root.querySelector("#core-field") as HTMLElement;
+  const coreName = root.querySelector("#core-name") as HTMLElement;
+  const coreClear = root.querySelector("#core-clear") as HTMLButtonElement;
+  const coreIssuesEl = root.querySelector("#core-issues") as HTMLElement;
   const rankInput = root.querySelector("#rank-keep") as HTMLInputElement;
   const listKeepInput = root.querySelector("#pvp-list-keep") as HTMLInputElement;
   const listNoteEl = root.querySelector("#pvp-list-note") as HTMLElement;
@@ -1816,9 +1917,41 @@ export function mountApp(root: HTMLElement): void {
     busyEl.classList.toggle("hidden", !message);
   }
 
+  function coreLoaded(): boolean {
+    return state.coreFileName.length > 0;
+  }
+
+  function coreMons(): Mon[] {
+    return state.coreParse?.mons ?? [];
+  }
+
+  function collectionLoaded(): boolean {
+    return coreLoaded() || state.extended.length > 0;
+  }
+
+  function seatMons(): Mon[] {
+    return mergeCoreMons(coreMons(), state.extended);
+  }
+
+  function paintExtendedTools(): void {
+    const canExport = coreMons().length > 0 || state.extended.length > 0;
+    coreExportEl.hidden = !canExport;
+    extendedClearEl.hidden = state.extended.length === 0;
+  }
+
   function paintList(): void {
     const result = state.result;
     if (!result) return;
+    const showCore = coreLoaded();
+    const showExtended = state.extended.length > 0;
+    if (state.tab === "CORE" && !showCore) state.tab = showExtended ? "EXTENDED" : "DUMP";
+    if (state.tab === "EXTENDED" && !showExtended) state.tab = showCore ? "CORE" : "DUMP";
+    tabCoreEl.hidden = !showCore;
+    tabExtendedEl.hidden = !showExtended;
+    gradeTabsEl.classList.toggle("has-core", showCore);
+    gradeTabsEl.classList.toggle("has-extended", showExtended);
+    gradeTablesEl.classList.toggle("is-core-tab", state.tab === "CORE" && showCore);
+    gradeTablesEl.classList.toggle("is-extended-tab", state.tab === "EXTENDED" && showExtended);
     root.querySelectorAll(".tab").forEach((btn) => {
       btn.classList.toggle("is-active", btn.getAttribute("data-tab") === state.tab);
     });
@@ -1829,22 +1962,59 @@ export function mountApp(root: HTMLElement): void {
     paintTrack(listLookEl, shownRows(result.look), "LOOK", LIST_PAINT_MAX, state.meta);
     const dumpRows = shownRows(result.dump);
     paintTrack(listDumpEl, dumpRows, "DUMP", dumpRows.length, state.meta);
+    const parts = splitCoreRows(result.core ?? [], coreMons());
+    paintTrack(listCoreEl, parts.file, "CORE", parts.file.length, state.meta);
+    paintExtended(parts.extended);
   }
 
-  function listScrolls(): { box: number; keep: number; look: number; dump: number } {
+  function paintExtended(rows: GradedMon[]): void {
+    const dupes = extendedDuplicates(state.extended, coreMons());
+    if (rows.length === 0 && dupes.length === 0) {
+      listExtendedEl.innerHTML = `<p class="empty">None</p>`;
+      return;
+    }
+    const graded = rows.map((row) => renderRow(row, "EXTENDED", state.meta)).join("");
+    const copies = dupes
+      .map((mon) => {
+        const title = mon.nickname?.trim() || mon.speciesName;
+        return `<article class="row row--extended">
+          <div class="row-top">
+            <div class="species">${escapeHtml(title)}</div>
+            <div class="row-end"><div class="cp">${mon.cp}</div>${extendDropButton(mon)}</div>
+          </div>
+          <div class="meta">${escapeHtml([mon.speciesName, `IVs ${formatIvs(mon)}`].filter(Boolean).join(" · "))}</div>
+          <div class="reasons"><span class="chip chip--core-same">Already in the core file</span></div>
+        </article>`;
+      })
+      .join("");
+    listExtendedEl.innerHTML = graded + copies;
+  }
+
+  function listScrolls(): { box: number; keep: number; look: number; dump: number; core: number; extended: number } {
     return {
       box: boxScrollEl.scrollTop,
       keep: listKeepEl.scrollTop,
       look: listLookEl.scrollTop,
       dump: listDumpEl.scrollTop,
+      core: listCoreEl.scrollTop,
+      extended: listExtendedEl.scrollTop,
     };
   }
 
-  function restoreListScrolls(saved: { box: number; keep: number; look: number; dump: number }): void {
+  function restoreListScrolls(saved: {
+    box: number;
+    keep: number;
+    look: number;
+    dump: number;
+    core: number;
+    extended: number;
+  }): void {
     boxScrollEl.scrollTop = saved.box;
     listKeepEl.scrollTop = saved.keep;
     listLookEl.scrollTop = saved.look;
     listDumpEl.scrollTop = saved.dump;
+    listCoreEl.scrollTop = saved.core;
+    listExtendedEl.scrollTop = saved.extended;
   }
 
   function paintBoxChrome(): void {
@@ -2032,9 +2202,15 @@ export function mountApp(root: HTMLElement): void {
   function paintResults(): void {
     const result = state.result;
     const parse = state.parse;
-    if (!result || !parse) {
+    if (!result || (!parse && !collectionLoaded())) {
       resultsEl.classList.add("hidden");
       gradeTablesEl.classList.add("hidden");
+      gradeTablesEl.classList.remove("is-core-tab");
+      gradeTablesEl.classList.remove("is-extended-tab");
+      gradeTabsEl.classList.remove("has-core");
+      gradeTabsEl.classList.remove("has-extended");
+      tabCoreEl.hidden = true;
+      tabExtendedEl.hidden = true;
       statusEl.classList.add("hidden");
       statusEl.textContent = "";
       issuesEl.classList.add("hidden");
@@ -2063,11 +2239,19 @@ export function mountApp(root: HTMLElement): void {
             .filter(Boolean)
             .join(" · ")
         : "PvP idle";
-    statusEl.textContent = `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned · ${leagueStatus} · ${pvpStatus} · Keep ${result.raidKeep} raid · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "All 4*" : "One 4*"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "Favorite can dump"} · ${result.keepShadow ? "KEEP shadow" : "Shadow can dump"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
+    const scanBit = parse
+      ? `${state.fileName} · ${parse.dialect} · ${parse.mons.length} scanned`
+      : "No scan CSV";
+    const coreBit = coreLoaded() ? ` · Core ${state.coreFileName} (${coreMons().length})` : "";
+    const extendedBit = state.extended.length > 0 ? ` · Extended ${state.extended.length}` : "";
+    statusEl.textContent = `${scanBit}${coreBit}${extendedBit} · ${leagueStatus} · ${pvpStatus} · Keep ${result.raidKeep} raid · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "All 4*" : "One 4*"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "Favorite can dump"} · ${result.keepShadow ? "KEEP shadow" : "Shadow can dump"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
+    const coreParts = splitCoreRows(result.core ?? [], coreMons());
     const counts: Array<[string, number]> = [
       ["keep", shownRows(result.keep).length],
       ["look", shownRows(result.look).length],
       ["dump", shownRows(result.dump).length],
+      ["core", coreParts.file.length],
+      ["extended", state.extended.length],
     ];
     for (const [id, n] of counts) {
       const main = root.querySelector(`#count-${id}`) as HTMLElement | null;
@@ -2076,7 +2260,7 @@ export function mountApp(root: HTMLElement): void {
       if (tab) tab.textContent = String(n);
     }
 
-    if (parse.issues.length > 0) {
+    if (parse && parse.issues.length > 0) {
       issuesEl.classList.remove("hidden");
       issuesEl.innerHTML = parse.issues
         .slice(0, 12)
@@ -2107,6 +2291,28 @@ export function mountApp(root: HTMLElement): void {
     csvName.title = filled ? state.fileName : "";
     csvClear.classList.toggle("hidden", !filled);
     csvClear.hidden = !filled;
+    paintCoreField();
+  }
+
+  function paintCoreField(): void {
+    const filled = state.coreFileName.length > 0;
+    coreField.classList.toggle("is-filled", filled);
+    coreName.textContent = filled ? state.coreFileName : "Choose a core CSV";
+    coreName.title = filled ? state.coreFileName : "";
+    coreClear.classList.toggle("hidden", !filled);
+    coreClear.hidden = !filled;
+    paintExtendedTools();
+    const issues = state.coreParse?.issues ?? [];
+    if (issues.length > 0) {
+      coreIssuesEl.classList.remove("hidden");
+      coreIssuesEl.innerHTML = issues
+        .slice(0, 8)
+        .map((issue) => `<li>Core row ${issue.row}: ${escapeHtml(issue.message)}</li>`)
+        .join("");
+    } else {
+      coreIssuesEl.classList.add("hidden");
+      coreIssuesEl.innerHTML = "";
+    }
   }
 
   function readFileText(file: File): Promise<string> {
@@ -2228,7 +2434,7 @@ export function mountApp(root: HTMLElement): void {
     let graded: GradeResult;
     try {
       showBusy("Grading box…");
-      graded = engine.gradeBox(parsed.mons, gradeKnobs(meta));
+      graded = engine.gradeBox(parsed.mons, gradeKnobs(meta), seatMons());
     } catch (err) {
       await fail(`gradeBox failed: ${errMsg(err)}`);
       return;
@@ -2240,7 +2446,12 @@ export function mountApp(root: HTMLElement): void {
     state.parse = parsed;
     state.result = graded;
     state.fileName = file.name;
-    state.tab = readStoredTab() ?? pickDefaultTab(graded);
+    const storedTab = readStoredTab();
+    const storedTabOk =
+      storedTab != null &&
+      (storedTab !== "CORE" || coreLoaded()) &&
+      (storedTab !== "EXTENDED" || state.extended.length > 0);
+    state.tab = storedTabOk ? storedTab : pickDefaultTab(graded);
     state.boxFileKey = boxStorageKey(file);
     const alive = new Set(parsed.mons.map((mon) => mon.sourceRow));
     state.dismissed = readDismissed(state.boxFileKey).filter((row) => alive.has(row));
@@ -2286,26 +2497,227 @@ export function mountApp(root: HTMLElement): void {
   }
 
   async function clearStoredCsv(): Promise<void> {
-    csvEpoch++;
+    const epoch = ++csvEpoch;
     resetCsvView();
     try {
       await clearLastCsv();
     } catch (err) {
       showError(`Could not remove the stored CSV: ${errMsg(err)}`);
     }
+    if (epoch !== csvEpoch || !collectionLoaded()) return;
+    await gradeCoreAlone(epoch);
+  }
+
+  async function acceptCoreFile(file: File): Promise<void> {
+    const epoch = ++csvEpoch;
+    const previousName = state.coreFileName;
+    const previousParse = state.coreParse;
+    showError("");
+    showBusy("Reading core CSV on this device…");
+    let text: string;
+    try {
+      text = await readFileText(file);
+    } catch (err) {
+      if (epoch !== csvEpoch) return;
+      showBusy("");
+      showError(errMsg(err));
+      return;
+    }
+    if (epoch !== csvEpoch) return;
+    let engine: Engine;
+    try {
+      engine = await loadEngine();
+    } catch (err) {
+      if (epoch !== csvEpoch) return;
+      showBusy("");
+      showError(errMsg(err));
+      return;
+    }
+    let parsed: ParseResult;
+    try {
+      parsed = engine.parseInventoryCsv(text);
+    } catch (err) {
+      if (epoch !== csvEpoch) return;
+      state.coreFileName = previousName;
+      state.coreParse = previousParse;
+      paintCoreField();
+      showBusy("");
+      showError(`Core CSV parse failed: ${errMsg(err)}`);
+      return;
+    }
+    if (epoch !== csvEpoch) return;
+    state.engine = engine;
+    state.coreParse = parsed;
+    state.coreFileName = file.name;
+    paintCoreField();
+    if (!state.meta) {
+      try {
+        state.meta = await engine.loadMeta({ ultra: state.keepUl, master: state.keepMl });
+      } catch (err) {
+        if (epoch !== csvEpoch) return;
+        showBusy("");
+        showError(`loadMeta failed: ${errMsg(err)}`);
+        return;
+      }
+    }
+    if (epoch !== csvEpoch) return;
+    try {
+      state.result = engine.gradeBox(state.parse?.mons ?? [], gradeKnobs(state.meta!), seatMons());
+    } catch (err) {
+      if (epoch !== csvEpoch) return;
+      showBusy("");
+      showError(`gradeBox failed: ${errMsg(err)}`);
+      return;
+    }
+    if (epoch !== csvEpoch) return;
+    if (!state.parse) state.tab = "CORE";
+    showBusy("");
+    paintRankings();
+    paintResults();
+    try {
+      await saveCoreCsv({
+        name: file.name,
+        text,
+        size: file.size,
+        lastModified: file.lastModified,
+      });
+    } catch (err) {
+      if (epoch !== csvEpoch) return;
+      showError(`Graded, but this browser could not keep the core CSV: ${errMsg(err)}`);
+    }
+  }
+
+  async function clearStoredCore(): Promise<void> {
+    const epoch = ++csvEpoch;
+    state.coreParse = null;
+    state.coreFileName = "";
+    if (state.tab === "CORE") {
+      state.tab =
+        !state.parse && state.extended.length > 0
+          ? "EXTENDED"
+          : state.result
+            ? pickDefaultTab(state.result)
+            : "DUMP";
+    }
+    paintCoreField();
+    try {
+      await clearCoreCsv();
+    } catch (err) {
+      showError(`Could not remove the stored core CSV: ${errMsg(err)}`);
+    }
+    if (epoch !== csvEpoch) return;
+    if (state.engine && state.meta && (state.parse || collectionLoaded())) regradeLive();
+    else {
+      state.result = null;
+      paintResults();
+    }
+  }
+
+  async function clearStoredExtended(): Promise<void> {
+    state.extended = [];
+    if (state.tab === "EXTENDED") {
+      state.tab = coreLoaded() ? "CORE" : state.result ? pickDefaultTab(state.result) : "DUMP";
+    }
+    paintExtendedTools();
+    try {
+      await clearCoreExtended();
+    } catch (err) {
+      showError(`Could not remove the extended core: ${errMsg(err)}`);
+    }
+    if (state.engine && state.meta && (state.parse || collectionLoaded())) regradeLive();
+    else {
+      state.result = null;
+      paintResults();
+    }
+  }
+
+  async function addExtended(sourceRow: number): Promise<void> {
+    const row = findGraded(sourceRow);
+    if (!row) return;
+    const decision = coreifyScan(row.mon, coreMons(), state.extended);
+    if (!decision.ok) {
+      const message =
+        decision.reason === "in-file"
+          ? "Already in the core file."
+          : decision.reason === "in-extended"
+            ? "Already in the extended core."
+            : "That Pokémon cannot be saved to the extended core.";
+      showError(message);
+      return;
+    }
+    showError("");
+    state.extended = [...state.extended, decision.mon];
+    paintExtendedTools();
+    if (state.engine && state.meta) regradeLive();
+    try {
+      await saveCoreExtended(state.extended);
+    } catch (err) {
+      showError(`Saved here, but this browser could not keep the extended core: ${errMsg(err)}`);
+    }
+  }
+
+  async function dropExtended(key: string): Promise<void> {
+    state.extended = removeExtended(state.extended, key);
+    if (state.tab === "EXTENDED" && state.extended.length === 0) {
+      state.tab = coreLoaded() ? "CORE" : state.result ? pickDefaultTab(state.result) : "DUMP";
+    }
+    paintExtendedTools();
+    try {
+      await saveCoreExtended(state.extended);
+    } catch (err) {
+      showError(`Could not update the extended core: ${errMsg(err)}`);
+    }
+    if (state.engine && state.meta && (state.parse || collectionLoaded())) regradeLive();
+    else {
+      state.result = null;
+      paintResults();
+    }
   }
 
   function regradeLive(): void {
-    const parsed = state.parse;
     const engine = state.engine;
     const meta = state.meta;
-    if (!parsed || !engine || !meta) return;
+    if (!engine || !meta) return;
+    if (!state.parse && !collectionLoaded()) return;
     try {
-      state.result = engine.gradeBox(parsed.mons, gradeKnobs(meta));
+      state.result = engine.gradeBox(state.parse?.mons ?? [], gradeKnobs(meta), seatMons());
       paintResults();
     } catch (err) {
       showError(`gradeBox failed: ${errMsg(err)}`);
     }
+  }
+
+  async function gradeCoreAlone(epoch: number): Promise<void> {
+    if (!collectionLoaded()) return;
+    let engine: Engine;
+    try {
+      engine = await loadEngine();
+    } catch (err) {
+      showError(errMsg(err));
+      return;
+    }
+    if (epoch !== csvEpoch) return;
+    let meta: Meta;
+    try {
+      meta = await engine.loadMeta({ ultra: state.keepUl, master: state.keepMl });
+    } catch (err) {
+      showError(`loadMeta failed: ${errMsg(err)}`);
+      return;
+    }
+    if (epoch !== csvEpoch) return;
+    state.engine = engine;
+    state.meta = meta;
+    try {
+      state.result = engine.gradeBox([], gradeKnobs(meta), seatMons());
+    } catch (err) {
+      showError(`gradeBox failed: ${errMsg(err)}`);
+      return;
+    }
+    if (epoch !== csvEpoch) return;
+    if (!state.parse) state.tab = coreLoaded() ? "CORE" : "EXTENDED";
+    showBusy("");
+    paintRankings();
+    paintResults();
   }
 
   function applyRankKeep(raw: unknown): void {
@@ -2551,6 +2963,41 @@ export function mountApp(root: HTMLElement): void {
     void clearStoredCsv();
   });
 
+  coreFileInput.addEventListener("change", () => {
+    const file = coreFileInput.files?.[0];
+    if (!file) return;
+    void acceptCoreFile(file).catch((err) => {
+      showBusy("");
+      showError(errMsg(err));
+    });
+  });
+
+  coreClear.addEventListener("click", () => {
+    coreFileInput.value = "";
+    void clearStoredCore();
+  });
+
+  coreExportEl.addEventListener("click", () => {
+    const file = formatCoreCsv(seatMons());
+    if (!file.text.trim()) return;
+    if (file.skipped.length > 0) {
+      showError(`Some rows were left out of the export: ${file.skipped.slice(0, 4).join("; ")}`);
+    } else {
+      showError("");
+    }
+    const blob = new Blob([file.text], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "pogo-grader-core.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+
+  extendedClearEl.addEventListener("click", () => {
+    void clearStoredExtended();
+  });
+
   document.addEventListener("scroll", () => placeBoxTip(), { capture: true, passive: true });
   window.addEventListener("resize", () => placeBoxTip());
 
@@ -2735,10 +3182,31 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
 
+    const coreifyBtn = target.closest("[data-coreify]") as HTMLButtonElement | null;
+    if (coreifyBtn?.dataset.coreify && !coreifyBtn.disabled) {
+      void addExtended(Number(coreifyBtn.dataset.coreify));
+      return;
+    }
+
+    const dropBtn = target.closest("[data-extend-drop]") as HTMLButtonElement | null;
+    if (dropBtn?.dataset.extendDrop) {
+      void dropExtended(dropBtn.dataset.extendDrop);
+      return;
+    }
+
     const tabBtn = target.closest("[data-tab]") as HTMLElement | null;
     if (tabBtn?.dataset.tab && state.result) {
       const next = tabBtn.dataset.tab as Tab;
-      if (next === "KEEP" || next === "LOOK" || next === "DUMP" || next === "BOX") {
+      if (
+        next === "KEEP" ||
+        next === "LOOK" ||
+        next === "DUMP" ||
+        next === "BOX" ||
+        next === "CORE" ||
+        next === "EXTENDED"
+      ) {
+        if (next === "CORE" && !coreLoaded()) return;
+        if (next === "EXTENDED" && state.extended.length === 0) return;
         state.tab = next;
         persistTab(next);
         paintList();
@@ -2777,11 +3245,31 @@ export function mountApp(root: HTMLElement): void {
       rankingsStatusEl.textContent = "Bundled lists load on grade";
     });
 
-  void loadLastCsv()
-    .then((stored) => {
-      if (!stored || csvEpoch !== 0) return;
+  void Promise.all([loadLastCsv(), loadCoreCsv(), loadCoreExtended()])
+    .then(async ([stored, storedCore, storedExtended]) => {
+      if (csvEpoch !== 0) return;
+      state.extended = storedExtended;
+      paintExtendedTools();
+      if (storedCore) {
+        try {
+          const engine = await loadEngine();
+          state.engine = engine;
+          state.coreParse = engine.parseInventoryCsv(storedCore.text);
+          state.coreFileName = storedCore.name;
+        } catch (err) {
+          showError(`Could not read the stored core CSV: ${errMsg(err)}`);
+        }
+        paintCoreField();
+      }
+      if (csvEpoch !== 0) return;
+      if (stored) {
+        const epoch = ++csvEpoch;
+        await gradeCsv(stored.text, stored, false, epoch, snapshotCsv());
+        return;
+      }
+      if (!collectionLoaded()) return;
       const epoch = ++csvEpoch;
-      return gradeCsv(stored.text, stored, false, epoch, snapshotCsv());
+      await gradeCoreAlone(epoch);
     })
     .catch((err) => {
       if (csvEpoch !== 0) return;

@@ -212,6 +212,8 @@ export interface GradeResult {
   keep: GradedMon[];
   look: GradedMon[];
   dump: GradedMon[];
+  /** Core CSV rows. Empty when no core file was graded. Not part of the scan tracks. */
+  core: GradedMon[];
   /** GL/LC KEEP only if 4096-rank is this or better (1 = best). */
   pvpRankKeep: number;
   /** Species in PvPoke GL overall this far down count as PvP. Rank 1 is best. */

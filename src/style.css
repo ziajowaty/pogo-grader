@@ -484,6 +484,10 @@ body {
   font-size: 0.92rem;
 }
 
+.file-label--core {
+  margin-top: 14px;
+}
+
 .csv-field {
   position: relative;
   display: flex;
@@ -497,6 +501,14 @@ body {
 .csv-field.is-filled {
   border-style: solid;
   border-color: color-mix(in srgb, var(--keep) 65%, var(--line));
+}
+
+.csv-field--core {
+  border-color: color-mix(in srgb, var(--look) 55%, var(--line));
+}
+
+.csv-field--core.is-filled {
+  border-color: color-mix(in srgb, var(--look) 75%, var(--line));
 }
 
 .csv-field:focus-within {
@@ -629,6 +641,18 @@ body {
   display: none;
 }
 
+.tabs.has-core,
+.tabs.has-extended {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.tabs.has-core.has-extended {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .tracks {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -749,6 +773,32 @@ body {
   justify-content: space-between;
   gap: 8px;
   align-items: baseline;
+}
+
+.row-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.row-coreify {
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.row-coreify:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.extended-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .species {
@@ -1059,6 +1109,21 @@ body {
 .chip--extra-keep {
   background: #1c2430;
   color: #f5f8ff;
+}
+
+.chip--core-up {
+  background: #2a2412;
+  color: var(--look);
+}
+
+.chip--core-hold {
+  background: #1c2838;
+  color: var(--gl);
+}
+
+.chip--core-same {
+  background: #241c28;
+  color: var(--shiny);
 }
 
 .chip--extra-spare {
@@ -1882,6 +1947,28 @@ button.type-chip.is-active {
   color: #14180f;
 }
 
+.tab[data-tab="CORE"] {
+  border-color: #3a5570;
+  color: var(--gl);
+}
+
+.tab[data-tab="CORE"].is-active {
+  background: var(--gl);
+  border-color: var(--gl);
+  color: #102030;
+}
+
+.tab[data-tab="EXTENDED"] {
+  border-color: #3d6b62;
+  color: var(--lc);
+}
+
+.tab[data-tab="EXTENDED"].is-active {
+  background: var(--lc);
+  border-color: var(--lc);
+  color: #102018;
+}
+
 @media (max-width: 1279px) {
   .tabs {
     display: grid;
@@ -1893,6 +1980,15 @@ button.type-chip.is-active {
     z-index: 4;
     padding: 8px 0;
     background: color-mix(in srgb, var(--bg) 94%, transparent);
+  }
+
+  .tabs.has-core,
+  .tabs.has-extended {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .tabs.has-core.has-extended {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .tracks {
@@ -1940,4 +2036,48 @@ button.type-chip.is-active {
   .app {
     padding-bottom: 8px;
   }
+}
+
+.track--core {
+  display: none;
+  border-color: #3a5570;
+  background: color-mix(in srgb, #102030 42%, var(--bg-elev));
+}
+
+.track--extended {
+  display: none;
+  border-color: #3d6b62;
+  background: color-mix(in srgb, #102820 42%, var(--bg-elev));
+}
+
+.track--extended .track-head {
+  background: #163028;
+  color: var(--lc);
+}
+
+.core-note {
+  margin: 0;
+  padding: 8px 12px 0;
+}
+
+#grade-tables.is-core-tab .tracks {
+  grid-template-columns: 1fr;
+}
+
+#grade-tables.is-core-tab .track:not(.track--core) {
+  display: none;
+}
+
+#grade-tables.is-core-tab .track--core,
+#grade-tables.is-extended-tab .track--extended {
+  display: flex;
+  max-height: min(70vh, 48rem);
+}
+
+#grade-tables.is-extended-tab .tracks {
+  grid-template-columns: 1fr;
+}
+
+#grade-tables.is-extended-tab .track:not(.track--extended) {
+  display: none;
 }

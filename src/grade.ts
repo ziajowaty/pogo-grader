@@ -1,3 +1,4 @@
+import { coreFingerprint } from "./coreExtend";
 import type {
   GradeResult,
   GradedMon,
@@ -771,6 +772,161 @@ function byScanStream(a: GradedMon, b: GradedMon): number {
   return compareScanStream(a.mon, b.mon);
 }
 
+function roleLabel(role: RoleDef): string {
+  const name = prettySpeciesId(role.speciesId);
+  if (role.kind === "lc") return `LC ${name}`;
+  if (role.kind === "ul") return `UL ${name}`;
+  if (role.kind === "ml") return `ML ${name}`;
+  if (role.kind === "raid") return `Raid ${name}`;
+  return `GL ${name}`;
+}
+
+function qualityRankText(g: GradedMon, role: RoleDef): string {
+  if (isCappedKind(role.kind)) {
+    const iv = rankIn(g, role.kind, role.speciesId);
+    return iv ? `${iv.rank}/${iv.of}` : "rank ?";
+  }
+  if (role.kind === "lc") {
+    return g.lc ? `${g.lc.rank}/${g.lc.of}` : "rank ?";
+  }
+  const pct = g.raidIv?.percent;
+  return pct != null ? `${pct}% IV` : "IV ?";
+}
+
+/** Negative when `a` is a better copy for this job. Ties are 0 (source row is not quality). */
+function qualityCmp(a: GradedMon, b: GradedMon, role: RoleDef): number {
+  if (isCappedKind(role.kind)) {
+    const ar = rankIn(a, role.kind, role.speciesId);
+    const br = rankIn(b, role.kind, role.speciesId);
+    const arank = ar?.rank ?? 100_000;
+    const brank = br?.rank ?? 100_000;
+    if (arank !== brank) return arank - brank;
+    const asp = ar?.statProduct ?? -1;
+    const bsp = br?.statProduct ?? -1;
+    if (asp !== bsp) return bsp - asp;
+    const aiv = a.mon.ivPercent ?? -1;
+    const biv = b.mon.ivPercent ?? -1;
+    if (aiv !== biv) return biv - aiv;
+    return 0;
+  }
+  if (role.kind === "lc") {
+    const arank = a.lc?.rank ?? 100_000;
+    const brank = b.lc?.rank ?? 100_000;
+    if (arank !== brank) return arank - brank;
+    const asp = a.lc?.statProduct ?? -1;
+    const bsp = b.lc?.statProduct ?? -1;
+    if (asp !== bsp) return bsp - asp;
+    const aiv = a.mon.ivPercent ?? -1;
+    const biv = b.mon.ivPercent ?? -1;
+    if (aiv !== biv) return biv - aiv;
+    return 0;
+  }
+  const ap = a.raidIv?.percent ?? -1;
+  const bp = b.raidIv?.percent ?? -1;
+  if (ap !== bp) return bp - ap;
+  return cmpNum(b.mon.atk ?? -1, a.mon.atk ?? -1);
+}
+
+function byQuality(role: RoleDef): (a: GradedMon, b: GradedMon) => number {
+  return (a, b) => qualityCmp(a, b, role) || a.mon.sourceRow - b.mon.sourceRow;
+}
+
+function hundoQualityCmp(a: GradedMon, b: GradedMon): number {
+  const atk = cmpNum(b.mon.atk ?? -1, a.mon.atk ?? -1);
+  if (atk) return atk;
+  return cmpNum(b.mon.ivPercent ?? -1, a.mon.ivPercent ?? -1);
+}
+
+/** On a tie the core hundo keeps the 4* seat. */
+function bestHundoPreferCore(scan: GradedMon[], core: GradedMon[]): GradedMon | null {
+  const scanBest = bestHundo(scan);
+  const coreBest = bestHundo(core);
+  if (!coreBest) return scanBest;
+  if (!scanBest) return coreBest;
+  if (hundoQualityCmp(scanBest, coreBest) < 0) return scanBest;
+  return coreBest;
+}
+
+function coreUpgradeReason(scan: GradedMon, coreMon: GradedMon, role: RoleDef): string {
+  const nick = coreMon.mon.nickname?.trim();
+  const name = nick ? `${nick} CP ${coreMon.mon.cp}` : `CP ${coreMon.mon.cp}`;
+  return `Core upgrade · ${roleLabel(role)} · ${name} · ${qualityRankText(scan, role)} vs ${qualityRankText(coreMon, role)}`;
+}
+
+function holdsReason(role: RoleDef): string {
+  return `Holds · ${roleLabel(role)}`;
+}
+
+interface CoreSeatPlan {
+  keepJobs: Map<GradedMon, RoleDef>;
+  upgrades: Map<GradedMon, { role: RoleDef; core: GradedMon }>;
+  blocked: Map<GradedMon, RoleDef>;
+  held: boolean;
+}
+
+/**
+ * Core copies with unique IVs occupy seats first. Scan copies fill seats that
+ * are still open. One strictly better scan copy per occupied seat is marked
+ * for LOOK; further copies are blocked.
+ */
+function planCoreSeats(
+  scanRows: GradedMon[],
+  coreRows: GradedMon[],
+  roles: RoleDef[],
+  costOf: (g: GradedMon, role: RoleDef) => number | null,
+  fillOrder: readonly PvpLeague[],
+  identityKeeps: (g: GradedMon) => boolean,
+): CoreSeatPlan {
+  const keepJobs = new Map<GradedMon, RoleDef>();
+  const upgrades = new Map<GradedMon, { role: RoleDef; core: GradedMon }>();
+  const blocked = new Map<GradedMon, RoleDef>();
+  const occupiedCandidates = new Map<GradedMon, RoleDef>();
+  const assignedScan = new Set<GradedMon>();
+  const assignedCore = new Set<GradedMon>();
+  let held = false;
+  const live = [...roles].filter((role) => role.slots > 0).sort((a, b) => compareRoles(a, b, fillOrder));
+
+  for (const role of live) {
+    const order = byQuality(role);
+    const coreEligible = coreRows
+      .filter((g) => !assignedCore.has(g) && costOf(g, role) != null)
+      .sort(order);
+    const occupants = coreEligible.slice(0, role.slots);
+    if (occupants.length > 0) held = true;
+    for (const g of occupants) {
+      assignedCore.add(g);
+      pushReason(g, holdsReason(role));
+    }
+    const open = role.slots - occupants.length;
+    const scanEligible = scanRows
+      .filter((g) => !assignedScan.has(g) && costOf(g, role) != null)
+      .sort(order);
+    for (const g of scanEligible.slice(0, open)) {
+      keepJobs.set(g, role);
+      assignedScan.add(g);
+    }
+    if (occupants.length === 0) continue;
+    let challengers = scanEligible.filter((g) => !assignedScan.has(g));
+    for (const g of scanEligible) {
+      if (!occupiedCandidates.has(g)) occupiedCandidates.set(g, role);
+    }
+    for (const occ of [...occupants].reverse()) {
+      const idx = challengers.findIndex((g) => qualityCmp(g, occ, role) < 0 && !identityKeeps(g));
+      if (idx < 0) continue;
+      const scan = challengers[idx];
+      upgrades.set(scan, { role, core: occ });
+      assignedScan.add(scan);
+      pushReason(occ, `Scan upgrade · CP ${scan.mon.cp} · ${qualityRankText(scan, role)} vs ${qualityRankText(occ, role)}`);
+      challengers = challengers.filter((g) => g !== scan);
+    }
+  }
+
+  for (const [g, role] of occupiedCandidates) {
+    if (!keepJobs.has(g) && !upgrades.has(g)) blocked.set(g, role);
+  }
+  return { keepJobs, upgrades, blocked, held };
+}
+
 /** Calcy History is last-scan-first; tables follow first-scanned-first (scan time, then CSV line). */
 export function compareScanStream(a: Mon, b: Mon): number {
   const ta = scanTimeMs(a.scanDate);
@@ -805,8 +961,10 @@ function scanTimeMs(raw?: string): number | null {
 /**
  * Wide-minmax box grader. KEEP if any keep class fires.
  * DUMP extras in scan order (first scanned at top).
+ * `core` is an optional second CSV of Pokémon already kept. Those rows occupy
+ * seats and are returned on `result.core`, not in the scan tracks.
  */
-export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
+export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult {
   const gm: RankGm = getRankGm(meta.glEvolution);
   const cutoff = pvpCutoff(meta);
   const listKeep = pvpListCutoff(meta);
@@ -902,7 +1060,33 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     return { ranks, metas, primary, primaryMeta };
   };
 
-  const graded: GradedMon[] = mons.map((mon) => {
+  const corePile = new WeakMap<Mon, "core">();
+  const echoSet = new Set<Mon>();
+  let scanMons = mons;
+  const seatCore: Mon[] = [];
+  const idleCore: Mon[] = [];
+  if (core.length > 0) {
+    const seen = new Set<string>();
+    for (const mon of core) {
+      corePile.set(mon, "core");
+      if (mon.ivUnique === false) idleCore.push(mon);
+      else {
+        seatCore.push(mon);
+        const fp = coreFingerprint(mon);
+        if (fp) seen.add(fp);
+      }
+    }
+    const scan: Mon[] = [];
+    for (const mon of mons) {
+      const fp = coreFingerprint(mon);
+      if (fp && seen.has(fp)) echoSet.add(mon);
+      else scan.push(mon);
+    }
+    scanMons = scan;
+  }
+  const gradedInput = core.length > 0 ? [...scanMons, ...echoSet, ...seatCore, ...idleCore] : mons;
+
+  const graded: GradedMon[] = gradedInput.map((mon) => {
     const ind = independentsOf(mon.speciesId);
     const glTargets = ind.listedGl.filter(
       (t) => !isMegaStage(t) && canBecome(mon.speciesId, t, meta, mon.gender),
@@ -955,19 +1139,34 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     };
   });
 
+  for (const g of graded) {
+    if (corePile.get(g.mon) === "core" && g.mon.ivUnique === false) {
+      pushReason(g, "IVs not unique — does not hold a seat");
+    }
+  }
+
   const groups = new Map<string, GradedMon[]>();
   for (const g of graded) {
+    if (echoSet.has(g.mon)) continue;
+    if (corePile.get(g.mon) === "core" && g.mon.ivUnique === false) continue;
     const key = familyKey(g.mon.speciesId, meta);
     const list = groups.get(key);
     if (list) list.push(g);
     else groups.set(key, [g]);
   }
 
+  const upgradeOf = new Map<GradedMon, { role: RoleDef; core: GradedMon }>();
+  const blockedScan = new Map<GradedMon, RoleDef>();
+  const lostHundo = new Set<GradedMon>();
+  const coreAnchored = new Set<string>();
+
   const groupSummaries: GradeResult["groups"] = [];
 
-  for (const [key, rows] of groups) {
+  for (const [key, mixed] of groups) {
+    const coreRows = mixed.filter((g) => corePile.get(g.mon) === "core");
+    const rows = mixed.filter((g) => corePile.get(g.mon) !== "core");
     const n = rows.length;
-    const ind = independentsOf(rows[0].mon.speciesId);
+    const ind = independentsOf(mixed[0].mon.speciesId);
     const glIds = keepGl ? ind.gl : [];
     const ulIds = keepUl ? ind.ul : [];
     const mlIds = keepMl ? ind.ml : [];
@@ -992,7 +1191,16 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       : [];
     const raidEligible = raidRows.filter((g) => raidIvMeets(g, raidIvKeep));
     const raidOrdered = [...raidEligible].sort(raidOrder);
-    const hundoSlot = keepAllGood ? null : bestHundo(rows);
+    const hundoSlot = keepAllGood
+      ? null
+      : coreRows.length === 0
+        ? bestHundo(rows)
+        : bestHundoPreferCore(rows, coreRows);
+    if (hundoSlot && corePile.get(hundoSlot.mon) === "core") {
+      coreAnchored.add(key);
+      pushReason(hundoSlot, "Holds · 4*");
+      for (const g of rows) if (isHundo(g.mon)) lostHundo.add(g);
+    }
 
     const cappedRole = (id: string, kind: CappedKind, index: Map<string, PvpokeRankRow>): RoleDef => ({
       kind,
@@ -1015,7 +1223,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       roles.push({ kind: "raid", speciesId: raidIds[0], slots: raidSlots, metaRank: 10_000 });
     }
 
-    const jobs = assignFamilyJobs(rows, roles, (g, role) => {
+    const costOf = (g: GradedMon, role: RoleDef): number | null => {
       if (isCappedKind(role.kind)) {
         if (!canBecome(g.mon.speciesId, role.speciesId, meta, g.mon.gender)) return null;
         if (!fitsLeagueCap(g.mon, role.speciesId, capNumber(role.kind), gm).fits) return null;
@@ -1033,7 +1241,23 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (!raidIvMeets(g, raidIvKeep)) return null;
       const pct = g.raidIv?.percent ?? 0;
       return Math.round((100 - pct) * 100);
-    }, fillOrder);
+    };
+    const identityKeeps = (g: GradedMon) =>
+      idKeepClasses(g.mon, meta, keepShadow, keepLucky, keepFavorite).length > 0;
+    const skipReview = (g: GradedMon) =>
+      identityKeeps(g) || (isHundo(g.mon) && (keepAllGood || hundoSlot === g));
+
+    const coreSits = coreRows.some((g) => roles.some((role) => costOf(g, role) != null));
+    let jobs: Map<GradedMon, RoleDef>;
+    if (!coreSits) {
+      jobs = assignFamilyJobs(rows, roles, costOf, fillOrder);
+    } else {
+      const plan = planCoreSeats(rows, coreRows, roles, costOf, fillOrder, skipReview);
+      jobs = plan.keepJobs;
+      if (plan.held) coreAnchored.add(key);
+      for (const [g, info] of plan.upgrades) upgradeOf.set(g, info);
+      for (const [g, role] of plan.blocked) blockedScan.set(g, role);
+    }
 
     const winnersByRole = new Map<string, GradedMon[]>();
     for (const [g, role] of jobs) {
@@ -1104,7 +1328,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
           const over = cappedCapMiss(g, role.speciesId, role.kind, gm);
           if (over) pushReason(g, over);
         }
-      } else if (roles.length) {
+      } else if (roles.length && !upgradeOf.has(g) && !blockedScan.has(g) && !lostHundo.has(g)) {
         pushReason(g, "No PvP/raid job — extra in this family");
       }
 
@@ -1121,7 +1345,8 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (classes.includes("mythical")) pushReason(g, "Mythical");
       if (classes.includes("limited")) pushReason(g, "Limited (UB / Dialgadex-style)");
 
-      if (!job) {
+      const coreReview = upgradeOf.has(g) || blockedScan.has(g) || lostHundo.has(g);
+      if (!job && !coreReview) {
         if (keepGl) {
           const better = betterAsReason(g);
           if (better) pushReason(g, better);
@@ -1158,7 +1383,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       }
     }
 
-    groupSummaries.push({ key, size: n, kept: 0 });
+    if (n > 0) groupSummaries.push({ key, size: n, kept: 0 });
   }
 
   // Family ranking sorts per-group copies; tracks follow first-scanned-first.
@@ -1176,8 +1401,27 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   }
 
   for (const g of graded) {
+    if (echoSet.has(g.mon)) {
+      const classes = idKeepClasses(g.mon, meta, keepShadow, keepLucky, keepFavorite);
+      g.keepClasses = classes;
+      if (classes.length) g.verdict = "KEEP";
+      else {
+        g.verdict = "LOOK";
+        pushReason(g, "Same Pokémon is in core");
+      }
+      continue;
+    }
+    if (corePile.get(g.mon) === "core") continue;
+
     if (g.keepClasses.length) {
       g.verdict = "KEEP";
+      continue;
+    }
+
+    const upgrade = upgradeOf.get(g);
+    if (upgrade) {
+      g.verdict = "LOOK";
+      pushReason(g, coreUpgradeReason(g, upgrade.core, upgrade.role));
       continue;
     }
 
@@ -1195,7 +1439,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     }
 
     const key = familyKey(g.mon.speciesId, meta);
-    const anchored = groupAnchor.get(key) === true;
+    const anchored = groupAnchor.get(key) === true || coreAnchored.has(key);
     const ind = independentsOf(g.mon.speciesId);
     const pvpOrRaidFamily =
       (keepGl ? ind.gl.length : 0) +
@@ -1241,8 +1485,10 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     g.verdict = "DUMP";
     pushReason(
       g,
-      extraOfKeeper.has(g)
-        ? "Extra copy — family already has a keeper"
+      blockedScan.has(g) || lostHundo.has(g)
+        ? `Core holds this seat · ${blockedScan.has(g) ? roleLabel(blockedScan.get(g)!) : "4*"}`
+        : extraOfKeeper.has(g)
+          ? "Extra copy — family already has a keeper"
         : extraOfFamily.has(g)
           ? `Extra copy — keeping ${familyKeep} best of PvP/raid family`
           : familyKeep === 0
@@ -1255,7 +1501,12 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const look: GradedMon[] = [];
   const dump: GradedMon[] = [];
   const keptByKey = new Map<string, number>();
+  const coreOut: GradedMon[] = [];
   for (const g of graded) {
+    if (corePile.get(g.mon) === "core") {
+      coreOut.push(g);
+      continue;
+    }
     if (g.verdict === "KEEP") {
       keep.push(g);
       const key = familyKey(g.mon.speciesId, meta);
@@ -1268,6 +1519,12 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     row.kept = keptByKey.get(row.key) ?? 0;
   }
   groupSummaries.sort((a, b) => b.size - a.size || a.key.localeCompare(b.key));
+  coreOut.sort((a, b) => {
+    const name = a.mon.speciesName.localeCompare(b.mon.speciesName);
+    if (name) return name;
+    if (a.mon.cp !== b.mon.cp) return b.mon.cp - a.mon.cp;
+    return a.mon.sourceRow - b.mon.sourceRow;
+  });
   keep.sort(byScanStream);
   look.sort(byScanStream);
   dump.sort(byScanStream);
@@ -1276,6 +1533,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     keep,
     look,
     dump,
+    core: coreOut,
     pvpRankKeep: cutoff,
     pvpListKeep: listKeep,
     pvpAny,
