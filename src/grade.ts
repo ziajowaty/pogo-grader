@@ -6,6 +6,7 @@ import type {
   MetaLeagueRank,
   Mon,
   PvpJob,
+  PvpLeague,
   PvpokeRankRow,
   Verdict,
   Gender,
@@ -17,6 +18,7 @@ import {
   clampPvpRankKeep,
   clampRaidIvKeep,
   clampRaidKeep,
+  normalizePvpFillOrder,
   DEFAULT_FAMILY_KEEP,
   DEFAULT_PVP_ANY,
   DEFAULT_PVP_KEEP,
@@ -85,6 +87,14 @@ function gatedGlSet(meta: Meta, listKeep: number): Set<string> {
     return new Set(rows.filter((row) => row.rank <= listKeep).map((row) => row.speciesId));
   }
   return meta.glTop500;
+}
+
+function gatedLcSet(meta: Meta, listKeep: number): Set<string> {
+  const rows = meta.lcRankings;
+  if (rows && rows.length > 0) {
+    return new Set(rows.filter((row) => row.rank <= listKeep).map((row) => row.speciesId));
+  }
+  return meta.lcTop100;
 }
 
 function raidGateId(speciesId: string, meta: Meta, gender: Gender): string | null {
@@ -267,7 +277,11 @@ function roleKey(role: Pick<RoleDef, "kind" | "speciesId">): string {
   return `${role.kind}:${role.speciesId}`;
 }
 
-const KIND_ORDER: Record<JobKind, number> = { gl: 0, ul: 1, ml: 2, lc: 3, raid: 4 };
+function kindRank(kind: JobKind, order: readonly PvpLeague[]): number {
+  if (kind === "raid") return order.length;
+  const at = order.indexOf(kind);
+  return at < 0 ? order.length : at;
+}
 
 type CappedKind = "gl" | "ul" | "ml";
 
@@ -295,28 +309,29 @@ function listCapOf(kind: CappedKind): number {
   return ML_LIST_CAP;
 }
 
-function compareRoles(a: RoleDef, b: RoleDef): number {
-  const ka = KIND_ORDER[a.kind];
-  const kb = KIND_ORDER[b.kind];
+function compareRoles(a: RoleDef, b: RoleDef, order: readonly PvpLeague[]): number {
+  const ka = kindRank(a.kind, order);
+  const kb = kindRank(b.kind, order);
   if (ka !== kb) return ka - kb;
   if (a.metaRank !== b.metaRank) return a.metaRank - b.metaRank;
   return a.speciesId.localeCompare(b.speciesId);
 }
 
 /**
- * One job per copy. Fill Great League before Little Cup, and within a league
+ * One job per copy. Bright leagues fill in `fillOrder`. Within a league,
  * exhaust the higher PvPoke species (Dragonair #85 before Dragonite #340)
- * before touching the next identity. Raid leftovers last. Each GL stage and LC
- * species gets `pvpKeep` seats (1–3, default 1). Each raid attacker gets
- * `raidKeep` seats (1–12, default 1).
+ * before touching the next identity. Raid leftovers last. Each capped stage
+ * and each Little Cup species gets `pvpKeep` seats (1–3, default 1). Each raid
+ * attacker gets `raidKeep` seats (1–12, default 1).
  */
 function assignFamilyJobs(
   rows: GradedMon[],
   roles: RoleDef[],
   costOf: (g: GradedMon, role: RoleDef) => number | null,
+  fillOrder: readonly PvpLeague[],
 ): Map<GradedMon, RoleDef> {
   const assigned = new Map<GradedMon, RoleDef>();
-  const live = [...roles].filter((role) => role.slots > 0).sort(compareRoles);
+  const live = [...roles].filter((role) => role.slots > 0).sort((a, b) => compareRoles(a, b, fillOrder));
   if (rows.length === 0 || live.length === 0) return assigned;
 
   const infinite = live.some((role) => !Number.isFinite(role.slots));
@@ -632,13 +647,24 @@ function noKeeperFamilyReason(
   keepUl: boolean,
   keepMl: boolean,
   keepLc: boolean,
+  fillOrder: readonly PvpLeague[],
 ): string {
-  const label =
-    (keepGl ? bestRankedLabel(ind.gl, glIndex, "GL") : null) ||
-    (keepUl ? bestRankedLabel(ind.ul, ulIndex, "UL") : null) ||
-    (keepMl ? bestRankedLabel(ind.ml, mlIndex, "ML") : null) ||
-    (keepLc ? bestRankedLabel(ind.lc, lcIndex, "LC") : null) ||
-    (ind.raid.length ? `${prettySpeciesId(ind.raid[0])} raid` : null);
+  const on: Record<PvpLeague, boolean> = { gl: keepGl, ul: keepUl, ml: keepMl, lc: keepLc };
+  const ids: Record<PvpLeague, string[]> = { gl: ind.gl, ul: ind.ul, ml: ind.ml, lc: ind.lc };
+  const index: Record<PvpLeague, Map<string, PvpokeRankRow>> = {
+    gl: glIndex,
+    ul: ulIndex,
+    ml: mlIndex,
+    lc: lcIndex,
+  };
+  const short: Record<PvpLeague, string> = { gl: "GL", ul: "UL", ml: "ML", lc: "LC" };
+  let label: string | null = null;
+  for (const kind of fillOrder) {
+    if (!on[kind]) continue;
+    label = bestRankedLabel(ids[kind], index[kind], short[kind]);
+    if (label) break;
+  }
+  if (!label && ind.raid.length) label = `${prettySpeciesId(ind.raid[0])} raid`;
   if (!label) return "PvP/raid family: IVs miss KEEP";
   return `PvP/raid family: ${label} — IVs miss KEEP`;
 }
@@ -797,6 +823,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const keepUl = meta.keepUl === true;
   const keepMl = meta.keepMl === true;
   const keepLc = keepLcOn(meta);
+  const fillOrder = normalizePvpFillOrder(meta.pvpFillOrder);
   const glSlots = pvpKeep;
   const lcSlots = pvpKeep;
   const raidSlots = raidKeep;
@@ -808,7 +835,11 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
   const ulOf = meta.ulRankings?.length || UL_LIST_CAP;
   const mlOf = meta.mlRankings?.length || ML_LIST_CAP;
   const lcOf = meta.lcRankings?.length || LC_LIST_CAP;
-  const gateMeta: Meta = { ...meta, glTop500: gatedGlSet(meta, listKeep) };
+  const gateMeta: Meta = {
+    ...meta,
+    glTop500: gatedGlSet(meta, listKeep),
+    lcTop100: gatedLcSet(meta, listKeep),
+  };
   const families = membersByFamily(meta);
   const independentGlCache = new Map<string, string[]>();
   const listedGlCache = new Map<string, string[]>();
@@ -832,7 +863,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
         const listed = independentGlIds(members, meta.glTop500, meta);
         listedGlCache.set(key, listed);
         independentGlCache.set(key, listed.filter((id) => gateMeta.glTop500.has(id)));
-        independentLcCache.set(key, independentLcIds(members, meta));
+        independentLcCache.set(key, independentLcIds(members, gateMeta));
       }
       const ultra = openLeagueIds(members, meta.ulRankings, listKeep, pvpAny, meta, gm);
       listedUlCache.set(key, ultra.listed);
@@ -892,7 +923,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       ids.filter((t) => !isMegaStage(t) && canBecome(mon.speciesId, t, meta, mon.gender));
     const ultra = keepUl ? rankStages(mon, stageTargets(ind.listedUl), ULTRA_LEAGUE_CAP, ulIndex, ulOf) : null;
     const master = keepMl ? rankStages(mon, stageTargets(ind.listedMl), MASTER_LEAGUE_CAP, mlIndex, mlOf) : null;
-    const lc = pvpAny ? ind.lc.includes(canonId(mon.speciesId)) : isLcSpecies(mon.speciesId, meta);
+    const lc = pvpAny ? ind.lc.includes(canonId(mon.speciesId)) : isLcSpecies(mon.speciesId, gateMeta);
     const lcRow = lookupRank(mon.speciesId, lcIndex);
     const raidTarget =
       raidGateId(mon.speciesId, meta, mon.gender) ??
@@ -942,13 +973,15 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     const mlIds = keepMl ? ind.ml : [];
     const lcIds = keepLc ? ind.lc : [];
     const raidIds = ind.raid;
-    rows.sort((a, b) => {
-      if (glIds.length) return glOrder(a, b);
-      if (ulIds.length) return ulOrder(a, b);
-      if (mlIds.length) return mlOrder(a, b);
-      if (lcIds.length) return lcOrder(a, b);
-      return raidOrder(a, b);
-    });
+    const sortByKind: Record<PvpLeague, (a: GradedMon, b: GradedMon) => number> = {
+      gl: glOrder,
+      ul: ulOrder,
+      ml: mlOrder,
+      lc: lcOrder,
+    };
+    const idsByKind: Record<PvpLeague, string[]> = { gl: glIds, ul: ulIds, ml: mlIds, lc: lcIds };
+    const lead = fillOrder.find((kind) => idsByKind[kind].length);
+    rows.sort(lead ? sortByKind[lead] : raidOrder);
     rows.forEach((g, i) => {
       g.copiesInGroup = n;
       g.copyRankInGroup = i + 1;
@@ -1000,7 +1033,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
       if (!raidIvMeets(g, raidIvKeep)) return null;
       const pct = g.raidIv?.percent ?? 0;
       return Math.round((100 - pct) * 100);
-    });
+    }, fillOrder);
 
     const winnersByRole = new Map<string, GradedMon[]>();
     for (const [g, role] of jobs) {
@@ -1179,7 +1212,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
         pushReason(
           g,
           familyKeep === 0
-            ? noKeeperFamilyReason(ind, glIndex, ulIndex, mlIndex, lcIndex, keepGl, keepUl, keepMl, keepLc)
+            ? noKeeperFamilyReason(ind, glIndex, ulIndex, mlIndex, lcIndex, keepGl, keepUl, keepMl, keepLc, fillOrder)
             : `PvP/raid family: ${familyKeep} best (no keeper)`,
         );
         continue;
@@ -1258,6 +1291,7 @@ export function gradeBox(mons: Mon[], meta: Meta): GradeResult {
     keepLc,
     keepUl,
     keepMl,
+    pvpFillOrder: fillOrder,
     groups: groupSummaries,
   };
 }

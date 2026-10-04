@@ -164,14 +164,39 @@ export interface GradedMon {
   raidIv?: RaidIvRank | null;
   /**
    * Exclusive PvP/raid job for this copy (one job per Pokémon).
-   * Great League fills before Ultra, then Master, then Little Cup; within a
-   * league, higher PvPoke species fill first (Dragonair before Dragonite).
-   * Raid leftovers last. A league that is off is not a job. Ultra and Master
-   * stay off until selected.
+   * Bright leagues fill in `pvpFillOrder` (default Great, Ultra, Master, Little Cup).
+   * Within a league, higher PvPoke species fill first (Dragonair before Dragonite).
+   * Raid leftovers last. A faded league is not a job. Ultra and Master stay
+   * faded until selected.
    */
   pvpJob?: PvpJob | null;
   copiesInGroup: number;
   copyRankInGroup: number;
+}
+
+/** Leagues that can claim a PvP seat, in the default fill order. */
+export const DEFAULT_PVP_FILL_ORDER = ["gl", "ul", "ml", "lc"] as const;
+export type PvpLeague = (typeof DEFAULT_PVP_FILL_ORDER)[number];
+
+export function isPvpLeague(value: string): value is PvpLeague {
+  return (DEFAULT_PVP_FILL_ORDER as readonly string[]).includes(value);
+}
+
+/** A permutation of the four leagues. Unknown entries are dropped; missing leagues are appended in default order. */
+export function normalizePvpFillOrder(raw: unknown): PvpLeague[] {
+  const seen = new Set<PvpLeague>();
+  const out: PvpLeague[] = [];
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (typeof item !== "string" || !isPvpLeague(item) || seen.has(item)) continue;
+      seen.add(item);
+      out.push(item);
+    }
+  }
+  for (const league of DEFAULT_PVP_FILL_ORDER) {
+    if (!seen.has(league)) out.push(league);
+  }
+  return out;
 }
 
 /** One PvP or raid identity this copy is assigned to. */
@@ -217,6 +242,8 @@ export interface GradeResult {
   keepUl: boolean;
   /** When true, Master League is a KEEP job. Default false. */
   keepMl: boolean;
+  /** League fill order used for this grade. Raid stays after these. */
+  pvpFillOrder: PvpLeague[];
   groups: Array<{
     key: string;
     size: number;
@@ -227,9 +254,9 @@ export interface GradeResult {
 export interface Meta {
   glTop500: Set<string>;
   lcTop100: Set<string>;
-  /** Ordered PvPoke GL overall list (up to 500 unique species). */
+  /** Ordered PvPoke GL overall list (up to the species cap). */
   glRankings?: PvpokeRankRow[];
-  /** Ordered PvPoke Little Cup overall list (up to 100 unique species). */
+  /** Ordered PvPoke Little Cup overall list (up to the species cap). */
   lcRankings?: PvpokeRankRow[];
   /** Ordered PvPoke Ultra League overall list. Present only after Ultra is selected. */
   ulRankings?: PvpokeRankRow[];
@@ -255,11 +282,11 @@ export interface Meta {
   evoReach?: Record<string, string[]>;
   /** Keep GL/LC IVs at this rank or better. Rank 1 is best. Default 500. */
   pvpRankKeep?: number;
-  /** Keep PvPoke GL overall species this far down. Rank 1 is best. Default 500. Ignored when `pvpAny`. */
+  /** Keep PvPoke species this far down in each league, including Little Cup. Rank 1 is best. Default 500. Ignored when `pvpAny`. */
   pvpListKeep?: number;
   /**
-   * When true, Great League is any species with base stats (not only the PvPoke top 500),
-   * and Little Cup is any unevolved species that can still evolve (not only the top 100).
+   * When true, Great League is any species with base stats (not only the PvPoke list),
+   * and Little Cup is any unevolved species that can still evolve (not only the Little Cup list).
    * IV floor (`pvpRankKeep`) still applies. Default false.
    */
   pvpAny?: boolean;
@@ -284,9 +311,10 @@ export interface Meta {
    * in that junk when `keepFavorite` is off. A shadow is included when
    * `keepShadow` is off.
    * Default 2. Does not change KEEP slot caps (`pvpKeep` per GL stage and LC species,
-   * `raidKeep` per raid attacker). Each copy gets at most one of those jobs. GL seats fill
-   * before LC; within a league, higher PvPoke species exhaust their seats before
-   * a worse evo. Raid is last. Unlisted forms (Dratini in GL) are not jobs.
+   * `raidKeep` per raid attacker). Each copy gets at most one of those jobs. Bright
+   * leagues fill in `pvpFillOrder` (default Great, Ultra, Master, Little Cup);
+   * within a league, higher PvPoke species exhaust their seats before a worse evo.
+   * Raid is last. Unlisted forms (Dratini in GL) are not jobs.
    * `keepGl` / `keepLc` false drops that league's jobs and floor.
    */
   familyKeep?: number;
@@ -336,6 +364,13 @@ export interface Meta {
    * PvP floor. Default false. Rankings are fetched only while this is on.
    */
   keepMl?: boolean;
+  /**
+   * Order in which bright leagues claim a copy. Faded leagues stay in the list
+   * and are skipped. Within a league, better PvPoke species still fill first.
+   * Raid seats stay after every league. Default Great League, Ultra League,
+   * Master League, Little Cup.
+   */
+  pvpFillOrder?: PvpLeague[];
   /** How KEEP PvP species lists were loaded. */
   pvpokeSource?: "live" | "cache" | "bundled";
   pvpokeFetchedAt?: number;
@@ -348,11 +383,12 @@ export interface Meta {
 export const DEFAULT_PVP_RANK_KEEP = 500;
 export const PVP_RANK_OF = 4096;
 
-/** How far down PvPoke GL overall a species still counts as PvP. */
-export const GL_LIST_CAP = 500;
-export const UL_LIST_CAP = 500;
-export const ML_LIST_CAP = 500;
-export const LC_LIST_CAP = 100;
+/** Unique species kept from one PvPoke ranking file, and the species-cutoff maximum. */
+export const PVP_LIST_CAP = 1000;
+export const GL_LIST_CAP = PVP_LIST_CAP;
+export const UL_LIST_CAP = PVP_LIST_CAP;
+export const ML_LIST_CAP = PVP_LIST_CAP;
+export const LC_LIST_CAP = PVP_LIST_CAP;
 export const DEFAULT_PVP_LIST_KEEP = 500;
 /** Off: only the PvPoke GL/LC lists count. On: any species with stats can be PvP. */
 export const DEFAULT_PVP_ANY = false;
@@ -393,7 +429,7 @@ export function clampPvpRankKeep(n: unknown): number {
 export function clampPvpListKeep(n: unknown): number {
   const v = typeof n === "number" ? n : Number(n);
   if (!Number.isFinite(v)) return DEFAULT_PVP_LIST_KEEP;
-  return Math.min(GL_LIST_CAP, Math.max(1, Math.round(v)));
+  return Math.min(PVP_LIST_CAP, Math.max(1, Math.round(v)));
 }
 
 export function clampPvpKeep(n: unknown): number {

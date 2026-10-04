@@ -30,7 +30,8 @@ import evolutionsJson from "../data/evolutions.json";
 import speciesTypesJson from "../data/species-types.json";
 
 const PVPOKE_TTL_MS = 24 * 60 * 60 * 1000;
-const PVPOKE_CACHE_KEY = "pogo-grader.pvpokeLists";
+/** v2 stores up to 1000 species. Older caches were cut at 500 (GL) and 100 (LC). */
+const PVPOKE_CACHE_KEY = "pogo-grader.pvpokeLists.v2";
 const RAID_TTL_MS = 24 * 60 * 60 * 1000;
 const RAID_CACHE_KEY = "pogo-grader.raidAttackers.dittobase";
 const RAID_LIVE_MIN = 40;
@@ -42,8 +43,8 @@ const UL_RANKINGS_URL =
   "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-2500.json";
 const ML_RANKINGS_URL =
   "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-10000.json";
-const UL_CACHE_KEY = "pogo-grader.pvpokeUltra";
-const ML_CACHE_KEY = "pogo-grader.pvpokeMaster";
+const UL_CACHE_KEY = "pogo-grader.pvpokeUltra.v2";
+const ML_CACHE_KEY = "pogo-grader.pvpokeMaster.v2";
 interface NamedListFile {
   comment?: string;
   speciesIds: string[];

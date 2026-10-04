@@ -7,7 +7,7 @@ import {
   rankingsRowMatches,
 } from "./meta";
 import { gradeBox, compareScanStream } from "./grade";
-import { clampFamilyKeep, clampPvpKeep, clampRaidIvKeep, clampRaidKeep, FAMILY_KEEP_MIN, PVP_KEEP_MAX, PVP_KEEP_MIN, RAID_IV_KEEP_MIN, RAID_KEEP_MAX, RAID_KEEP_MIN, type Mon } from "./types";
+import { clampFamilyKeep, clampPvpKeep, clampPvpListKeep, clampRaidIvKeep, clampRaidKeep, FAMILY_KEEP_MIN, normalizePvpFillOrder, PVP_KEEP_MAX, PVP_KEEP_MIN, RAID_IV_KEEP_MIN, RAID_KEEP_MAX, RAID_KEEP_MIN, type Mon } from "./types";
 import { cpAsSpecies, fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, LITTLE_CUP_CAP, MASTER_LEAGUE_CAP, ULTRA_LEAGUE_CAP } from "./rank";
 
 function must(cond: boolean, message: string): void {
@@ -63,6 +63,9 @@ must(result.keepGl === true, "default KEEP Great League");
 must(result.keepLc === true, "default KEEP Little Cup");
 must(result.keepUl === false, "default Ultra League off");
 must(result.keepMl === false, "default Master League off");
+must(result.pvpFillOrder.join(",") === "gl,ul,ml,lc", "default fill order");
+must(normalizePvpFillOrder(["lc", "bogus", "lc", "gl"]).join(",") === "lc,gl,ul,ml", "fill order drops unknown leagues and appends the rest");
+must(normalizePvpFillOrder(null).join(",") === "gl,ul,ml,lc", "missing fill order is the default");
 must(meta.ulRankings == null, "Ultra League list stays unloaded until selected");
 must(meta.mlRankings == null, "Master League list stays unloaded until selected");
 const askedLeagues = await loadMeta({ ultra: true, master: true });
@@ -76,6 +79,9 @@ must(
 );
 must(Array.isArray(meta.glRankings) && meta.glRankings.length === 500, "bundled GL rankings 500");
 must(Array.isArray(meta.lcRankings) && meta.lcRankings.length === 100, "bundled LC rankings 100");
+must(clampPvpListKeep(1000) === 1000, "species cutoff allows 1000");
+must(clampPvpListKeep(1001) === 1000, "species cutoff stops at 1000");
+must(clampPvpListKeep(500) === 500, "default species cutoff stays 500");
 const raidFinals = meta.raidRankings?.filter((row) => !row.asSpeciesId) ?? [];
 const raidKeepFinals = raidFinals.filter((row) => row.viable !== false);
 must(
@@ -909,6 +915,23 @@ const lcGate: typeof meta = {
 };
 const lcLegal = gradeBox([{ ...ivMon("wooper", "Wooper", 821, 0, 15, 15), cp: 500, level: 20 }], lcGate);
 must(lcLegal.keep[0]?.pvpJob?.kind === "lc", "500 CP wooper is Little Cup when GL is gated off");
+const wooperLcRank = wooperLcRow?.rank ?? 0;
+must(wooperLcRank > 1, "bundled wooper is past LC rank 1");
+const lcAtRank = gradeBox([{ ...ivMon("wooper", "Wooper", 825, 0, 15, 15), cp: 500, level: 20 }], {
+  ...lcGate,
+  pvpListKeep: wooperLcRank,
+});
+must(lcAtRank.keep[0]?.pvpJob?.kind === "lc", "wooper KEEPs Little Cup at its own species rank");
+const lcCutOff = gradeBox([{ ...ivMon("wooper", "Wooper", 826, 0, 15, 15), cp: 500, level: 20 }], {
+  ...lcGate,
+  pvpListKeep: wooperLcRank - 1,
+  familyKeep: 0,
+});
+const lcCutRow = [...lcCutOff.keep, ...lcCutOff.look, ...lcCutOff.dump][0];
+must(lcCutOff.keep.length === 0, "wooper outside the Little Cup cutoff does not KEEP");
+must(lcCutRow?.pvpJob?.kind !== "lc", "species cutoff drops a Little Cup wooper");
+must(lcCutRow?.keepClasses.includes("lc") !== true, "species cutoff drops the LC keep class");
+must(lcCutRow?.lcMeta?.rank === wooperLcRank, "cutoff still shows the Little Cup rank");
 const lcOff = gradeBox([{ ...ivMon("wooper", "Wooper", 823, 0, 15, 15), cp: 500, level: 20 }], {
   ...lcGate,
   keepLc: false,
@@ -1196,6 +1219,28 @@ const glBeforeUl = gradeBox([ivMon("machop", "Machop", 954, 0, 15, 15)], {
   keepFavorite: false,
 });
 must(glBeforeUl.keep[0]?.pvpJob?.kind === "gl", "Great League fills before Ultra League");
+const ulBeforeGl = gradeBox([ivMon("machop", "Machop", 970, 0, 15, 15)], {
+  ...meta,
+  keepUl: true,
+  ulRankings: ulList,
+  pvpFillOrder: ["ul", "gl", "ml", "lc"],
+  pvpRankKeep: 4096,
+  raidAttackers: new Set<string>(),
+  raidEvolution: {},
+  keepShadow: false,
+  keepLucky: false,
+  keepFavorite: false,
+});
+must(ulBeforeGl.pvpFillOrder.join(",") === "ul,gl,ml,lc", "echo Ultra-first fill order");
+must(ulBeforeGl.keep[0]?.pvpJob?.kind === "ul", "Ultra League fills before Great League when ordered first");
+const lcFirst = gradeBox(
+  [0, 1, 2].map((i) => ({ ...ivMon("bidoof", "Bidoof", 980 + i, 0, 15, 15), cp: 400 })),
+  { ...anyMeta, pvpFillOrder: ["lc", "gl", "ul", "ml"] },
+);
+must(
+  lcFirst.keep.map((g) => `${g.pvpJob?.kind}:${g.pvpJob?.speciesId}`).join(" ") === "lc:bidoof gl:bibarel gl:bidoof",
+  `Little Cup fills before Great League when ordered first, got ${lcFirst.keep.map((g) => `${g.pvpJob?.kind}:${g.pvpJob?.speciesId}`).join(" ")}`,
+);
 
 console.log(
   JSON.stringify(
