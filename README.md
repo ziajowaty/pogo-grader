@@ -26,7 +26,7 @@ npm run preview  # serve the production build
 2. AutoScan the rest in Calcy IV or Poke Genie, export CSV.
 3. Drop the CSV here. Nothing is uploaded.
 4. Three tracks in CSV order: **KEEP**, **LOOK**, **DUMP**.
-5. **KEEP PvP ≤** (default 500/4096). Bright **Lucky**, **Shadow**, and **Favorite** keep those tags. Fade a chip and that tag no longer protects the copy. **All 4\*** starts faded: one 4\* per family. Brighten it to keep every 4\*.
+5. **Seats** decide who can be kept. **PvP IV rank** (default 500/4096) decides who KEEPs. An empty seat still LOOKs its best copy. Bright **Lucky**, **Shadow**, and **Favorite** keep those tags. Fade a chip and that tag no longer protects the copy. **All 4\*** starts faded: one 4\* per family. Brighten it to keep every 4\*. The full rules are in [docs/grading.md](docs/grading.md).
 6. Read the DUMP grid, then transfer those copies yourself in GO.
 
 This app never talks to Scopely/Niantic and never taps Transfer.

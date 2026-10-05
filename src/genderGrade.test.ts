@@ -102,4 +102,23 @@ must(raidFemale?.raidIv?.evoSpeciesId === "gardevoir", `female Ralts raid ${raid
 must(!raidFemale?.raidIv?.evoSpeciesId?.startsWith("gallade"), "female Ralts raid is not a Gallade form");
 must(raidMale?.raidIv?.evoSpeciesId === "gardevoir", `male Ralts raid ${raidMale?.raidIv?.evoSpeciesId}`);
 
+const cubone = evoIds("cubone", "male");
+const cuboneShadow = evoIds("cubone_shadow", "male");
+must(cubone.includes("marowak") && !cubone.includes("marowak_alolan"), `Cubone GL ${cubone}`);
+must(
+  cuboneShadow.includes("marowak_shadow") && !cuboneShadow.includes("marowak_alolan_shadow"),
+  `Cubone Shadow GL ${cuboneShadow}`,
+);
+const reach = base.evoReach ?? {};
+must(reach.exeggcute?.includes("exeggutor_alolan") === true, "Exeggcute can still become Alolan Exeggutor");
+must(reach.koffing?.includes("weezing_galarian") === true, "Koffing can still become Galarian Weezing");
+must(reach.pikachu?.includes("raichu_alolan") === true, "Pikachu can still become Alolan Raichu");
+must(!reach.darumaka?.includes("darmanitan_galarian_standard"), "Darumaka is not Galarian Darmanitan");
+must(reach.darumaka_galarian?.includes("darmanitan_galarian_standard") === true, "Galarian Darumaka still evolves");
+must(!reach.zorua?.includes("zoroark_hisuian"), "Zorua is not Hisuian Zoroark");
+must(reach.zorua_hisuian?.includes("zoroark_hisuian") === true, "Hisuian Zorua still evolves");
+must(!reach.rattata_alolan?.includes("raticate"), "Alolan Rattata is not Kanto Raticate");
+must(reach.rattata_alolan?.includes("raticate_alolan") === true, "Alolan Rattata still becomes Alolan Raticate");
+must(!reach.slowpoke_galarian?.includes("slowbro_mega"), "Galarian Slowpoke is not Mega Slowbro");
+
 console.log("genderGrade tests passed");

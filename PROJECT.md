@@ -32,14 +32,17 @@ Not an overlay. Not a game client. CalcyIV / Poke Genie scan; this app decides.
 
 ## Grade law (wide-minmax)
 
+Full rules, including the two different "500"s and empty seats: [docs/grading.md](docs/grading.md).
+
 KEEP if any class fires. DUMP only if every keep class fails and the copy is not held as LOOK.
 
 - **KR-ID:** shiny, lucky, costume, background, 4\*, legendary, mythical, ultrabeast, dynamax, gigantamax, `@special` / special move, favorite. Missing flags → KEEP/LOOK, never DUMP.
-- **KR-SHADOW:** `keepShadow` (default on) and `shadow === true` → KEEP. Off: shadow is not a keep class and is not dump-protected. Useless copies DUMP like other junk. Shiny, PvP, raids, and the other rules can still KEEP the copy.
-- **KR-GL:** species (or its GL evo) in PvPoke GL overall top **500**. Keep copies with 4096-rank ≤ `pvpRankKeep`. Default cap **2** per species+form+shadow; `keepAllGood` keeps every floor copy. Extras DUMP if the group already has a KEEP. Limited / `@special` / non-unique IVs never DUMP. A bright Shadow chip also never DUMPs. A PvP family with **no** keeper stays LOOK.
-- **KR-LC:** PvPoke Little Cup top **100**, unevolved rank. Same floor, default cap **2**, `keepAllGood` keeps all floor copies.
-- **KR-RAID:** Limited → KEEP all. Default cap **6** non-limited raid copies; `keepAllGood` keeps every raid attacker. Extra 4\* are dupes unless `keepAllGood` (then keep all hundos). Always keep at least one hundo per species when any exist.
-- **DUMP fuel:** extras of a `species+form+shadow` that already has a KEEP or a 4096-floor copy; plus ungated junk extras (not the last copy). **CSV stream order** (KEEP / LOOK / DUMP tracks are a partition of the export, never re-sorted).
+- **KR-SHADOW:** `keepShadow` (default on) and `shadow === true` → KEEP. Off: shadow is not a keep class. Useless copies follow the seat rules.
+- **Seats:** one species in one bright league, plus one raid attacker per family. Top list uses the PvPoke species cutoff (`pvpListKeep`, default 500). Any species gives every evolution a seat. That cutoff is not the IV rank.
+- **KEEP bar:** IV rank ≤ `pvpRankKeep` (default 500 of 4096) fills up to `pvpKeep` copies per seat (default 1). Raid uses IV% ≥ `raidIvKeep` and `raidKeep` copies.
+- **Empty seat:** if a seat got zero KEEPs, LOOK the best remaining copy for that seat, even when it misses the bar. One Pokémon takes one seat, in fill order. Other copies DUMP.
+- **No seat:** LOOK the one best copy. DUMP extras.
+- **DUMP fuel:** extras after seats are filled, and junk extras that are not the best copy. **CSV stream order** (KEEP / LOOK / DUMP tracks are a partition of the export, never re-sorted).
 
 Fetch the two PvPoke ranking JSON files (extract IDs) and Dittobase best-attackers pages (eDPS per move type; A tier and better are raid KEEP). 24h browser cache. Keep `data/base-stats.json`, CPM, `gl-evolution.json`, the Dittobase raid snapshot, and limited/legendary/mythical vendored. Fail closed: live → stale cache → bundled snapshot. Node tests skip fetch. Vite `/ditto` proxy for local CORS; GitHub Pages uses the CI-pinned snapshot.
 

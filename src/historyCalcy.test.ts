@@ -177,8 +177,8 @@ const all = [...result.keep, ...result.look, ...result.dump];
 must(all.length === 134, "KEEP/LOOK/DUMP partition the box");
 must(result.keep.length + result.look.length + result.dump.length === 134, "no dropped rows");
 must(
-  result.keep.length === 38 && result.look.length === 43 && result.dump.length === 53,
-  `verdict snapshot keep/look/dump 38/43/53, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
+  result.keep.length === 38 && result.look.length === 46 && result.dump.length === 50,
+  `verdict snapshot keep/look/dump 38/46/50, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
 );
 
 must(
@@ -227,7 +227,7 @@ const DUMP_HEAD = [
   "123|Pik♂40|Pikachu|347",
   "132|TRRhy♂58|Rhyhorn|1298",
   "134|TRRhy♂71|Rhyhorn|1404",
-  "135|Pik♂62|Pikachu|594",
+  "111|GL 150|Charmander|832",
 ];
 must(
   result.keep.slice(0, KEEP_HEAD.length).map((g) => rowKey(g.mon)).join(" || ") === KEEP_HEAD.join(" || "),
@@ -335,17 +335,18 @@ must(!favMachop?.keepClasses.includes("lucky"), "Lucky off drops lucky class eve
 
 const noFavChip = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, keepFavorite: false });
 must(noFavChip.keepFavorite === false, "echo keepFavorite false");
-must(
-  noFavChip.dump.some((g) => g.mon.favorite && g.mon.speciesId === "machop"),
-  "Favorite off DUMPs the Machop that has no other keep class",
-);
 const machopFavOff = [...noFavChip.keep, ...noFavChip.look, ...noFavChip.dump].find((g) => g.mon.favorite);
 must(
   machopFavOff != null && !machopFavOff.keepClasses.includes("favorite"),
   "Favorite off drops favorite class on Machop",
 );
 must(machopFavOff?.keepClasses.includes("raid") !== true, "that Machop is not raid KEEP while Machamp is below A");
-must(machopFavOff?.verdict === "DUMP", "favorite Machop DUMPs when Favorite is off and Machamp is not a raid attacker");
+must(machopFavOff?.verdict !== "KEEP", "favorite Machop does not KEEP when Favorite is off");
+must(
+  machopFavOff?.verdict === "DUMP" ||
+    (machopFavOff?.verdict === "LOOK" && machopFavOff.reasons.some((r) => r.startsWith("Empty seat"))),
+  "favorite Machop DUMPs, or LOOKs only as an empty seat",
+);
 for (const lucky of luckies) {
   const g = [...noLucky.keep, ...noLucky.look, ...noLucky.dump].find(
     (row) => row.mon.sourceRow === lucky.sourceRow,
@@ -364,19 +365,17 @@ must(gibles.length === 17, "graded 17 Gible");
 const gibleKeep = gibles.filter((g) => g.verdict === "KEEP");
 const gibleLook = gibles.filter((g) => g.verdict === "LOOK");
 const gibleDump = gibles.filter((g) => g.verdict === "DUMP");
-if (gibleKeep.length === 0) {
-  must(gibleLook.length === result.familyKeep, "no-keeper Gible family LOOKs familyKeep best");
-  must(gibleDump.length === 17 - result.familyKeep, "Gible extras beyond familyKeep DUMP");
-  must(
-    gibleLook.every((g) => g.copyRankInGroup <= result.familyKeep),
-    "LOOK Gible are the best copies",
-  );
-} else {
-  must(
-    gibleDump.length === 17 - gibleKeep.length,
-    "if a Gible KEEPs, remaining copies DUMP",
-  );
-}
+must(gibleKeep.length + gibleLook.length + gibleDump.length === 17, "every Gible is graded");
+must(
+  gibleLook.every((g) => g.reasons.some((r) => r.startsWith("Empty seat"))),
+  "LOOK Gible hold an empty seat",
+);
+const gibleLookSeats = new Set(gibleLook.map((g) => `${g.lookJob?.kind}:${g.lookJob?.speciesId}`));
+must(gibleLookSeats.size === gibleLook.length, "each empty Gible seat LOOKs one copy");
+must(
+  gibleDump.every((g) => g.reasons.some((r) => r.includes("seats are filled"))),
+  "extra Gible dump because their seats are filled",
+);
 
 const froakies = all.filter((g) => g.mon.speciesId === "froakie");
 must(froakies.length > 0, "fixture has Froakie");
@@ -389,31 +388,10 @@ must(
   "Froakie raid KEEP only at 90%+ IV",
 );
 
-const zero = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, familyKeep: 0 });
-must(zero.familyKeep === 0, "echo familyKeep 0");
-must(zero.keep.length === result.keep.length, "familyKeep 0 does not drop KEEP");
 must(
-  zero.dump.every((g) =>
-    g.reasons.some((r) => /useless for pvp|extra copy — family already has a keeper/i.test(r)),
-  ),
-  "familyKeep 0 dumps only non-meta junk or extras of a keeper",
+  result.dump.every((g) => !g.mon.shadow),
+  "bright Shadow still never dumps shadows",
 );
-must(
-  zero.dump.every((g) => !g.mon.shadow),
-  "familyKeep 0 with bright Shadow still never dumps shadows",
-);
-const zeroGibles = [...zero.keep, ...zero.look, ...zero.dump].filter((g) => g.mon.speciesId === "gible");
-const zeroGibleKeep = zeroGibles.filter((g) => g.verdict === "KEEP");
-if (zeroGibleKeep.length === 0) {
-  must(
-    zeroGibles.every((g) => g.verdict === "LOOK"),
-    "familyKeep 0 leaves a no-keeper Gible family on LOOK",
-  );
-  must(
-    zeroGibles.every((g) => g.reasons.some((r) => /pvp\/raid family/i.test(r))),
-    "familyKeep 0 explains the Gible family is still PvP or raid",
-  );
-}
 must(
   result.dump.every((g) => g.mon.ivUnique),
   "this export has unique IVs on every dump",

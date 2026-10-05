@@ -133,6 +133,87 @@ function raidTags(id: string, limited: Set<string>, legendary: Set<string>, myth
   return tags;
 }
 
+const REGIONAL_FORMS = ["alolan", "galarian", "hisuian", "paldean"] as const;
+
+/**
+ * PvPoke still lists Cubone → Alolan Marowak. That branch is not a standing
+ * evolution: there is no Alolan Cubone, and regular Cubone only becomes Marowak.
+ * A few events have turned it on temporarily.
+ */
+const EVENT_ONLY_EVOLUTIONS = new Set(["cubone>marowak_alolan", "cubone_shadow>marowak_alolan_shadow"]);
+
+function isShadowId(id: string): boolean {
+  return id.endsWith("_shadow");
+}
+
+function stripShadowId(id: string): string {
+  return isShadowId(id) ? id.slice(0, -7) : id;
+}
+
+function withShadowId(core: string, shadow: boolean): string {
+  return shadow ? `${core}_shadow` : core;
+}
+
+function regionalTokens(core: string): string[] {
+  return core.split("_").filter((part) => (REGIONAL_FORMS as readonly string[]).includes(part));
+}
+
+/** `darumaka` + galarian → `darumaka_galarian`; `darmanitan_standard` + galarian → `darmanitan_galarian_standard`. */
+function insertRegional(core: string, region: string): string {
+  const parts = core.split("_").filter(Boolean);
+  if (parts.includes(region)) return core;
+  return [parts[0], region, ...parts.slice(1)].filter(Boolean).join("_");
+}
+
+function speciesKnown(id: string, known: Set<string>): boolean {
+  return known.has(id) || (isShadowId(id) && known.has(stripShadowId(id)));
+}
+
+/**
+ * Drop evolutions the pre-evo cannot actually become.
+ * A regional final belongs to the regional pre-evo when that pre-evo exists
+ * (Darumaka does not become Galarian Darmanitan; Galarian Darumaka does).
+ * A regional pre-evo does not become the other region's final when its own
+ * final exists (Alolan Rattata does not become Kanto Raticate).
+ */
+function evolutionEdgeOk(from: string, to: string, known: Set<string>): boolean {
+  if (EVENT_ONLY_EVOLUTIONS.has(`${from}>${to}`)) return false;
+  const fromCore = stripShadowId(from);
+  const toCore = stripShadowId(to);
+  const fromRegions = regionalTokens(fromCore);
+  const toRegions = regionalTokens(toCore);
+  const fromShadow = isShadowId(from);
+
+  for (const region of toRegions) {
+    if (fromRegions.includes(region)) continue;
+    if (speciesKnown(withShadowId(insertRegional(fromCore, region), fromShadow), known)) return false;
+  }
+  for (const region of fromRegions) {
+    if (toRegions.includes(region)) continue;
+    if (speciesKnown(withShadowId(insertRegional(toCore, region), isShadowId(to)), known)) return false;
+  }
+  if ((toCore.includes("_mega") || toCore.includes("_primal")) && fromRegions.length > 0) {
+    const megaBase = toCore.replace(/_mega(?:_[xy])?$/, "").replace(/_primal$/, "");
+    const megaRegions = regionalTokens(megaBase);
+    if (fromRegions.some((region) => !megaRegions.includes(region))) return false;
+  }
+  return true;
+}
+
+function keepStandingEvolutionEdges(edges: Record<string, string[]>): Record<string, string[]> {
+  const known = new Set<string>();
+  for (const [from, tos] of Object.entries(edges)) {
+    known.add(from);
+    for (const to of tos) known.add(to);
+  }
+  const out: Record<string, string[]> = {};
+  for (const [from, tos] of Object.entries(edges)) {
+    const next = tos.filter((to) => evolutionEdgeOk(from, to, known));
+    if (next.length > 0) out[from] = next;
+  }
+  return out;
+}
+
 function loadEvolutionEdges(data: unknown): Record<string, string[]> {
   const raw = (data as EvolutionFile).from ?? {};
   const out: Record<string, string[]> = {};
@@ -144,7 +225,7 @@ function loadEvolutionEdges(data: unknown): Record<string, string[]> {
     if (next.length === 0) continue;
     out[key] = next;
   }
-  return out;
+  return keepStandingEvolutionEdges(out);
 }
 
 function raidHit(id: string, raid: Set<string>): string | null {

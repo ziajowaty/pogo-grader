@@ -170,6 +170,11 @@ export interface GradedMon {
    * faded until selected.
    */
   pvpJob?: PvpJob | null;
+  /**
+   * Seat this copy holds because nobody passed the KEEP bar.
+   * It does not KEEP. One Pokémon still takes only one seat.
+   */
+  lookJob?: PvpJob | null;
   copiesInGroup: number;
   copyRankInGroup: number;
 }
@@ -224,8 +229,6 @@ export interface GradeResult {
   pvpKeep: number;
   /** Copies kept of each family's raid attacker. Independent of `pvpKeep`. */
   raidKeep: number;
-  /** LOOK this many best copies of a PvP/raid family with no KEEP. 0 leaves that family on LOOK and DUMPs only non-meta junk. */
-  familyKeep: number;
   /** Raid KEEP only if IV% is this or better. 0 keeps any IV. */
   raidIvKeep: number;
   /** When true, every eligible 4* / raid / PvP-floor copy KEEPs. When false, extras are dupes. */
@@ -305,21 +308,6 @@ export interface Meta {
    * Limited raid species still KEEP every copy. `keepAllGood` still keeps every hundo.
    */
   raidKeep?: number;
-  /**
-   * When a PvP/raid family has no KEEP, LOOK this many best copies and DUMP the rest.
-   * 0 does not DUMP that family: a listed species stays LOOK even when every copy
-   * misses the IV floor. 0 DUMPs only ungated junk (not useful for PvP or raids), still
-   * never dumping limited / special / non-unique IVs. A favorite is included
-   * in that junk when `keepFavorite` is off. A shadow is included when
-   * `keepShadow` is off.
-   * Default 2. Does not change KEEP slot caps (`pvpKeep` per GL stage and LC species,
-   * `raidKeep` per raid attacker). Each copy gets at most one of those jobs. Bright
-   * leagues fill in `pvpFillOrder` (default Great, Ultra, Master, Little Cup);
-   * within a league, higher PvPoke species exhaust their seats before a worse evo.
-   * Raid is last. Unlisted forms (Dratini in GL) are not jobs.
-   * `keepGl` / `keepLc` false drops that league's jobs and floor.
-   */
-  familyKeep?: number;
   /**
    * Raid KEEP only if IV% ((atk+def+sta)/45) is at least this. 0 keeps any IV.
    * Default 90.
@@ -405,8 +393,6 @@ export const DEFAULT_RAID_KEEP = 1;
 export const RAID_KEEP_MIN = 1;
 export const RAID_KEEP_MAX = 12;
 
-/** Best copies to LOOK in a PvP/raid family that has no KEEP. 0 LOOKs the whole family and DUMPs only non-meta junk. */
-export const DEFAULT_FAMILY_KEEP = 2;
 export const DEFAULT_KEEP_LUCKY = true;
 export const DEFAULT_KEEP_FAVORITE = true;
 export const DEFAULT_KEEP_SHADOW = true;
@@ -416,8 +402,6 @@ export const DEFAULT_KEEP_LC = true;
 /** Ultra League and Master League stay off until selected. */
 export const DEFAULT_KEEP_UL = false;
 export const DEFAULT_KEEP_ML = false;
-export const FAMILY_KEEP_MIN = 0;
-export const FAMILY_KEEP_MAX = 99;
 export const DEFAULT_RAID_IV_KEEP = 90;
 export const RAID_IV_KEEP_MIN = 0;
 export const RAID_IV_KEEP_MAX = 100;
@@ -452,12 +436,6 @@ export function prettySpeciesId(id: string): string {
     .replace(/_/g, " ")
     .replace(/\s+/g, " ")
     .replace(/\b\w/g, (ch) => ch.toUpperCase());
-}
-
-export function clampFamilyKeep(n: unknown): number {
-  const v = typeof n === "number" ? n : Number(n);
-  if (!Number.isFinite(v)) return DEFAULT_FAMILY_KEEP;
-  return Math.min(FAMILY_KEEP_MAX, Math.max(FAMILY_KEEP_MIN, Math.round(v)));
 }
 
 export function clampRaidIvKeep(n: unknown): number {

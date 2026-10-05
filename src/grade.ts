@@ -13,14 +13,12 @@ import type {
   Gender,
 } from "./types";
 import {
-  clampFamilyKeep,
   clampPvpKeep,
   clampPvpListKeep,
   clampPvpRankKeep,
   clampRaidIvKeep,
   clampRaidKeep,
   normalizePvpFillOrder,
-  DEFAULT_FAMILY_KEEP,
   DEFAULT_PVP_ANY,
   DEFAULT_PVP_KEEP,
   DEFAULT_PVP_LIST_KEEP,
@@ -566,10 +564,6 @@ function raidKeepCap(meta: Meta): number {
   return clampRaidKeep(meta.raidKeep ?? DEFAULT_RAID_KEEP);
 }
 
-function familyKeepCap(meta: Meta): number {
-  return clampFamilyKeep(meta.familyKeep ?? DEFAULT_FAMILY_KEEP);
-}
-
 function raidIvFloor(meta: Meta): number {
   return clampRaidIvKeep(meta.raidIvKeep ?? DEFAULT_RAID_IV_KEEP);
 }
@@ -622,54 +616,6 @@ function pvpFloorLegal(
   return false;
 }
 
-function bestRankedLabel(ids: string[], index: Map<string, PvpokeRankRow>, league: string): string | null {
-  if (ids.length === 0) return null;
-  let bestId = ids[0];
-  let bestRank = Number.POSITIVE_INFINITY;
-  for (const id of ids) {
-    const rank = lookupRank(id, index)?.rank;
-    if (rank != null && rank < bestRank) {
-      bestRank = rank;
-      bestId = id;
-    }
-  }
-  const name = prettySpeciesId(bestId);
-  return Number.isFinite(bestRank) ? `${name} ${league} #${bestRank}` : name;
-}
-
-/** Why a listed family with no keeper stays LOOK when spares are 0. */
-function noKeeperFamilyReason(
-  ind: { gl: string[]; ul: string[]; ml: string[]; lc: string[]; raid: string[] },
-  glIndex: Map<string, PvpokeRankRow>,
-  ulIndex: Map<string, PvpokeRankRow>,
-  mlIndex: Map<string, PvpokeRankRow>,
-  lcIndex: Map<string, PvpokeRankRow>,
-  keepGl: boolean,
-  keepUl: boolean,
-  keepMl: boolean,
-  keepLc: boolean,
-  fillOrder: readonly PvpLeague[],
-): string {
-  const on: Record<PvpLeague, boolean> = { gl: keepGl, ul: keepUl, ml: keepMl, lc: keepLc };
-  const ids: Record<PvpLeague, string[]> = { gl: ind.gl, ul: ind.ul, ml: ind.ml, lc: ind.lc };
-  const index: Record<PvpLeague, Map<string, PvpokeRankRow>> = {
-    gl: glIndex,
-    ul: ulIndex,
-    ml: mlIndex,
-    lc: lcIndex,
-  };
-  const short: Record<PvpLeague, string> = { gl: "GL", ul: "UL", ml: "ML", lc: "LC" };
-  let label: string | null = null;
-  for (const kind of fillOrder) {
-    if (!on[kind]) continue;
-    label = bestRankedLabel(ids[kind], index[kind], short[kind]);
-    if (label) break;
-  }
-  if (!label && ind.raid.length) label = `${prettySpeciesId(ind.raid[0])} raid`;
-  if (!label) return "PvP/raid family: IVs miss KEEP";
-  return `PvP/raid family: ${label} — IVs miss KEEP`;
-}
-
 function pushReason(g: GradedMon, reason: string): void {
   if (g.reasons.length >= MAX_REASON) return;
   if (!g.reasons.includes(reason)) g.reasons.push(reason);
@@ -712,6 +658,35 @@ function jobKeepReason(
   if (limited) return `${head}${ivBit} (limited — keep all)`;
   if (keepAllGood) return `${head}${ivBit} (keep all eligible)`;
   return `${head}${ivBit} (copy ${raidCopy || g.copyRankInGroup} of ${raidN}, keep ${Math.min(seats, raidN)} ≥${raidIvKeep}%)`;
+}
+
+function canSitSeat(g: GradedMon, role: RoleDef, meta: Meta, gm: RankGm, raidIds: string[]): boolean {
+  if (isCappedKind(role.kind)) {
+    if (!canBecome(g.mon.speciesId, role.speciesId, meta, g.mon.gender)) return false;
+    if (!fitsLeagueCap(g.mon, role.speciesId, capNumber(role.kind), gm).fits) return false;
+    return rankIn(g, role.kind, role.speciesId) != null;
+  }
+  if (role.kind === "lc") {
+    if (canonId(g.mon.speciesId) !== role.speciesId) return false;
+    if (g.mon.cp > LITTLE_CUP_CAP) return false;
+    return g.lc != null;
+  }
+  return raidIds.some((target) => canBecome(g.mon.speciesId, target, meta, g.mon.gender));
+}
+
+function emptySeatReason(g: GradedMon, role: RoleDef): string {
+  const { verb, name } = jobAction(g, role.speciesId);
+  if (role.kind === "lc") {
+    const rankBit = g.lc ? ` ${g.lc.rank}/${g.lc.of}` : "";
+    return `Empty seat — ${verb} ${name} for Little Cup${rankBit}`;
+  }
+  if (isCappedKind(role.kind)) {
+    const iv = rankIn(g, role.kind, role.speciesId);
+    const rankBit = iv ? ` ${iv.rank}/${iv.of}` : "";
+    return `Empty seat — ${verb} ${name} for ${CAPPED_LABEL[role.kind]}${rankBit}`;
+  }
+  const ivBit = g.raidIv ? ` ${g.raidIv.percent}% IV` : "";
+  return `Empty seat — ${verb} ${name} for raids${ivBit}`;
 }
 
 function extraJobReason(
@@ -862,6 +837,8 @@ interface CoreSeatPlan {
   upgrades: Map<GradedMon, { role: RoleDef; core: GradedMon }>;
   blocked: Map<GradedMon, RoleDef>;
   held: boolean;
+  /** Roles a core copy already sits, so the scan does not LOOK a second body. */
+  occupiedRoleKeys: Set<string>;
 }
 
 /**
@@ -883,6 +860,7 @@ function planCoreSeats(
   const occupiedCandidates = new Map<GradedMon, RoleDef>();
   const assignedScan = new Set<GradedMon>();
   const assignedCore = new Set<GradedMon>();
+  const occupiedRoleKeys = new Set<string>();
   let held = false;
   const live = [...roles].filter((role) => role.slots > 0).sort((a, b) => compareRoles(a, b, fillOrder));
 
@@ -892,7 +870,10 @@ function planCoreSeats(
       .filter((g) => !assignedCore.has(g) && costOf(g, role) != null)
       .sort(order);
     const occupants = coreEligible.slice(0, role.slots);
-    if (occupants.length > 0) held = true;
+    if (occupants.length > 0) {
+      held = true;
+      occupiedRoleKeys.add(roleKey(role));
+    }
     for (const g of occupants) {
       assignedCore.add(g);
       pushReason(g, holdsReason(role));
@@ -924,7 +905,7 @@ function planCoreSeats(
   for (const [g, role] of occupiedCandidates) {
     if (!keepJobs.has(g) && !upgrades.has(g)) blocked.set(g, role);
   }
-  return { keepJobs, upgrades, blocked, held };
+  return { keepJobs, upgrades, blocked, held, occupiedRoleKeys };
 }
 
 /** Calcy History is last-scan-first; tables follow first-scanned-first (scan time, then CSV line). */
@@ -971,7 +952,6 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
   const pvpAny = pvpAnyOn(meta);
   const pvpKeep = pvpKeepCap(meta);
   const raidKeep = raidKeepCap(meta);
-  const familyKeep = familyKeepCap(meta);
   const raidIvKeep = raidIvFloor(meta);
   const keepAllGood = Boolean(meta.keepAllGood);
   const keepLucky = keepLuckyOn(meta);
@@ -1157,6 +1137,7 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
 
   const upgradeOf = new Map<GradedMon, { role: RoleDef; core: GradedMon }>();
   const blockedScan = new Map<GradedMon, RoleDef>();
+  const emptySeatOf = new Map<GradedMon, RoleDef>();
   const lostHundo = new Set<GradedMon>();
   const coreAnchored = new Set<string>();
 
@@ -1249,11 +1230,13 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
 
     const coreSits = coreRows.some((g) => roles.some((role) => costOf(g, role) != null));
     let jobs: Map<GradedMon, RoleDef>;
+    const filledRoles = new Set<string>();
     if (!coreSits) {
       jobs = assignFamilyJobs(rows, roles, costOf, fillOrder);
     } else {
       const plan = planCoreSeats(rows, coreRows, roles, costOf, fillOrder, skipReview);
       jobs = plan.keepJobs;
+      for (const roleKeyFilled of plan.occupiedRoleKeys) filledRoles.add(roleKeyFilled);
       if (plan.held) coreAnchored.add(key);
       for (const [g, info] of plan.upgrades) upgradeOf.set(g, info);
       for (const [g, role] of plan.blocked) blockedScan.set(g, role);
@@ -1277,6 +1260,28 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
           role.kind === "raid" ? (g.raidIv?.evoSpeciesId ?? role.speciesId) : role.speciesId;
         g.pvpJob = { kind: role.kind, speciesId, seat: i + 1, of };
       });
+      if (list.length > 0) filledRoles.add(roleKey(role));
+    }
+
+    const claimed = new Set<GradedMon>(jobs.keys());
+    const openRoles = [...roles]
+      .filter((role) => role.slots > 0 && !filledRoles.has(roleKey(role)))
+      .sort((a, b) => compareRoles(a, b, fillOrder));
+    for (const role of openRoles) {
+      const candidates = rows
+        .filter((g) => !claimed.has(g) && !upgradeOf.has(g) && canSitSeat(g, role, meta, gm, raidIds))
+        .sort((a, b) => {
+          if (role.kind === "lc") return lcOrder(a, b);
+          if (role.kind === "raid") return raidOrder(a, b);
+          if (isCappedKind(role.kind)) return openOrderAs(a, b, role.kind, role.speciesId);
+          return a.mon.sourceRow - b.mon.sourceRow;
+        });
+      const best = candidates[0];
+      if (!best) continue;
+      claimed.add(best);
+      emptySeatOf.set(best, role);
+      const speciesId = role.kind === "raid" ? (best.raidIv?.evoSpeciesId ?? role.speciesId) : role.speciesId;
+      best.lookJob = { kind: role.kind, speciesId, seat: 1, of: 1 };
     }
 
     const glKeep = new Set<GradedMon>();
@@ -1328,6 +1333,8 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
           const over = cappedCapMiss(g, role.speciesId, role.kind, gm);
           if (over) pushReason(g, over);
         }
+      } else if (emptySeatOf.has(g)) {
+        pushReason(g, emptySeatReason(g, emptySeatOf.get(g)!));
       } else if (roles.length && !upgradeOf.has(g) && !blockedScan.has(g) && !lostHundo.has(g)) {
         pushReason(g, "No PvP/raid job — extra in this family");
       }
@@ -1391,7 +1398,6 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
 
   const dumpFuel: GradedMon[] = [];
   const extraOfKeeper = new Set<GradedMon>();
-  const extraOfFamily = new Set<GradedMon>();
 
   const groupAnchor = new Map<string, boolean>();
   for (const [key, rows] of groups) {
@@ -1449,30 +1455,18 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
         ind.raid.length >
       0;
 
-    if (pvpOrRaidFamily && !anchored) {
-      // 0 dumps species that are not on a PvP or raid list. A listed family stays LOOK.
-      if (familyKeep === 0 || g.copyRankInGroup <= familyKeep) {
-        g.verdict = "LOOK";
-        pushReason(
-          g,
-          familyKeep === 0
-            ? noKeeperFamilyReason(ind, glIndex, ulIndex, mlIndex, lcIndex, keepGl, keepUl, keepMl, keepLc, fillOrder)
-            : `PvP/raid family: ${familyKeep} best (no keeper)`,
-        );
-        continue;
-      }
-      extraOfFamily.add(g);
-      dumpFuel.push(g);
+    if (emptySeatOf.has(g)) {
+      g.verdict = "LOOK";
       continue;
     }
 
-    if (anchored) {
+    if (pvpOrRaidFamily) {
       extraOfKeeper.add(g);
       dumpFuel.push(g);
       continue;
     }
 
-    if (familyKeep > 0 && (g.copiesInGroup === 1 || g.copyRankInGroup === 1)) {
+    if (!anchored && (g.copiesInGroup === 1 || g.copyRankInGroup === 1)) {
       g.verdict = "LOOK";
       pushReason(g, g.copiesInGroup === 1 ? "only copy" : "best junk copy — not the last");
       continue;
@@ -1488,12 +1482,8 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
       blockedScan.has(g) || lostHundo.has(g)
         ? `Core holds this seat · ${blockedScan.has(g) ? roleLabel(blockedScan.get(g)!) : "4*"}`
         : extraOfKeeper.has(g)
-          ? "Extra copy — family already has a keeper"
-        : extraOfFamily.has(g)
-          ? `Extra copy — keeping ${familyKeep} best of PvP/raid family`
-          : familyKeep === 0
-            ? "Useless for PvP/raids — keep 0 per family"
-            : "Not GL/LC/raid/limited; unique IVs",
+          ? "Extra copy — seats are filled"
+          : "Not GL/LC/raid/limited; unique IVs",
     );
   }
 
@@ -1539,7 +1529,6 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
     pvpAny,
     pvpKeep,
     raidKeep,
-    familyKeep,
     raidIvKeep,
     keepAllGood,
     keepLucky,

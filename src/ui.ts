@@ -12,13 +12,11 @@ import type {
 } from "./types";
 import { viableRaidTier } from "./dittobase";
 import {
-  clampFamilyKeep,
   clampPvpKeep,
   clampPvpListKeep,
   clampPvpRankKeep,
   clampRaidIvKeep,
   clampRaidKeep,
-  DEFAULT_FAMILY_KEEP,
   DEFAULT_KEEP_FAVORITE,
   DEFAULT_KEEP_GL,
   DEFAULT_KEEP_LC,
@@ -33,8 +31,6 @@ import {
   DEFAULT_PVP_RANK_KEEP,
   DEFAULT_RAID_IV_KEEP,
   DEFAULT_RAID_KEEP,
-  FAMILY_KEEP_MAX,
-  FAMILY_KEEP_MIN,
   GL_LIST_CAP,
   isPokemonType,
   LC_LIST_CAP,
@@ -102,14 +98,12 @@ const RANK_PRESETS = [50, 150, 500, 4096] as const;
 const LIST_KEEP_PRESETS = [100, 300, 500, 1000] as const;
 const PVP_KEEP_PRESETS = [1, 2, 3] as const;
 const RAID_KEEP_PRESETS = [1, 3, 6, 12] as const;
-const FAMILY_KEEP_PRESETS = [FAMILY_KEEP_MIN, 1, 2, 6, FAMILY_KEEP_MAX] as const;
 const RAID_IV_PRESETS = [RAID_IV_KEEP_MIN, 80, 90, 95, RAID_IV_KEEP_MAX] as const;
 const RANK_KEEP_KEY = "pogo-grader.pvpRankKeep";
 const LIST_KEEP_KEY = "pogo-grader.pvpListKeep";
 const PVP_ANY_KEY = "pogo-grader.pvpAny";
 const PVP_KEEP_KEY = "pogo-grader.pvpKeep.v2";
 const RAID_KEEP_KEY = "pogo-grader.raidKeep";
-const FAMILY_KEEP_KEY = "pogo-grader.familyKeep";
 const RAID_IV_KEEP_KEY = "pogo-grader.raidIvKeep";
 const RAID_IV_KEEP_KEY_LEGACY = "pogo-grader.raidSpKeep";
 const KEEP_ALL_GOOD_KEY = "pogo-grader.keepAllGood";
@@ -156,7 +150,6 @@ interface AppState {
   pvpAny: boolean;
   pvpKeep: number;
   raidKeep: number;
-  familyKeep: number;
   raidIvKeep: number;
   keepAllGood: boolean;
   keepLucky: boolean;
@@ -234,16 +227,6 @@ function readStoredRaidKeep(): number {
     return next;
   } catch {
     return DEFAULT_RAID_KEEP;
-  }
-}
-
-function readStoredFamilyKeep(): number {
-  try {
-    const raw = localStorage.getItem(FAMILY_KEEP_KEY);
-    if (raw == null || raw === "") return DEFAULT_FAMILY_KEEP;
-    return clampFamilyKeep(Number(raw));
-  } catch {
-    return DEFAULT_FAMILY_KEEP;
   }
 }
 
@@ -366,7 +349,6 @@ const state: AppState = {
   pvpAny: readStoredPvpAny(),
   pvpKeep: readStoredPvpKeep(),
   raidKeep: readStoredRaidKeep(),
-  familyKeep: readStoredFamilyKeep(),
   raidIvKeep: readStoredRaidIvKeep(),
   keepAllGood: readStoredKeepAllGood(),
   keepLucky: readStoredKeepLucky(),
@@ -593,14 +575,15 @@ function formatRanks(item: GradedMon, meta: Meta | null): string {
 }
 
 function jobLabel(item: GradedMon): string {
-  const job = item.pvpJob;
+  const job = item.pvpJob ?? item.lookJob;
   if (!job) return "";
   const name = prettySpeciesId(job.speciesId);
-  if (job.kind === "lc") return `LC ${name}`;
-  if (job.kind === "ul") return `UL ${name}`;
-  if (job.kind === "ml") return `ML ${name}`;
-  if (job.kind === "raid") return `Raid ${name}`;
-  return `GL ${name}`;
+  const head = item.pvpJob ? "" : "LOOK ";
+  if (job.kind === "lc") return `${head}LC ${name}`;
+  if (job.kind === "ul") return `${head}UL ${name}`;
+  if (job.kind === "ml") return `${head}ML ${name}`;
+  if (job.kind === "raid") return `${head}Raid ${name}`;
+  return `${head}GL ${name}`;
 }
 
 function reasonClass(reason: string): string {
@@ -654,6 +637,7 @@ function reasonClass(reason: string): string {
   if (r.startsWith("ultra league as ")) return "chip chip--ul-seat";
   if (r.startsWith("master league as ")) return "chip chip--ml-seat";
   if (r.startsWith("little cup as ")) return "chip chip--lc-seat";
+  if (r.startsWith("empty seat")) return "chip chip--family-open";
   if (r.startsWith("pvp/raid family") && r.includes("no keeper")) return "chip chip--family-open";
   if (r.startsWith("pvp/raid family")) return "chip chip--family";
   if (r.includes("useless for pvp") || r.includes("keep 0 per family")) return "chip chip--junk";
@@ -661,7 +645,7 @@ function reasonClass(reason: string): string {
   if (r.includes("best junk")) return "chip chip--junk-best";
   if (r.includes("not gl/lc/raid")) return "chip chip--unlisted";
   if (r.startsWith("limited")) return "chip chip--limited";
-  if (r.includes("already has a keeper")) return "chip chip--extra-keep";
+  if (r.includes("already has a keeper") || r.includes("seats are filled")) return "chip chip--extra-keep";
   if (r.startsWith("extra copy")) return "chip chip--extra-spare";
   if (r.startsWith("raid copies")) return "chip chip--raid-copies";
   return "chip chip--loud";
@@ -720,8 +704,9 @@ function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null): string {
     ? `<span class="badge-crowd" title="Family copy rank (best first). Rows stay in scan order (first scanned at top).">${copyRankInGroup}/${copiesInGroup}</span>`
     : "";
   const job = jobLabel(item);
+  const jobKind = item.pvpJob?.kind ?? item.lookJob?.kind ?? "gl";
   const jobBadge = job
-    ? `<span class="badge-job badge-job--${item.pvpJob?.kind ?? "gl"}">${escapeHtml(job)}</span>`
+    ? `<span class="badge-job badge-job--${jobKind}${item.pvpJob ? "" : " badge-job--look"}">${escapeHtml(job)}</span>`
     : "";
   const line = [speciesBit, `IVs ${formatIvs(mon)}`, flags, formatRanks(item, meta)].filter(Boolean).join(" · ");
   const action =
@@ -1104,11 +1089,11 @@ export function mountApp(root: HTMLElement): void {
           </section>
 
           <section class="rule-group rule-group--who" aria-labelledby="rules-who">
-            <h3 id="rules-who">Which Pokémon</h3>
+            <h3 id="rules-who">Seats</h3>
             <div class="rule">
               <div class="rule-copy">
                 <p class="rule-title" id="rules-leagues">Leagues</p>
-                <p class="rule-hint">Bright leagues KEEP, from the top. Ultra League and Master League start faded and fetch their lists when you brighten them.</p>
+                <p class="rule-hint">Bright leagues have seats and fill from the top. One Pokémon takes the first seat it qualifies for. Ultra League and Master League start faded and fetch their lists when you brighten them.</p>
               </div>
               <div class="rule-control">
                 <div class="league-order">
@@ -1122,7 +1107,7 @@ export function mountApp(root: HTMLElement): void {
             </div>
             <div class="rule">
               <div class="rule-copy">
-                <p class="rule-title" id="pvp-species-label">PvP species</p>
+                <p class="rule-title" id="pvp-species-label">Who gets a seat</p>
                 <p class="rule-hint" id="pvp-list-note"></p>
               </div>
               <div class="rule-control">
@@ -1147,11 +1132,11 @@ export function mountApp(root: HTMLElement): void {
           </section>
 
           <section class="rule-group rule-group--iv" aria-labelledby="rules-iv">
-            <h3 id="rules-iv">How good</h3>
+            <h3 id="rules-iv">Who KEEPs</h3>
             <div class="rule">
               <div class="rule-copy">
                 <label class="rule-title" for="rank-keep">PvP IV rank</label>
-                <p class="rule-hint" id="pvp-iv-note">Keep this rank or better. 1 is the best of ${PVP_RANK_OF} Great League and Little Cup spreads.</p>
+                <p class="rule-hint" id="pvp-iv-note">KEEP at this IV rank or better. 1 is the best of ${PVP_RANK_OF} spreads. This is not the species cutoff above.</p>
               </div>
               <div class="rule-control">
                 <div class="rank-row">
@@ -1184,21 +1169,17 @@ export function mountApp(root: HTMLElement): void {
                 </div>
               </div>
             </div>
-          </section>
-
-          <section class="rule-group rule-group--count" aria-labelledby="rules-count">
-            <h3 id="rules-count">How many</h3>
             <div class="rule">
               <div class="rule-copy">
-                <label class="rule-title" for="pvp-keep">Copies per job</label>
-                <p class="rule-hint" id="pvp-keep-note">Seats for each Great League stage. Seats for each Little Cup species. Fill order: Great League, then Ultra League, then Master League, then Little Cup. Faded leagues are skipped. Within a league, better PvPoke species fill first.</p>
+                <label class="rule-title" for="pvp-keep">Copies per seat</label>
+                <p class="rule-hint" id="pvp-keep-note">How many copies KEEP for each seat. A seat is one species in one bright league.</p>
               </div>
               <div class="rule-control">
                 <div class="rank-row">
-                  <input id="pvp-keep" type="number" inputmode="numeric" min="${PVP_KEEP_MIN}" max="${PVP_KEEP_MAX}" step="1" value="${state.pvpKeep}" aria-label="Copies per job" />
+                  <input id="pvp-keep" type="number" inputmode="numeric" min="${PVP_KEEP_MIN}" max="${PVP_KEEP_MAX}" step="1" value="${state.pvpKeep}" aria-label="Copies per seat" />
                   <span class="rank-suffix">copies</span>
                 </div>
-                <div class="rank-presets" role="group" aria-label="Copies per job">
+                <div class="rank-presets" role="group" aria-label="Copies per seat">
                   ${PVP_KEEP_PRESETS.map(
                     (n) =>
                       `<button type="button" class="btn btn--preset" data-pvp-keep="${n}">${n}</button>`,
@@ -1209,7 +1190,7 @@ export function mountApp(root: HTMLElement): void {
             <div class="rule">
               <div class="rule-copy">
                 <label class="rule-title rule-title--raid" for="raid-keep">Raid copies</label>
-                <p class="rule-hint">Seats for each family's raid attacker. Highest attack fills first.</p>
+                <p class="rule-hint">How many copies KEEP for each family's raid seat. Highest attack fills first. An empty raid seat still LOOKs one.</p>
               </div>
               <div class="rule-control">
                 <div class="rank-row">
@@ -1226,20 +1207,8 @@ export function mountApp(root: HTMLElement): void {
             </div>
             <div class="rule">
               <div class="rule-copy">
-                <label class="rule-title" for="family-keep">Spares with no keeper</label>
-                <p class="rule-hint">If a PvP or raid family has no KEEP, LOOK this many best copies. 0 leaves that family on LOOK and dumps only species that are not useful for PvP or raids.</p>
-              </div>
-              <div class="rule-control">
-                <div class="rank-row">
-                  <input id="family-keep" type="number" inputmode="numeric" min="${FAMILY_KEEP_MIN}" max="${FAMILY_KEEP_MAX}" step="1" value="${state.familyKeep}" aria-label="Spares with no keeper" />
-                  <span class="rank-suffix">copies</span>
-                </div>
-                <div class="rank-presets" role="group" aria-label="Spares with no keeper">
-                  ${FAMILY_KEEP_PRESETS.map(
-                    (n) =>
-                      `<button type="button" class="btn btn--preset" data-family-keep="${n}">${n === FAMILY_KEEP_MAX ? "all" : String(n)}</button>`,
-                  ).join("")}
-                </div>
+                <p class="rule-title">Empty seat</p>
+                <p class="rule-hint">If a seat has no KEEP, LOOK the best copy left for it, even when that copy misses the IV bar. Other copies DUMP. A species with no seat still LOOKs its one best copy.</p>
               </div>
             </div>
           </section>
@@ -1354,7 +1323,6 @@ export function mountApp(root: HTMLElement): void {
   const pvpKeepNoteEl = root.querySelector("#pvp-keep-note") as HTMLElement;
   const pvpKeepInput = root.querySelector("#pvp-keep") as HTMLInputElement;
   const raidKeepInput = root.querySelector("#raid-keep") as HTMLInputElement;
-  const familyKeepInput = root.querySelector("#family-keep") as HTMLInputElement;
   const raidIvKeepInput = root.querySelector("#raid-iv-keep") as HTMLInputElement;
   const skipScanEl = root.querySelector("#skip-scan") as HTMLElement;
   const rankingsStatusEl = root.querySelector("#rankings-status") as HTMLElement;
@@ -1382,7 +1350,6 @@ export function mountApp(root: HTMLElement): void {
       keepMl: state.keepMl,
       pvpFillOrder: state.pvpFillOrder,
       raidKeep: state.raidKeep,
-      familyKeep: state.familyKeep,
       raidIvKeep: state.raidIvKeep,
       keepAllGood: state.keepAllGood,
       keepLucky: state.keepLucky,
@@ -1426,14 +1393,6 @@ export function mountApp(root: HTMLElement): void {
   function persistRaidKeep(n: number): void {
     try {
       localStorage.setItem(RAID_KEEP_KEY, String(n));
-    } catch {
-      /* private mode */
-    }
-  }
-
-  function persistFamilyKeep(n: number): void {
-    try {
-      localStorage.setItem(FAMILY_KEEP_KEY, String(n));
     } catch {
       /* private mode */
     }
@@ -1527,20 +1486,21 @@ export function mountApp(root: HTMLElement): void {
     if (!open.length) return "Every league is off. Good PvP IVs do not keep a copy.";
     if (state.pvpAny) {
       const bits: string[] = [];
-      if (capped.length === 1) bits.push(`Every species can be ${capped[0]}.`);
-      else if (capped.length > 1) bits.push(`Every species can be ${capped.join(", ")}.`);
-      if (state.keepLc) bits.push("Little Cup is every unevolved Pokémon that can still evolve.");
+      if (capped.length === 1) bits.push(`Every species gets a ${capped[0]} seat.`);
+      else if (capped.length > 1) bits.push(`Every species gets a seat in ${capped.join(", ")}.`);
+      if (state.keepLc) bits.push("Little Cup seats are every unevolved Pokémon that can still evolve.");
+      bits.push("The IV rank below still decides KEEP.");
       return bits.join(" ");
     }
-    if (open.length === 1) return `${open[0]} species through this PvPoke rank.`;
-    return `${open.join(", ")} species through this PvPoke rank.`;
+    if (open.length === 1) return `${open[0]} species through this PvPoke rank get a seat. This number is the species rank, not the IV rank.`;
+    return `${open.join(", ")} species through this PvPoke rank get a seat. This number is the species rank, not the IV rank.`;
   }
 
   function pvpIvNote(): string {
     const names = selectedLeagueNames();
     if (names.length === 0) return "No league is on, so this floor is idle.";
     const which = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-    return `Keep this rank or better. 1 is the best of ${PVP_RANK_OF} ${which} spreads.`;
+    return `KEEP at this IV rank or better for ${which}. 1 is the best of ${PVP_RANK_OF}. An empty seat still LOOKs its best copy.`;
   }
 
   function andList(names: string[]): string {
@@ -1549,17 +1509,12 @@ export function mountApp(root: HTMLElement): void {
     return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
   }
 
-  function pvpCopiesNote(): string {
-    const stages = state.pvpFillOrder
-      .filter((kind) => kind !== "lc" && leagueOn(kind))
-      .map((kind) => LEAGUE_LABEL[kind]);
-    if (!stages.length && !state.keepLc) return "No league is on, so these seats are idle.";
-    const bits: string[] = [];
-    if (stages.length === 1) bits.push(`Seats for each ${stages[0]} stage.`);
-    else if (stages.length > 1) bits.push(`Seats for each ${andList(stages)} stage.`);
-    if (state.keepLc) bits.push("Seats for each Little Cup species.");
-    return bits.join(" ");
-  }
+function pvpCopiesNote(): string {
+  const names = selectedLeagueNames();
+  if (!names.length) return "No league is on, so this count is idle.";
+  const which = names.length === 1 ? names[0] : andList(names);
+  return `How many copies KEEP for each ${which} seat. An empty seat still LOOKs one.`;
+}
 
   function paintLeagueOrder(): void {
     const list = root.querySelector("#league-order-list");
@@ -1612,7 +1567,6 @@ export function mountApp(root: HTMLElement): void {
     listKeepInput.value = String(state.pvpListKeep);
     pvpKeepInput.value = String(state.pvpKeep);
     raidKeepInput.value = String(state.raidKeep);
-    familyKeepInput.value = String(state.familyKeep);
     raidIvKeepInput.value = String(state.raidIvKeep);
     root.querySelectorAll("[data-rank]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-rank"));
@@ -1671,10 +1625,6 @@ export function mountApp(root: HTMLElement): void {
     root.querySelectorAll("[data-raid-keep]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-raid-keep"));
       btn.classList.toggle("is-active", n === state.raidKeep);
-    });
-    root.querySelectorAll("[data-family-keep]").forEach((btn) => {
-      const n = Number(btn.getAttribute("data-family-keep"));
-      btn.classList.toggle("is-active", n === state.familyKeep);
     });
     root.querySelectorAll("[data-raid-iv]").forEach((btn) => {
       const n = Number(btn.getAttribute("data-raid-iv"));
@@ -2234,7 +2184,7 @@ export function mountApp(root: HTMLElement): void {
         ? [
             `KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF}`,
             result.pvpAny ? "PvP any species" : `PvPoke top ${result.pvpListKeep}/${GL_LIST_CAP}`,
-            `Keep ${result.pvpKeep} PvP/identity`,
+            `Keep ${result.pvpKeep}/seat`,
           ]
             .filter(Boolean)
             .join(" · ")
@@ -2244,7 +2194,7 @@ export function mountApp(root: HTMLElement): void {
       : "No scan CSV";
     const coreBit = coreLoaded() ? ` · Core ${state.coreFileName} (${coreMons().length})` : "";
     const extendedBit = state.extended.length > 0 ? ` · Extended ${state.extended.length}` : "";
-    statusEl.textContent = `${scanBit}${coreBit}${extendedBit} · ${leagueStatus} · ${pvpStatus} · Keep ${result.raidKeep} raid · Keep ${result.familyKeep}/family · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "All 4*" : "One 4*"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "Favorite can dump"} · ${result.keepShadow ? "KEEP shadow" : "Shadow can dump"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
+    statusEl.textContent = `${scanBit}${coreBit}${extendedBit} · ${leagueStatus} · ${pvpStatus} · Keep ${result.raidKeep} raid · Empty seat LOOKs 1 · KEEP raid ≥${result.raidIvKeep}% IV · ${result.keepAllGood ? "All 4*" : "One 4*"} · ${result.keepLucky ? "KEEP lucky" : "Lucky off"} · ${result.keepFavorite ? "KEEP favorite" : "Favorite can dump"} · ${result.keepShadow ? "KEEP shadow" : "Shadow can dump"} · ${pvpokeStatus(state.meta)} · ${raidListStatus(state.meta)}${removedNote}`;
     const coreParts = splitCoreRows(result.core ?? [], coreMons());
     const counts: Array<[string, number]> = [
       ["keep", shownRows(result.keep).length],
@@ -2761,14 +2711,6 @@ export function mountApp(root: HTMLElement): void {
     regradeLive();
   }
 
-  function applyFamilyKeep(raw: unknown): void {
-    const next = clampFamilyKeep(raw);
-    state.familyKeep = next;
-    persistFamilyKeep(next);
-    paintRankControls();
-    regradeLive();
-  }
-
   function applyRaidIvKeep(raw: unknown): void {
     const next = clampRaidIvKeep(raw);
     state.raidIvKeep = next;
@@ -2928,12 +2870,6 @@ export function mountApp(root: HTMLElement): void {
   raidKeepInput.addEventListener("blur", () => {
     applyRaidKeep(raidKeepInput.value);
   });
-  familyKeepInput.addEventListener("change", () => {
-    applyFamilyKeep(familyKeepInput.value);
-  });
-  familyKeepInput.addEventListener("blur", () => {
-    applyFamilyKeep(familyKeepInput.value);
-  });
   raidIvKeepInput.addEventListener("change", () => {
     applyRaidIvKeep(raidIvKeepInput.value);
   });
@@ -3089,12 +3025,6 @@ export function mountApp(root: HTMLElement): void {
         state.rankingsRaidType = state.rankingsRaidType === next ? "" : next;
       }
       paintRankControls();
-      return;
-    }
-
-    const familyKeepBtn = target.closest("[data-family-keep]") as HTMLElement | null;
-    if (familyKeepBtn?.dataset.familyKeep) {
-      applyFamilyKeep(familyKeepBtn.dataset.familyKeep);
       return;
     }
 

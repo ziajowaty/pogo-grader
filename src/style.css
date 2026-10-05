@@ -1199,6 +1199,10 @@ body {
   color: var(--raid);
 }
 
+.badge-job--look {
+  outline: 1px dashed currentColor;
+}
+
 .rankings-card {
   margin-bottom: 12px;
 }

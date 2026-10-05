@@ -7,7 +7,7 @@ import {
   rankingsRowMatches,
 } from "./meta";
 import { gradeBox, compareScanStream } from "./grade";
-import { clampFamilyKeep, clampPvpKeep, clampPvpListKeep, clampRaidIvKeep, clampRaidKeep, FAMILY_KEEP_MIN, normalizePvpFillOrder, PVP_KEEP_MAX, PVP_KEEP_MIN, RAID_IV_KEEP_MIN, RAID_KEEP_MAX, RAID_KEEP_MIN, type Mon } from "./types";
+import { clampPvpKeep, clampPvpListKeep, clampRaidIvKeep, clampRaidKeep, normalizePvpFillOrder, PVP_KEEP_MAX, PVP_KEEP_MIN, RAID_IV_KEEP_MIN, RAID_KEEP_MAX, RAID_KEEP_MIN, type Mon } from "./types";
 import { cpAsSpecies, fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, LITTLE_CUP_CAP, MASTER_LEAGUE_CAP, ULTRA_LEAGUE_CAP } from "./rank";
 
 function must(cond: boolean, message: string): void {
@@ -50,8 +50,6 @@ must(clampPvpKeep(9) === PVP_KEEP_MAX && PVP_KEEP_MAX === 3, "pvpKeep clamps up 
 must(result.raidKeep === 1, "default raidKeep 1");
 must(clampRaidKeep(0) === RAID_KEEP_MIN && RAID_KEEP_MIN === 1, "raidKeep clamps down to 1");
 must(clampRaidKeep(40) === RAID_KEEP_MAX && RAID_KEEP_MAX === 12, "raidKeep clamps up to 12");
-must(result.familyKeep === 2, "default familyKeep 2");
-must(clampFamilyKeep(0) === 0 && FAMILY_KEEP_MIN === 0, "familyKeep 0 is a valid clamp");
 must(result.raidIvKeep === 90, "default raid IV keep 90");
 must(clampRaidIvKeep(0) === 0 && RAID_IV_KEEP_MIN === 0, "raid IV keep 0 is a valid clamp");
 must(clampRaidIvKeep(108) === 100, "raid IV keep clamps to 100");
@@ -240,7 +238,8 @@ must(
 
 const weedle = all.find((g) => g.mon.speciesId === "weedle");
 must(weedle?.keepClasses.includes("raid") !== true, "low-IV weedle is not raid KEEP");
-must(weedle?.verdict === "LOOK", "only low-IV raid pre-evo LOOKs at familyKeep 2");
+must(weedle?.verdict === "LOOK", "only low-IV raid pre-evo LOOKs the empty raid seat");
+must(weedle?.reasons.some((r) => r.startsWith("Empty seat")) === true, "weedle LOOK names the empty seat");
 must(weedle?.raidIv != null && weedle.raidIv.percent < 90, `weedle raid IV should be below 90, got ${weedle?.raidIv?.percent}`);
 
 const machamp = all.find((g) => g.mon.speciesId === "machamp_shadow");
@@ -274,13 +273,13 @@ const extraWooper: Mon = {
   nickname: "junk-wooper",
 };
 const withExtraWooper = gradeBox([...parsed.mons, extraWooper], { ...meta, pvpRankKeep: 500 });
-must(
-  withExtraWooper.dump.some((g) => g.mon.sourceRow === 99),
-  "extra wooper DUMP when GL keeper exists",
+const extraWooperRow = [...withExtraWooper.keep, ...withExtraWooper.look, ...withExtraWooper.dump].find(
+  (g) => g.mon.sourceRow === 99,
 );
+must(extraWooperRow?.verdict === "LOOK" && extraWooperRow.lookJob?.kind === "lc", "extra wooper LOOKs the empty Little Cup seat");
 must(
-  withExtraWooper.keep.some((g) => g.mon.speciesId === "wooper" && g.mon.sourceRow !== 99),
-  "original wooper still KEEP",
+  withExtraWooper.keep.some((g) => g.mon.speciesId === "wooper" && g.mon.sourceRow !== 99 && g.pvpJob?.kind === "gl"),
+  "original wooper still KEEPs Great League",
 );
 
 const noFavMons = parsed.mons.map((m) =>
@@ -293,99 +292,18 @@ const tightToads = [...noFavTight.keep, ...noFavTight.look, ...noFavTight.dump].
 const toadKeep = tightToads.filter((g) => g.verdict === "KEEP");
 const toadLook = tightToads.filter((g) => g.verdict === "LOOK");
 const toadDump = tightToads.filter((g) => g.verdict === "DUMP");
-if (toadKeep.length === 0) {
-  must(tightToads.length === 3, "fixture has 3 seismitoads");
-  must(toadLook.length === 2, "no-keeper GL family LOOKs familyKeep 2");
-  must(toadDump.length === 1, "no-keeper GL family dumps extras beyond familyKeep");
-  must(
-    toadLook.every((g) => g.copyRankInGroup <= 2),
-    "LOOK copies are the 2 best of the family",
-  );
-  must(
-    toadDump.every((g) => g.copyRankInGroup > 2),
-    "DUMP copies are worse than familyKeep",
-  );
-} else {
-  must(
-    toadDump.length === tightToads.length - toadKeep.length,
-    "when a seismitoad still KEEPs, the rest DUMP",
-  );
-}
-
-const noFavAll = gradeBox(noFavMons, { ...meta, pvpRankKeep: 1, familyKeep: 99 });
-const allToads = [...noFavAll.keep, ...noFavAll.look, ...noFavAll.dump].filter(
-  (g) => g.mon.speciesId === "seismitoad",
-);
-if (allToads.every((g) => g.verdict !== "KEEP")) {
-  must(
-    allToads.every((g) => g.verdict === "LOOK"),
-    "familyKeep 99 keeps a no-keeper GL family as LOOK",
-  );
-}
-
-const noFavOne = gradeBox(noFavMons, { ...meta, pvpRankKeep: 1, familyKeep: 1 });
-const oneToads = [...noFavOne.keep, ...noFavOne.look, ...noFavOne.dump].filter(
-  (g) => g.mon.speciesId === "seismitoad",
-);
-if (oneToads.every((g) => g.verdict !== "KEEP")) {
-  must(
-    oneToads.filter((g) => g.verdict === "LOOK").length === 1,
-    "familyKeep 1 LOOKs only the best copy",
-  );
-  must(
-    oneToads.filter((g) => g.verdict === "DUMP").length === 2,
-    "familyKeep 1 dumps the other two",
-  );
-}
-
-const noFavZero = gradeBox(noFavMons, { ...meta, pvpRankKeep: 1, familyKeep: 0 });
-const zeroToads = [...noFavZero.keep, ...noFavZero.look, ...noFavZero.dump].filter(
-  (g) => g.mon.speciesId === "seismitoad",
-);
-if (zeroToads.every((g) => g.verdict !== "KEEP")) {
-  must(
-    zeroToads.every((g) => g.verdict === "LOOK"),
-    "familyKeep 0 leaves a no-keeper GL family on LOOK",
-  );
-  must(
-    zeroToads.every((g) => g.reasons.some((r) => /pvp\/raid family/i.test(r) && !/useless/i.test(r))),
-    "familyKeep 0 names the PvP family instead of calling it useless",
-  );
-}
-
-const sampleZero = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500, familyKeep: 0 });
-must(sampleZero.keep.length === result.keep.length, "familyKeep 0 does not drop KEEP");
-const junkZero = [...sampleZero.keep, ...sampleZero.look, ...sampleZero.dump].filter((g) =>
-  ["bidoof", "caterpie"].includes(g.mon.speciesId),
+must(tightToads.length === 3, "fixture has 3 seismitoads");
+must(
+  toadLook.every((g) => g.reasons.some((r) => r.startsWith("Empty seat"))),
+  "LOOK seismitoads hold an empty seat",
 );
 must(
-  junkZero.every((g) => g.verdict === "DUMP"),
-  "familyKeep 0 dumps ungated junk including only copies",
+  new Set(toadLook.map((g) => `${g.lookJob?.kind}:${g.lookJob?.speciesId}`)).size === toadLook.length,
+  "each empty seismitoad seat LOOKs one copy",
 );
 must(
-  sampleZero.keep.some((g) => g.mon.speciesId === "machamp_shadow" && g.keepClasses.includes("shadow")),
-  "familyKeep 0 still KEEPs a shadow Machamp",
-);
-must(
-  sampleZero.keep.every((g) => g.mon.speciesId !== "machamp_shadow" || !g.keepClasses.includes("raid")),
-  "shadow Machamp is below A, so familyKeep 0 does not KEEP it as a raid attacker",
-);
-must(
-  [...sampleZero.keep, ...sampleZero.look, ...sampleZero.dump].some(
-    (g) =>
-      g.mon.speciesId === "weedle" &&
-      g.verdict === "LOOK" &&
-      g.reasons.some((r) => /pvp\/raid family/i.test(r) && !/useless/i.test(r)),
-  ),
-  "familyKeep 0 leaves a low-IV raid pre-evo on LOOK",
-);
-must(
-  sampleZero.keep.some((g) => g.mon.speciesId === "wooper" && g.keepClasses.includes("gl")),
-  "familyKeep 0 still KEEPs a PvP floor copy",
-);
-must(
-  sampleZero.dump.every((g) => !g.mon.shadow),
-  "familyKeep 0 with bright Shadow still never dumps shadows",
+  toadDump.every((g) => g.reasons.some((r) => r.includes("seats are filled"))),
+  "extra seismitoads dump because their seats are filled",
 );
 
 const tight = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 1 });
@@ -413,7 +331,7 @@ const extraWoopers: Mon[] = [1, 2, 3].map((i) => ({
   favorite: false,
   nickname: `junk-wooper-${i}`,
 }));
-const wooperFamily = gradeBox([wooperMon!, ...extraWoopers], { ...meta, pvpRankKeep: 1, familyKeep: 2 });
+const wooperFamily = gradeBox([wooperMon!, ...extraWoopers], { ...meta, pvpRankKeep: 1 });
 const wooperRows = [...wooperFamily.keep, ...wooperFamily.look, ...wooperFamily.dump].filter(
   (g) => g.mon.speciesId === "wooper",
 );
@@ -422,20 +340,15 @@ must(
   wooperRows.filter((g) => g.verdict === "KEEP").length === 1,
   "rank-1 LC wooper KEEPs; junk IVs do not",
 );
+const wooperLooks = wooperRows.filter((g) => g.verdict === "LOOK");
 must(
-  wooperRows.filter((g) => g.verdict === "DUMP").length === 3,
-  "junk woopers dump when a LC keeper exists",
+  wooperLooks.some((g) => g.lookJob?.kind === "gl" && g.lookJob.speciesId === "quagsire"),
+  "a junk wooper LOOKs the empty Quagsire seat while Little Cup KEEPs",
 );
-const wooperZero = gradeBox([wooperMon!, ...extraWoopers], { ...meta, pvpRankKeep: 1, familyKeep: 0 });
-const wooperZeroRows = [...wooperZero.keep, ...wooperZero.look, ...wooperZero.dump].filter(
-  (g) => g.mon.speciesId === "wooper",
+must(
+  wooperRows.filter((g) => g.verdict === "DUMP").every((g) => g.reasons.some((r) => r.includes("seats are filled"))),
+  "woopers past the open seats dump",
 );
-if (wooperZeroRows.every((g) => g.verdict !== "KEEP")) {
-  must(
-    wooperZeroRows.every((g) => g.verdict === "LOOK"),
-    "familyKeep 0 leaves a no-keeper wooper family on LOOK",
-  );
-}
 must(
   tight.keep.some((g) => g.mon.speciesId === "seismitoad" && g.keepClasses.includes("favorite")),
   "favorite still KEEP when rank floor is 1",
@@ -588,14 +501,13 @@ function ivMon(
 const tinkZero = gradeBox([ivMon("tinkatink", "Tinkatink", 901, 0, 0, 0)], {
   ...meta,
   pvpRankKeep: 1,
-  familyKeep: 0,
   keepFavorite: false,
 });
 const tinkRow = [...tinkZero.keep, ...tinkZero.look, ...tinkZero.dump][0];
 must(tinkRow?.verdict === "LOOK", `bad Tinkatink stays LOOK at spares 0, got ${tinkRow?.verdict} ${tinkRow?.reasons.join(" | ")}`);
 must(
-  tinkRow?.reasons.some((r) => /tinkaton gl #5/i.test(r)) === true,
-  `Tinkatink should name Tinkaton GL #5, got ${tinkRow?.reasons.join(" | ")}`,
+  tinkRow?.reasons.some((r) => /empty seat — evolve to tinkaton for great league/i.test(r)) === true,
+  `Tinkatink should name the empty Tinkaton seat, got ${tinkRow?.reasons.join(" | ")}`,
 );
 must(
   tinkRow?.reasons.every((r) => !/useless for pvp/i.test(r)),
@@ -604,14 +516,10 @@ must(
 const bidoofZero = gradeBox([ivMon("bidoof", "Bidoof", 902, 0, 0, 0)], {
   ...meta,
   pvpRankKeep: 1,
-  familyKeep: 0,
   keepFavorite: false,
 });
-must(bidoofZero.dump.length === 1, "spares 0 still dumps a non-meta Bidoof");
-must(
-  bidoofZero.dump[0]?.reasons.some((r) => r.includes("keep 0 per family")) === true,
-  "non-meta dump still says useless for PvP/raids",
-);
+must(bidoofZero.look.length === 1 && bidoofZero.dump.length === 0, "lone non-meta Bidoof LOOKs");
+must(bidoofZero.look[0]?.reasons.some((r) => r === "only copy") === true, "lone Bidoof is the only copy");
 
 const trashBulb = ivMon("bulbasaur", "Bulbasaur", 450, 0, 0, 0);
 const trashGrade = gradeBox([trashBulb], bulbMeta);
@@ -925,7 +833,6 @@ must(lcAtRank.keep[0]?.pvpJob?.kind === "lc", "wooper KEEPs Little Cup at its ow
 const lcCutOff = gradeBox([{ ...ivMon("wooper", "Wooper", 826, 0, 15, 15), cp: 500, level: 20 }], {
   ...lcGate,
   pvpListKeep: wooperLcRank - 1,
-  familyKeep: 0,
 });
 const lcCutRow = [...lcCutOff.keep, ...lcCutOff.look, ...lcCutOff.dump][0];
 must(lcCutOff.keep.length === 0, "wooper outside the Little Cup cutoff does not KEEP");
@@ -935,11 +842,10 @@ must(lcCutRow?.lcMeta?.rank === wooperLcRank, "cutoff still shows the Little Cup
 const lcOff = gradeBox([{ ...ivMon("wooper", "Wooper", 823, 0, 15, 15), cp: 500, level: 20 }], {
   ...lcGate,
   keepLc: false,
-  familyKeep: 0,
 });
-must(lcOff.keep.length === 0 && lcOff.dump.length === 1, "Little Cup off dumps a lone LC wooper when spares are 0");
-must(lcOff.dump[0]?.keepClasses.includes("lc") !== true, "dumped LC wooper has no LC keep class");
-must(lcOff.dump[0]?.pvpJob == null, "dumped LC wooper has no PvP job");
+must(lcOff.keep.length === 0 && lcOff.look.length === 1, "Little Cup off LOOKs a lone wooper with no seat");
+must(lcOff.look[0]?.keepClasses.includes("lc") !== true, "LOOK wooper has no LC keep class");
+must(lcOff.look[0]?.pvpJob == null, "LOOK wooper has no KEEP job");
 const lcOver = gradeBox([{ ...ivMon("wooper", "Wooper", 822, 0, 15, 15), cp: 501, level: 20 }], lcGate);
 const lcOverRow = [...lcOver.keep, ...lcOver.look, ...lcOver.dump][0];
 must(lcOverRow?.pvpJob?.kind !== "lc", "501 CP wooper cannot Little Cup");
@@ -968,7 +874,7 @@ must(keepShadowOff.keepShadow === false, "echo keepShadow false");
 must(keepShadowOff.keep.length === 0, "faded Shadow drops the junk shadow keep class");
 must(
   keepShadowOff.look.length === 1 && keepShadowOff.dump.length === 0,
-  "lone junk shadow LOOKs at default familyKeep",
+  "lone junk shadow LOOKs as the only copy",
 );
 must(
   keepShadowOff.look[0].keepClasses.includes("shadow") !== true,
@@ -979,13 +885,6 @@ must(
   "lone junk shadow is not a never-dump lock",
 );
 must(keepShadowOff.look[0].reasons.some((r) => r === "only copy"), "lone junk shadow explains only copy");
-
-const keepShadowDump = gradeBox([junkShadow], { ...meta, keepShadow: false, familyKeep: 0 });
-must(keepShadowDump.dump.length === 1, "faded Shadow + familyKeep 0 dumps a junk shadow");
-must(
-  keepShadowDump.dump[0].reasons.every((r) => !/never dump/i.test(r)),
-  "dumped shadow has no never-dump lock",
-);
 
 const extraShadow = { ...junkShadow, sourceRow: 501, nickname: "junk-shadow-2" };
 const shadowExtras = gradeBox([junkShadow, extraShadow], { ...meta, keepShadow: false });
@@ -1029,14 +928,17 @@ must(keepLuckyOn.dump.length === 0, "KEEP lucky does not dump the junk lucky");
 const keepLuckyOff = gradeBox([junkLucky], { ...meta, keepLucky: false });
 must(keepLuckyOff.keepLucky === false, "echo keepLucky false");
 must(keepLuckyOff.keep.length === 0, "Lucky off drops the junk lucky keep class");
-must(keepLuckyOff.look.length === 1 && keepLuckyOff.dump.length === 0, "lone junk lucky LOOKs at default familyKeep");
+must(keepLuckyOff.look.length === 1 && keepLuckyOff.dump.length === 0, "lone junk lucky LOOKs as the only copy");
 must(
   keepLuckyOff.look[0].keepClasses.includes("lucky") !== true,
   "Lucky off does not attach lucky keep class",
 );
 
-const keepLuckyDump = gradeBox([junkLucky], { ...meta, keepLucky: false, familyKeep: 0 });
-must(keepLuckyDump.dump.length === 1, "Lucky off + familyKeep 0 dumps a junk lucky");
+const keepLuckyDump = gradeBox(
+  [junkLucky, { ...junkLucky, sourceRow: 506 }],
+  { ...meta, keepLucky: false },
+);
+must(keepLuckyDump.look.length === 1 && keepLuckyDump.dump.length === 1, "Lucky off LOOKs one junk copy and dumps the extra");
 must(keepLuckyDump.dump[0].keepClasses.includes("lucky") !== true, "dumped lucky has no lucky class");
 
 const luckyFav = gradeBox([{ ...junkLucky, favorite: true }], { ...meta, keepLucky: false });
@@ -1067,14 +969,7 @@ must(
 );
 must(keepFavOff.look[0].reasons.some((r) => r === "only copy"), "lone junk star explains only copy");
 
-const keepFavZero = gradeBox([junkFav], { ...meta, keepFavorite: false, familyKeep: 0 });
-must(keepFavZero.dump.length === 1 && keepFavZero.look.length === 0, "familyKeep 0 dumps a junk star");
-must(
-  keepFavZero.dump[0].reasons.every((r) => !/never dump/i.test(r)),
-  "dumped star has no never-dump lock",
-);
-
-const shinyStar = gradeBox([{ ...junkFav, shiny: true }], { ...meta, keepFavorite: false, familyKeep: 0 });
+const shinyStar = gradeBox([{ ...junkFav, shiny: true }], { ...meta, keepFavorite: false });
 must(
   shinyStar.keep.length === 1 && shinyStar.keep[0].keepClasses.includes("shiny"),
   "shiny star still KEEPs when the star itself can dump",
@@ -1099,7 +994,6 @@ const anyMeta = {
   pvpAny: true,
   pvpRankKeep: 4096,
   pvpKeep: 1,
-  familyKeep: 0,
   raidAttackers: new Set<string>(),
   raidEvolution: {},
 };
@@ -1158,7 +1052,7 @@ const anyNone = gradeBox([{ ...ivMon("bidoof", "Bidoof", 940, 0, 15, 15), cp: 40
   keepLc: false,
 });
 must(anyNone.keepGl === false && anyNone.keepLc === false, "echo both leagues off");
-must(anyNone.keep.length === 0 && anyNone.dump.length === 1, "both leagues off dumps a lone PvP bidoof at familyKeep 0");
+must(anyNone.keep.length === 0 && anyNone.look.length === 1, "both leagues off LOOKs a lone bidoof");
 
 const openOff = {
   ...meta,
@@ -1171,7 +1065,6 @@ const openOff = {
   raidAttackers: new Set<string>(),
   raidEvolution: {},
   pvpRankKeep: 4096,
-  familyKeep: 0,
 };
 const ulList = [{ rank: 1, speciesId: "machamp", speciesName: "Machamp" }];
 const ulOn = gradeBox([ivMon("machop", "Machop", 950, 0, 15, 15)], {
@@ -1259,7 +1152,6 @@ console.log(
       extraWooperDump: withExtraWooper.dump.filter((g) => g.mon.speciesId === "wooper").length,
       noFavTightToads: tightToads.map((g) => `${g.verdict}:${g.gl?.rank ?? "?"}`),
       pvpKeep: result.pvpKeep,
-      familyKeep: result.familyKeep,
       raidMachamp,
       dupeMachampKeep: dupeHundos.keep.length,
       allMachampKeep: allHundos.keep.length,
