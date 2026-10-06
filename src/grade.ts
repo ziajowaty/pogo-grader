@@ -32,7 +32,7 @@ import {
   UL_LIST_CAP,
 } from "./types";
 import { evolutionGenderOk } from "./genderForm";
-import { canonId } from "./meta";
+import { canonId, returnPurifyBase } from "./meta";
 import {
   fitsLeagueCap,
   getRankGm,
@@ -40,8 +40,10 @@ import {
   LITTLE_CUP_CAP,
   MASTER_LEAGUE_CAP,
   lookupBaseStats,
+  purifiedCp,
   rankCappedLeagueAs,
   rankLittleCup,
+  rankPurifiedAs,
   ULTRA_LEAGUE_CAP,
   raidIvPercent,
   type RankGm,
@@ -380,6 +382,12 @@ function rankIn(g: GradedMon, kind: CappedKind, speciesId: string): LeagueRank |
   return leagueRanks(g, kind)?.find((r) => r.evoSpeciesId === speciesId) ?? null;
 }
 
+function lcRankFor(g: GradedMon, speciesId: string): LeagueRank | null {
+  const id = canonId(speciesId);
+  if (g.lc && canonId(g.lc.evoSpeciesId) === id) return g.lc;
+  return g.lcAs?.find((rank) => canonId(rank.evoSpeciesId) === id) ?? null;
+}
+
 function metaIn(g: GradedMon, kind: CappedKind, speciesId: string): MetaLeagueRank | null {
   return leagueMetas(g, kind)?.find((m) => m.speciesId === speciesId) ?? null;
 }
@@ -594,25 +602,39 @@ function lcCapMiss(g: GradedMon): string | null {
   return `CP ${g.mon.cp} over Little Cup ${LITTLE_CUP_CAP}`;
 }
 
-function cappedFloor(g: GradedMon, kind: CappedKind, cutoff: number, gm: RankGm): boolean {
+function cappedFloor(g: GradedMon, kind: CappedKind, cutoff: number, gm: RankGm, meta: Meta): boolean {
   const stages = leagueRanks(g, kind) ?? [];
   const leagueCap = capNumber(kind);
-  return stages.some((r) => rankMeets(r, cutoff) && fitsLeagueCap(g.mon, r.evoSpeciesId, leagueCap, gm).fits);
+  const rows = leagueRows(meta, kind);
+  return stages.some(
+    (r) => rankMeets(r, cutoff) && fitsPvpTarget(g.mon, r.evoSpeciesId, leagueCap, gm, meta, g.mon.gender, rows),
+  );
 }
 
 function pvpFloorLegal(
   g: GradedMon,
   cutoff: number,
   gm: RankGm,
+  meta: Meta,
   keepGl: boolean,
   keepUl: boolean,
   keepMl: boolean,
   keepLc: boolean,
 ): boolean {
   if (keepLc && rankMeets(g.lc, cutoff) && g.mon.cp <= LITTLE_CUP_CAP) return true;
-  if (keepGl && cappedFloor(g, "gl", cutoff, gm)) return true;
-  if (keepUl && cappedFloor(g, "ul", cutoff, gm)) return true;
-  if (keepMl && cappedFloor(g, "ml", cutoff, gm)) return true;
+  if (
+    keepLc &&
+    g.lcAs?.some(
+      (rank) =>
+        rankMeets(rank, cutoff) &&
+        fitsPvpTarget(g.mon, rank.evoSpeciesId, LITTLE_CUP_CAP, gm, meta, g.mon.gender, meta.lcRankings),
+    )
+  ) {
+    return true;
+  }
+  if (keepGl && cappedFloor(g, "gl", cutoff, gm, meta)) return true;
+  if (keepUl && cappedFloor(g, "ul", cutoff, gm, meta)) return true;
+  if (keepMl && cappedFloor(g, "ml", cutoff, gm, meta)) return true;
   return false;
 }
 
@@ -621,10 +643,44 @@ function pushReason(g: GradedMon, reason: string): void {
   if (!g.reasons.includes(reason)) g.reasons.push(reason);
 }
 
-function jobAction(g: GradedMon, targetId: string): { verb: "Stay" | "Evolve to"; name: string } {
+function jobAction(g: GradedMon, targetId: string): { verb: "Stay" | "Evolve to" | "Purify to"; name: string } {
   const name = prettySpeciesId(targetId);
-  if (canonId(g.mon.speciesId) === targetId) return { verb: "Stay", name };
+  const from = canonId(g.mon.speciesId);
+  const target = canonId(targetId);
+  if (from === target) return { verb: "Stay", name };
+  if (from.endsWith("_shadow") && from.slice(0, -7) === target) return { verb: "Purify to", name };
   return { verb: "Evolve to", name };
+}
+
+function leagueRows(meta: Meta, kind: CappedKind | "lc"): PvpokeRankRow[] | undefined {
+  if (kind === "gl") return meta.glRankings;
+  if (kind === "ul") return meta.ulRankings;
+  if (kind === "ml") return meta.mlRankings;
+  return meta.lcRankings;
+}
+
+function isPurifyFill(mon: Mon, target: string, rows: PvpokeRankRow[] | undefined): boolean {
+  return returnPurifyBase(mon.speciesId, rows) === canonId(target);
+}
+
+/** Under the CP cap as this PvP target. A purify seat uses +2 IVs at level 25 or the current level, whichever is higher. */
+function fitsPvpTarget(
+  mon: Mon,
+  target: string,
+  cap: number,
+  gm: RankGm,
+  meta: Meta,
+  gender: Gender,
+  rows: PvpokeRankRow[] | undefined,
+): boolean {
+  if (isPurifyFill(mon, target, rows)) {
+    if (mon.cp > cap) return false;
+    const projected = purifiedCp(mon, target, gm);
+    if (projected == null) return true;
+    return projected <= cap;
+  }
+  if (!canBecome(mon.speciesId, target, meta, gender)) return false;
+  return fitsLeagueCap(mon, target, cap, gm).fits;
 }
 
 function jobKeepReason(
@@ -640,8 +696,8 @@ function jobKeepReason(
 ): string {
   const { verb, name } = jobAction(g, job.speciesId);
   if (job.kind === "lc") {
-    const iv = g.lc;
-    const meta = g.lcMeta;
+    const iv = lcRankFor(g, job.speciesId);
+    const meta = g.lcMeta && canonId(g.lcMeta.speciesId) === canonId(job.speciesId) ? g.lcMeta : null;
     const metaBit = meta ? ` #${meta.rank}/${meta.of}` : "";
     const rankBit = iv ? `: ${iv.rank}/${iv.of} (keep ≤${cutoff})` : " (IV rank unavailable)";
     return `${verb} ${name} for Little Cup${metaBit}${rankBit}`;
@@ -662,22 +718,40 @@ function jobKeepReason(
 
 function canSitSeat(g: GradedMon, role: RoleDef, meta: Meta, gm: RankGm, raidIds: string[]): boolean {
   if (isCappedKind(role.kind)) {
-    if (!canBecome(g.mon.speciesId, role.speciesId, meta, g.mon.gender)) return false;
-    if (!fitsLeagueCap(g.mon, role.speciesId, capNumber(role.kind), gm).fits) return false;
+    if (!fitsPvpTarget(g.mon, role.speciesId, capNumber(role.kind), gm, meta, g.mon.gender, leagueRows(meta, role.kind))) {
+      return false;
+    }
     return rankIn(g, role.kind, role.speciesId) != null;
   }
   if (role.kind === "lc") {
-    if (canonId(g.mon.speciesId) !== role.speciesId) return false;
-    if (g.mon.cp > LITTLE_CUP_CAP) return false;
-    return g.lc != null;
+    if (!lcRankFor(g, role.speciesId)) return false;
+    if (canonId(g.mon.speciesId) === canonId(role.speciesId)) return g.mon.cp <= LITTLE_CUP_CAP;
+    return fitsPvpTarget(g.mon, role.speciesId, LITTLE_CUP_CAP, gm, meta, g.mon.gender, meta.lcRankings);
   }
-  return raidIds.some((target) => canBecome(g.mon.speciesId, target, meta, g.mon.gender));
+  return raidIdsForRole(raidIds, role).some((target) => canBecome(g.mon.speciesId, target, meta, g.mon.gender));
+}
+
+/** One raid seat, or one per shadow line and one per normal line when a merge joined both. */
+function raidRoleIds(raidIds: string[]): string[] {
+  if (raidIds.length === 0) return [];
+  const shadow = raidIds.find((id) => id.endsWith("_shadow"));
+  const normal = raidIds.find((id) => !id.endsWith("_shadow"));
+  if (shadow && normal) return [normal, shadow];
+  return [raidIds[0]];
+}
+
+function raidIdsForRole(raidIds: string[], role: RoleDef): string[] {
+  const split = raidIds.some((id) => id.endsWith("_shadow")) && raidIds.some((id) => !id.endsWith("_shadow"));
+  if (!split) return raidIds;
+  const shadowRole = role.speciesId.endsWith("_shadow");
+  return raidIds.filter((id) => id.endsWith("_shadow") === shadowRole);
 }
 
 function emptySeatReason(g: GradedMon, role: RoleDef): string {
   const { verb, name } = jobAction(g, role.speciesId);
   if (role.kind === "lc") {
-    const rankBit = g.lc ? ` ${g.lc.rank}/${g.lc.of}` : "";
+    const iv = lcRankFor(g, role.speciesId);
+    const rankBit = iv ? ` ${iv.rank}/${iv.of}` : "";
     return `Empty seat — ${verb} ${name} for Little Cup${rankBit}`;
   }
   if (isCappedKind(role.kind)) {
@@ -716,17 +790,33 @@ function roleMissReason(
 ): string | null {
   if (role.kind === "raid") return null;
   if (role.kind === "lc") {
-    if (canonId(g.mon.speciesId) !== role.speciesId) return null;
-    const over = lcCapMiss(g);
-    if (over) return over;
-    if (!g.lc) return "LC rank unknown — IVs not unique";
-    if (g.lc.rank > cutoff) return `LC ${g.lc.rank}/${g.lc.of} worse than keep ≤${cutoff}`;
-    return extraJobReason("Little Cup", prettySpeciesId(role.speciesId), g.lc.rank, g.lc.of, winners, (row) => row.lc);
+    const own = canonId(g.mon.speciesId) === canonId(role.speciesId);
+    const iv = lcRankFor(g, role.speciesId);
+    if (!own && !iv) return null;
+    if (own) {
+      const over = lcCapMiss(g);
+      if (over) return over;
+    }
+    if (!iv) return "LC rank unknown — IVs not unique";
+    if (iv.rank > cutoff) return `LC ${iv.rank}/${iv.of} worse than keep ≤${cutoff}`;
+    return extraJobReason(
+      "Little Cup",
+      prettySpeciesId(role.speciesId),
+      iv.rank,
+      iv.of,
+      winners,
+      (row) => lcRankFor(row, role.speciesId),
+    );
   }
   if (!isCappedKind(role.kind)) return null;
-  if (!canBecome(g.mon.speciesId, role.speciesId, meta, g.mon.gender)) return null;
-  const over = cappedCapMiss(g, role.speciesId, role.kind, gm);
-  if (over) return over;
+  const rows = leagueRows(meta, role.kind);
+  if (isPurifyFill(g.mon, role.speciesId, rows)) {
+    if (!fitsPvpTarget(g.mon, role.speciesId, capNumber(role.kind), gm, meta, g.mon.gender, rows)) return null;
+  } else {
+    if (!canBecome(g.mon.speciesId, role.speciesId, meta, g.mon.gender)) return null;
+    const over = cappedCapMiss(g, role.speciesId, role.kind, gm);
+    if (over) return over;
+  }
   const iv = rankIn(g, role.kind, role.speciesId);
   const short = CAPPED_SHORT[role.kind];
   if (!iv) return `${short} rank unknown — IVs not unique`;
@@ -762,7 +852,8 @@ function qualityRankText(g: GradedMon, role: RoleDef): string {
     return iv ? `${iv.rank}/${iv.of}` : "rank ?";
   }
   if (role.kind === "lc") {
-    return g.lc ? `${g.lc.rank}/${g.lc.of}` : "rank ?";
+    const iv = lcRankFor(g, role.speciesId);
+    return iv ? `${iv.rank}/${iv.of}` : "rank ?";
   }
   const pct = g.raidIv?.percent;
   return pct != null ? `${pct}% IV` : "IV ?";
@@ -785,11 +876,13 @@ function qualityCmp(a: GradedMon, b: GradedMon, role: RoleDef): number {
     return 0;
   }
   if (role.kind === "lc") {
-    const arank = a.lc?.rank ?? 100_000;
-    const brank = b.lc?.rank ?? 100_000;
+    const ar = lcRankFor(a, role.speciesId);
+    const br = lcRankFor(b, role.speciesId);
+    const arank = ar?.rank ?? 100_000;
+    const brank = br?.rank ?? 100_000;
     if (arank !== brank) return arank - brank;
-    const asp = a.lc?.statProduct ?? -1;
-    const bsp = b.lc?.statProduct ?? -1;
+    const asp = ar?.statProduct ?? -1;
+    const bsp = br?.statProduct ?? -1;
     if (asp !== bsp) return bsp - asp;
     const aiv = a.mon.ivPercent ?? -1;
     const biv = b.mon.ivPercent ?? -1;
@@ -1024,9 +1117,34 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
     };
   };
 
-  const rankStages = (mon: Mon, targets: string[], cap: number, index: Map<string, PvpokeRankRow>, of: number) => {
+  const rankOne = (mon: Mon, target: string, cap: number, rows: PvpokeRankRow[] | undefined): LeagueRank | null => {
+    if (isPurifyFill(mon, target, rows)) return rankPurifiedAs(mon, gm, target, cap);
+    return rankCappedLeagueAs(mon, gm, target, cap);
+  };
+
+  const withPurifyTarget = (
+    mon: Mon,
+    targets: string[],
+    rows: PvpokeRankRow[] | undefined,
+  ): string[] => {
+    const base = returnPurifyBase(mon.speciesId, rows);
+    if (!base || targets.includes(base) || isMegaStage(base)) return targets;
+    if (!targets.includes(base) && familyMembers(mon.speciesId, meta, families).includes(base)) {
+      return [...targets, base];
+    }
+    return targets;
+  };
+
+  const rankStages = (
+    mon: Mon,
+    targets: string[],
+    cap: number,
+    index: Map<string, PvpokeRankRow>,
+    of: number,
+    rows: PvpokeRankRow[] | undefined,
+  ) => {
     const ranks = targets
-      .map((t) => rankCappedLeagueAs(mon, gm, t, cap))
+      .map((t) => rankOne(mon, t, cap, rows))
       .filter((r): r is LeagueRank => r != null)
       .sort((a, b) => a.rank - b.rank || b.statProduct - a.statProduct);
     const metas = targets
@@ -1068,11 +1186,11 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
 
   const graded: GradedMon[] = gradedInput.map((mon) => {
     const ind = independentsOf(mon.speciesId);
-    const glTargets = ind.listedGl.filter(
-      (t) => !isMegaStage(t) && canBecome(mon.speciesId, t, meta, mon.gender),
-    );
+    const reachable = (ids: string[]) =>
+      ids.filter((t) => !isMegaStage(t) && canBecome(mon.speciesId, t, meta, mon.gender));
+    const glTargets = withPurifyTarget(mon, reachable(ind.listedGl), meta.glRankings);
     const glAs = glTargets
-      .map((t) => rankCappedLeagueAs(mon, gm, t, GREAT_LEAGUE_CAP))
+      .map((t) => rankOne(mon, t, GREAT_LEAGUE_CAP, meta.glRankings))
       .filter((r): r is LeagueRank => r != null)
       .sort((a, b) => a.rank - b.rank || b.statProduct - a.statProduct);
     const glMetaAs = glTargets
@@ -1083,11 +1201,27 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
       .filter((r): r is MetaLeagueRank => r != null);
     const primary = glAs[0] ?? null;
     const primaryMeta = (primary && glMetaAs.find((m) => m.speciesId === primary.evoSpeciesId)) || null;
-    const stageTargets = (ids: string[]) =>
-      ids.filter((t) => !isMegaStage(t) && canBecome(mon.speciesId, t, meta, mon.gender));
-    const ultra = keepUl ? rankStages(mon, stageTargets(ind.listedUl), ULTRA_LEAGUE_CAP, ulIndex, ulOf) : null;
-    const master = keepMl ? rankStages(mon, stageTargets(ind.listedMl), MASTER_LEAGUE_CAP, mlIndex, mlOf) : null;
-    const lc = pvpAny ? ind.lc.includes(canonId(mon.speciesId)) : isLcSpecies(mon.speciesId, gateMeta);
+    const ultra = keepUl
+      ? rankStages(mon, withPurifyTarget(mon, reachable(ind.listedUl), meta.ulRankings), ULTRA_LEAGUE_CAP, ulIndex, ulOf, meta.ulRankings)
+      : null;
+    const master = keepMl
+      ? rankStages(mon, withPurifyTarget(mon, reachable(ind.listedMl), meta.mlRankings), MASTER_LEAGUE_CAP, mlIndex, mlOf, meta.mlRankings)
+      : null;
+    const lcOwn = pvpAny ? ind.lc.includes(canonId(mon.speciesId)) : isLcSpecies(mon.speciesId, gateMeta);
+    const lcPurify = returnPurifyBase(mon.speciesId, meta.lcRankings);
+    const lcAs: LeagueRank[] = [];
+    if (lcOwn && mon.cp <= LITTLE_CUP_CAP) {
+      const ownRank = rankLittleCup(mon, gm);
+      if (ownRank) lcAs.push(ownRank);
+    }
+    if (
+      lcPurify &&
+      ind.lc.includes(lcPurify) &&
+      fitsPvpTarget(mon, lcPurify, LITTLE_CUP_CAP, gm, meta, mon.gender, meta.lcRankings)
+    ) {
+      const purifiedRank = rankPurifiedAs(mon, gm, lcPurify, LITTLE_CUP_CAP);
+      if (purifiedRank) lcAs.push(purifiedRank);
+    }
     const lcRow = lookupRank(mon.speciesId, lcIndex);
     const raidTarget =
       raidGateId(mon.speciesId, meta, mon.gender) ??
@@ -1101,7 +1235,8 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
       gl: primary,
       ul: ultra?.primary,
       ml: master?.primary,
-      lc: lc ? rankLittleCup(mon, gm) : null,
+      lc: lcAs.find((rank) => canonId(rank.evoSpeciesId) === canonId(mon.speciesId)) ?? null,
+      lcAs: lcAs.length > 0 ? lcAs : undefined,
       glAs,
       ulAs: ultra?.ranks,
       mlAs: master?.ranks,
@@ -1201,24 +1336,32 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
       })),
     ];
     if (raidIds.length) {
-      roles.push({ kind: "raid", speciesId: raidIds[0], slots: raidSlots, metaRank: 10_000 });
+      for (const raidId of raidRoleIds(raidIds)) {
+        roles.push({ kind: "raid", speciesId: raidId, slots: raidSlots, metaRank: 10_000 });
+      }
     }
 
     const costOf = (g: GradedMon, role: RoleDef): number | null => {
       if (isCappedKind(role.kind)) {
-        if (!canBecome(g.mon.speciesId, role.speciesId, meta, g.mon.gender)) return null;
-        if (!fitsLeagueCap(g.mon, role.speciesId, capNumber(role.kind), gm).fits) return null;
+        if (!fitsPvpTarget(g.mon, role.speciesId, capNumber(role.kind), gm, meta, g.mon.gender, leagueRows(meta, role.kind))) {
+          return null;
+        }
         const iv = rankIn(g, role.kind, role.speciesId);
         if (!rankMeets(iv, cutoff)) return null;
         return iv!.rank;
       }
       if (role.kind === "lc") {
-        if (canonId(g.mon.speciesId) !== role.speciesId) return null;
-        if (g.mon.cp > LITTLE_CUP_CAP) return null;
-        if (!rankMeets(g.lc, cutoff)) return null;
-        return g.lc!.rank;
+        const iv = lcRankFor(g, role.speciesId);
+        if (!iv) return null;
+        if (canonId(g.mon.speciesId) === canonId(role.speciesId)) {
+          if (g.mon.cp > LITTLE_CUP_CAP) return null;
+        } else if (!fitsPvpTarget(g.mon, role.speciesId, LITTLE_CUP_CAP, gm, meta, g.mon.gender, meta.lcRankings)) {
+          return null;
+        }
+        if (!rankMeets(iv, cutoff)) return null;
+        return iv.rank;
       }
-      if (!raidIds.some((t) => canBecome(g.mon.speciesId, t, meta, g.mon.gender))) return null;
+      if (!raidIdsForRole(raidIds, role).some((t) => canBecome(g.mon.speciesId, t, meta, g.mon.gender))) return null;
       if (!raidIvMeets(g, raidIvKeep)) return null;
       const pct = g.raidIv?.percent ?? 0;
       return Math.round((100 - pct) * 100);
@@ -1252,7 +1395,7 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
       const list = winnersByRole.get(roleKey(role)) ?? [];
       const kind = role.kind;
       if (isCappedKind(kind)) list.sort((a, b) => openOrderAs(a, b, kind, role.speciesId));
-      else if (kind === "lc") list.sort(lcOrder);
+      else if (kind === "lc") list.sort(byQuality(role));
       else list.sort(raidOrder);
       const of = list.length;
       list.forEach((g, i) => {
@@ -1271,7 +1414,7 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
       const candidates = rows
         .filter((g) => !claimed.has(g) && !upgradeOf.has(g) && canSitSeat(g, role, meta, gm, raidIds))
         .sort((a, b) => {
-          if (role.kind === "lc") return lcOrder(a, b);
+          if (role.kind === "lc") return byQuality(role)(a, b);
           if (role.kind === "raid") return raidOrder(a, b);
           if (isCappedKind(role.kind)) return openOrderAs(a, b, role.kind, role.speciesId);
           return a.mon.sourceRow - b.mon.sourceRow;
@@ -1402,7 +1545,7 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
   const groupAnchor = new Map<string, boolean>();
   for (const [key, rows] of groups) {
     const hasKeep = rows.some((row) => row.keepClasses.length > 0);
-    const hasFloor = rows.some((row) => pvpFloorLegal(row, cutoff, gm, keepGl, keepUl, keepMl, keepLc));
+    const hasFloor = rows.some((row) => pvpFloorLegal(row, cutoff, gm, meta, keepGl, keepUl, keepMl, keepLc));
     groupAnchor.set(key, hasKeep || hasFloor);
   }
 

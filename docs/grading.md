@@ -14,6 +14,8 @@ A seat is one species in one bright league. Marowak in Great League and Cubone i
 
 **Leagues.** Bright leagues have seats and fill from the top of the order. Default order is Great League, Ultra League, Master League, Little Cup. Ultra and Master start faded. One Pokémon takes the first seat it qualifies for. Inside a league, the better PvPoke species fills first.
 
+**Purify.** When the normal species' PvPoke moveset includes Return and the shadow moveset does not, that shadow can also fill the normal species' PvP seat. Purification adds 2 to Attack, Defense, and HP, capped at 15, and raises the level to 25 when it was lower. The copy still has to fit that league's CP cap at the new level, so a Cubone has no purified Little Cup seat. The shadow seat stays, so a second copy can KEEP for the shadow. Raid is not part of that projection. If the merged family has both a shadow raid attacker and a normal one, those stay two raid seats.
+
 **Who gets a seat.** This is the PvPoke species rank, not the IV rank.
 
 - **Top list** at 500: a species at PvPoke rank 500 or better gets a seat. Cubone at Great League #945 does not. Marowak Shadow at #82 does.

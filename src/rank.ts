@@ -163,6 +163,26 @@ function tableFor(
   return table;
 }
 
+function rankAtIvs(
+  ivs: { atk: number; def: number; sta: number },
+  gm: RankGm,
+  speciesId: string,
+  cap: number,
+): LeagueRank | null {
+  const id = canonId(speciesId);
+  const stats = lookupBaseStats(id, gm);
+  if (!stats) return null;
+  const shedinja = stripShadow(id) === "shedinja";
+  const table = tableFor(stats, cap, gm, shedinja);
+  const idx = (ivs.atk << 8) | (ivs.def << 4) | ivs.sta;
+  return {
+    rank: table.rank[idx],
+    of: IV_COMBOS,
+    statProduct: table.sp[idx],
+    evoSpeciesId: id,
+  };
+}
+
 function rankAt(
   mon: Mon,
   gm: RankGm,
@@ -171,17 +191,42 @@ function rankAt(
 ): LeagueRank | null {
   const ivs = ivsOf(mon);
   if (!ivs) return null;
-  const stats = lookupBaseStats(speciesId, gm);
-  if (!stats) return null;
-  const shedinja = stripShadow(canonId(speciesId)) === "shedinja";
-  const table = tableFor(stats, cap, gm, shedinja);
-  const idx = (ivs.atk << 8) | (ivs.def << 4) | ivs.sta;
+  return rankAtIvs(ivs, gm, speciesId, cap);
+}
+
+/** IVs after purification: +2 to each stat, capped at 15. */
+export function purifiedIvSpread(mon: Mon): { atk: number; def: number; sta: number } | null {
+  const ivs = ivsOf(mon);
+  if (!ivs) return null;
   return {
-    rank: table.rank[idx],
-    of: IV_COMBOS,
-    statProduct: table.sp[idx],
-    evoSpeciesId: speciesId,
+    atk: Math.min(15, ivs.atk + 2),
+    def: Math.min(15, ivs.def + 2),
+    sta: Math.min(15, ivs.sta + 2),
   };
+}
+
+/** Stat-product rank of this shadow after purifying into `speciesId`. */
+export function rankPurifiedAs(mon: Mon, gm: RankGm, speciesId: string, cap: number): LeagueRank | null {
+  const ivs = purifiedIvSpread(mon);
+  if (!ivs) return null;
+  return rankAtIvs(ivs, gm, speciesId, cap);
+}
+
+/**
+ * Level after purification. A Pokémon below level 25 is raised to 25.
+ * A higher level stays put.
+ */
+export function purifiedLevel(level: number | null | undefined): number | null {
+  if (level == null || !Number.isFinite(level)) return null;
+  return Math.max(level, 25);
+}
+
+/** CP after purifying into `speciesId`: +2 IVs at `purifiedLevel`. Null without a level. */
+export function purifiedCp(mon: Mon, speciesId: string, gm: RankGm): number | null {
+  const ivs = purifiedIvSpread(mon);
+  const level = purifiedLevel(mon.level);
+  if (!ivs || level == null) return null;
+  return cpAtLevel(speciesId, ivs, level, gm);
 }
 
 /** Great League 1500 CP rank for unique IVs, as the family GL evo when mapped. */

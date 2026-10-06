@@ -30,8 +30,8 @@ import evolutionsJson from "../data/evolutions.json";
 import speciesTypesJson from "../data/species-types.json";
 
 const PVPOKE_TTL_MS = 24 * 60 * 60 * 1000;
-/** v2 stores up to 1000 species. Older caches were cut at 500 (GL) and 100 (LC). */
-const PVPOKE_CACHE_KEY = "pogo-grader.pvpokeLists.v2";
+/** v3 keeps each row's simulated moveset. v2 stored up to 1000 species and dropped moves. */
+const PVPOKE_CACHE_KEY = "pogo-grader.pvpokeLists.v3";
 const RAID_TTL_MS = 24 * 60 * 60 * 1000;
 const RAID_CACHE_KEY = "pogo-grader.raidAttackers.dittobase";
 const RAID_LIVE_MIN = 40;
@@ -43,8 +43,8 @@ const UL_RANKINGS_URL =
   "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-2500.json";
 const ML_RANKINGS_URL =
   "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-10000.json";
-const UL_CACHE_KEY = "pogo-grader.pvpokeUltra.v2";
-const ML_CACHE_KEY = "pogo-grader.pvpokeMaster.v2";
+const UL_CACHE_KEY = "pogo-grader.pvpokeUltra.v3";
+const ML_CACHE_KEY = "pogo-grader.pvpokeMaster.v3";
 interface NamedListFile {
   comment?: string;
   speciesIds: string[];
@@ -529,14 +529,113 @@ function scoreOf(row: { score?: unknown }): number | undefined {
   return typeof row.score === "number" && Number.isFinite(row.score) ? row.score : undefined;
 }
 
-function rowFromId(id: string, rank: number, speciesName?: string, score?: number): PvpokeRankRow {
+function movesetOf(row: { moveset?: unknown }): string[] | undefined {
+  if (!Array.isArray(row.moveset)) return undefined;
+  const moves: string[] = [];
+  for (const move of row.moveset) {
+    if (typeof move !== "string") continue;
+    const id = move.trim().toUpperCase();
+    if (!id || id === "NONE") continue;
+    moves.push(id);
+  }
+  return moves.length > 0 ? moves : undefined;
+}
+
+function rowFromId(
+  id: string,
+  rank: number,
+  speciesName?: string,
+  score?: number,
+  moveset?: string[],
+): PvpokeRankRow {
   const speciesId = canonId(id);
   return {
     rank,
     speciesId,
     speciesName: (speciesName && speciesName.trim()) || prettySpeciesId(speciesId),
     score,
+    ...(moveset && moveset.length > 0 ? { moveset } : {}),
   };
+}
+
+/** PvPoke simulated this species with Return, the charged move purification teaches. */
+export function movesetHasReturn(moveset: readonly string[] | undefined): boolean {
+  return moveset?.some((move) => move.toUpperCase() === "RETURN") === true;
+}
+
+/**
+ * Normal species id a shadow can fill by purifying, when this league's moveset
+ * uses Return and the shadow moveset does not. Null when either row is missing.
+ */
+export function returnPurifyBase(
+  speciesId: string,
+  rows: readonly PvpokeRankRow[] | undefined,
+): string | null {
+  const id = canonId(speciesId);
+  if (!id.endsWith("_shadow") || !rows?.length) return null;
+  const base = id.slice(0, -7);
+  let baseRow: PvpokeRankRow | undefined;
+  let shadowRow: PvpokeRankRow | undefined;
+  for (const row of rows) {
+    if (row.speciesId === base) baseRow = row;
+    else if (row.speciesId === id) shadowRow = row;
+  }
+  if (!baseRow || !shadowRow) return null;
+  if (!movesetHasReturn(baseRow.moveset) || movesetHasReturn(shadowRow.moveset)) return null;
+  return base;
+}
+
+/** Normal species whose Return moveset opens a purify seat next to the shadow. */
+export function returnPurifyBases(lists: Array<readonly PvpokeRankRow[] | undefined>): string[] {
+  const bases = new Set<string>();
+  for (const rows of lists) {
+    if (!rows) continue;
+    const by = new Map(rows.map((row) => [row.speciesId, row]));
+    for (const row of rows) {
+      if (row.speciesId.endsWith("_shadow")) continue;
+      if (!movesetHasReturn(row.moveset)) continue;
+      const shadow = by.get(`${row.speciesId}_shadow`);
+      if (!shadow || movesetHasReturn(shadow.moveset)) continue;
+      bases.add(row.speciesId);
+    }
+  }
+  return [...bases];
+}
+
+/**
+ * Put each Return species and its shadow on one family root so they share the
+ * normal seat instead of keeping it twice. Evolution reach is unchanged.
+ */
+export function mergeReturnFamilies(
+  familyOf: Record<string, string> | undefined,
+  bases: readonly string[],
+): Record<string, string> {
+  const next: Record<string, string> = { ...(familyOf ?? {}) };
+  const rootOf = (id: string): string => {
+    let cur = id;
+    const seen = new Set<string>();
+    while (next[cur] && next[cur] !== cur && !seen.has(cur)) {
+      seen.add(cur);
+      cur = next[cur];
+    }
+    return cur;
+  };
+  for (const base of bases) {
+    const shadow = `${base}_shadow`;
+    const left = rootOf(base);
+    const right = rootOf(shadow);
+    const keep = left < right ? left : right;
+    const drop = keep === left ? right : left;
+    if (left !== right) {
+      for (const [id, value] of Object.entries(next)) {
+        if (id === drop || value === drop) next[id] = keep;
+      }
+      next[drop] = keep;
+    }
+    next[base] = keep;
+    next[shadow] = keep;
+  }
+  return next;
 }
 
 function uniqueRankRows(rows: unknown, cap: number): PvpokeRankRow[] {
@@ -553,7 +652,7 @@ function uniqueRankRows(rows: unknown, cap: number): PvpokeRankRow[] {
       continue;
     }
     if (!row || typeof row !== "object" || !("speciesId" in row)) continue;
-    const rec = row as { speciesId?: unknown; speciesName?: unknown; score?: unknown };
+    const rec = row as { speciesId?: unknown; speciesName?: unknown; score?: unknown; moveset?: unknown };
     const id = canonId(String(rec.speciesId ?? ""));
     if (!id || seen.has(id)) continue;
     seen.add(id);
@@ -563,6 +662,7 @@ function uniqueRankRows(rows: unknown, cap: number): PvpokeRankRow[] {
         out.length + 1,
         typeof rec.speciesName === "string" ? rec.speciesName : undefined,
         scoreOf(rec),
+        movesetOf(rec),
       ),
     );
     if (out.length >= cap) break;
@@ -614,8 +714,19 @@ function bundledLists(): CachedLists {
   };
 }
 
+/** A list saved before movesets were kept cannot open a purify seat. Refetch it. */
+function rankingsHaveMoveset(rows: readonly { moveset?: readonly string[] }[]): boolean {
+  return rows.some((row) => (row.moveset?.length ?? 0) > 0);
+}
+
 function cacheUsable(cached: CachedLists | null): cached is CachedLists {
-  return Boolean(cached && cached.gl.length >= 20 && cached.lc.length >= 20);
+  return Boolean(
+    cached &&
+      cached.gl.length >= 20 &&
+      cached.lc.length >= 20 &&
+      rankingsHaveMoveset(cached.gl) &&
+      rankingsHaveMoveset(cached.lc),
+  );
 }
 
 type PvpokeLists = {
@@ -780,7 +891,7 @@ function readOptionalCache(key: string, cap: number): CachedOptional | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as { rows?: unknown; fetchedAt?: unknown };
     const rows = coerceRankRows(parsed.rows, cap);
-    if (!rows || !Number.isFinite(parsed.fetchedAt)) return null;
+    if (!rows || !rankingsHaveMoveset(rows) || !Number.isFinite(parsed.fetchedAt)) return null;
     return { rows, fetchedAt: Number(parsed.fetchedAt) };
   } catch {
     return null;
@@ -836,7 +947,8 @@ export async function loadMeta(request?: LeagueListRequest): Promise<Meta> {
   const mythical = toSet(mythicalJson as string[]);
   const evoEdges = loadEvolutionEdges(evolutionsJson);
   const typeMap = loadSpeciesTypes(speciesTypesJson);
-  const { familyOf, evoReach } = buildFamilyIndex(evoEdges);
+  const builtFamilies = buildFamilyIndex(evoEdges);
+  const evoReach = builtFamilies.evoReach;
   const wantUltra = request?.ultra === true;
   const wantMaster = request?.master === true;
   const [lists, raidLive, ultra, master] = await Promise.all([
@@ -850,6 +962,10 @@ export async function loadMeta(request?: LeagueListRequest): Promise<Meta> {
     raidEntries.filter(entryIsViable).map((entry) => entry.speciesId),
   );
   const raidEvolution = buildRaidEvolution(raidAttackers, evoEdges);
+  const familyOf = mergeReturnFamilies(
+    builtFamilies.familyOf,
+    returnPurifyBases([lists.gl, lists.lc, ultra?.rows, master?.rows]),
+  );
   return {
     glTop500: toSet(lists.gl.map((row) => row.speciesId)),
     lcTop100: toSet(lists.lc.map((row) => row.speciesId)),

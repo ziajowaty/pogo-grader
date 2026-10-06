@@ -64,6 +64,11 @@ export interface PvpokeRankRow {
   speciesId: string;
   speciesName: string;
   score?: number;
+  /**
+   * Fast move plus charged moves this PvPoke rank was simulated with.
+   * `RETURN` on the normal row and not on the shadow row is the purify seat.
+   */
+  moveset?: string[];
 }
 
 export const POKEMON_TYPES = [
@@ -140,6 +145,8 @@ export interface GradedMon {
   ul?: LeagueRank | null;
   ml?: LeagueRank | null;
   lc?: LeagueRank | null;
+  /** Little Cup ranks besides `lc`, including a purified Return seat. */
+  lcAs?: LeagueRank[];
   /** Every independent GL stage this copy can become, best IV-rank first. */
   glAs?: LeagueRank[];
   /** Every independent Ultra League stage this copy can become, best IV-rank first. */

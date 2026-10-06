@@ -592,7 +592,7 @@ function reasonClass(reason: string): string {
   if (r.startsWith("core holds") || r.startsWith("holds")) return "chip chip--core-hold";
   if (r.startsWith("same pokémon") || r.startsWith("same pokemon")) return "chip chip--core-same";
   if (r.includes("no pvp/raid job")) return "chip chip--nojob";
-  if (r.startsWith("stay ") || r.startsWith("evolve to ")) {
+  if (r.startsWith("stay ") || r.startsWith("evolve to ") || r.startsWith("purify to ")) {
     if (r.includes("little cup")) return "chip chip--lc";
     if (r.includes("ultra league")) return "chip chip--ul";
     if (r.includes("master league")) return "chip chip--ml";
@@ -996,7 +996,6 @@ export function mountApp(root: HTMLElement): void {
             <button type="button" class="btn" id="core-export" hidden>Export core CSV</button>
             <button type="button" class="btn" id="extended-clear" hidden>Clear extended</button>
           </div>
-          <p class="note">Add to core saves a scanned Pokémon on this device. Export writes the core file plus those saves as one CSV this app can load again.</p>
         </section>
 
         <section class="card card--skip" aria-labelledby="skip-title">
@@ -1272,7 +1271,7 @@ export function mountApp(root: HTMLElement): void {
           </section>
           <section class="track track--extended" data-track="EXTENDED">
             <header class="track-head">EXTENDED <span class="count" id="count-extended">0</span></header>
-            <p class="note core-note">Saved from scans on this device. Not part of the transfer list.</p>
+            <p class="note core-note">Your core pokemon collection. Kept in browser memory, it's recommended to periodically export the pokemon to the optional core csv. Export merges with the loaded core csv.</p>
             <div id="list-extended" class="list"></div>
           </section>
         </div>
