@@ -1248,6 +1248,11 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
       ulMetaAs: ultra?.metas,
       mlMetaAs: master?.metas,
       raidIv: raidTarget ? raidIvPercent(mon, raidTarget) : null,
+      pvpFamily:
+        (keepGl && ind.gl.length > 0) ||
+        (keepUl && ind.ul.length > 0) ||
+        (keepMl && ind.ml.length > 0) ||
+        (keepLc && ind.lc.length > 0),
       pvpJob: null,
       copiesInGroup: 1,
       copyRankInGroup: 1,

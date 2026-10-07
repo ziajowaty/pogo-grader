@@ -170,6 +170,11 @@ export interface GradedMon {
   /** IV% for raid KEEP ((atk+def+sta)/45). */
   raidIv?: RaidIvRank | null;
   /**
+   * Family has a seat in a bright league on this grade.
+   * Display-only. Does not change KEEP / LOOK / DUMP.
+   */
+  pvpFamily?: boolean;
+  /**
    * Exclusive PvP/raid job for this copy (one job per Pokémon).
    * Bright leagues fill in `pvpFillOrder` (default Great, Ultra, Master, Little Cup).
    * Within a league, higher PvPoke species fill first (Dragonair before Dragonite).

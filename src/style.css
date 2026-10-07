@@ -710,8 +710,47 @@ body {
 }
 
 .track--dump .track-head {
+  align-items: center;
+  flex-wrap: wrap;
   background: var(--dump-bg);
   color: var(--dump);
+}
+
+.trade-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.trade-switches .keep-chip {
+  min-height: 32px;
+  padding: 4px 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dump-subhead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 4px 4px;
+  background: color-mix(in srgb, var(--dump-bg) 92%, var(--bg));
+  color: var(--dump);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.dump-subhead .count {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  font-size: 0.85rem;
 }
 
 .track--box .track-head {
@@ -1201,6 +1240,20 @@ body {
 
 .badge-job--look {
   outline: 1px dashed currentColor;
+}
+
+.badge-trade {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 7px;
+  border: 1px dashed var(--dump);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dump);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
 }
 
 .rankings-card {
@@ -1738,6 +1791,11 @@ button.type-chip.is-active {
   background: color-mix(in srgb, #ef6d6d 36%, #1c0c0c);
 }
 
+.box-tile--trade {
+  outline: 1px dashed var(--tile);
+  outline-offset: 2px;
+}
+
 .box-tile.is-selected {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
@@ -1823,6 +1881,16 @@ button.type-chip.is-active {
   margin-right: 3px;
   color: #f4d35e;
   font-size: 0.75rem;
+}
+
+.box-trade {
+  width: 100%;
+  margin-top: 2px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  color: var(--tile);
 }
 
 .box-name {

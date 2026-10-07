@@ -50,6 +50,7 @@ import {
   RAID_KEEP_MIN,
 } from "./types";
 import { compareScanStream } from "./grade";
+import { isForTrade, splitDump, type TradeFlags } from "./trade";
 import {
   coreExtendKey,
   coreifyScan,
@@ -118,6 +119,8 @@ const FILL_ORDER_KEY = "pogo-grader.pvpFillOrder";
 const PIN_DETAIL_KEY = "pogo-grader.pinDetail";
 const TAB_KEY = "pogo-grader.tab";
 const BOX_FILTER_KEY = "pogo-grader.boxFilter";
+const TRADE_RAID_KEY = "pogo-grader.tradeRaid";
+const TRADE_PVP_KEY = "pogo-grader.tradePvp";
 
 type Tab = Verdict | "BOX" | "CORE" | "EXTENDED";
 type RankingsTab = "gl" | "ul" | "ml" | "lc" | "raid";
@@ -167,6 +170,10 @@ interface AppState {
   boxSort: BoxSort;
   /** Which verdicts the LIST grid draws. Off hides that group from this grid only. */
   boxFilter: BoxFilter;
+  /** Bright: raid DUMP copies move into FOR TRADE. Shadows stay in TRANSFER. */
+  tradeRaid: boolean;
+  /** Bright: DUMP copies from a bright-league family move into FOR TRADE. Shadows stay in TRANSFER. */
+  tradePvp: boolean;
   /** sourceRow values removed from the list and tracks. Last removed is last. */
   dismissed: number[];
   boxSelected: number | null;
@@ -365,6 +372,8 @@ const state: AppState = {
   rankingsRaidType: "",
   boxSort: "scan",
   boxFilter: readStoredBoxFilter(),
+  tradeRaid: readStoredFlag(TRADE_RAID_KEY, false),
+  tradePvp: readStoredFlag(TRADE_PVP_KEY, false),
   dismissed: [],
   boxSelected: null,
   boxFileKey: "",
@@ -686,7 +695,33 @@ function rowChips(item: GradedMon, verdict: Tab, meta: Meta | null): string {
   return `<div class="reasons">${spans.join("")}</div>`;
 }
 
-function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null): string {
+function tradeFlags(): TradeFlags {
+  return { tradeRaid: state.tradeRaid, tradePvp: state.tradePvp };
+}
+
+function rowForTrade(item: GradedMon): boolean {
+  return item.verdict === "DUMP" && isForTrade(item, tradeFlags());
+}
+
+function tradeChipTitle(kind: "raid" | "pvp", on: boolean): string {
+  if (kind === "raid") {
+    return on
+      ? "FOR TRADE includes raid attackers and their pre-evolutions. Click to fade — those copies go back to TRANSFER. Shadows stay in TRANSFER."
+      : "Raid candy stays in TRANSFER. Click to move raid DUMP copies into FOR TRADE. Shadows stay in TRANSFER.";
+  }
+  const leaguesOn = state.keepGl || state.keepUl || state.keepMl || state.keepLc;
+  if (!on) {
+    const anyNote = state.pvpAny ? " Any species is on, so this would match every non-shadow DUMP." : "";
+    return `PvP candy stays in TRANSFER. Click to move DUMP copies from a bright-league family into FOR TRADE. Shadows stay in TRANSFER.${anyNote}`;
+  }
+  if (!leaguesOn) return "No bright league, so this matches nothing. Click to fade.";
+  if (state.pvpAny) {
+    return "Any species is on, so every non-shadow DUMP goes to FOR TRADE. Shadows stay in TRANSFER. Click to fade.";
+  }
+  return "FOR TRADE includes families with a seat in a bright league. Click to fade. Shadows stay in TRANSFER.";
+}
+
+function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null, forTrade = false): string {
   const { mon, copiesInGroup, copyRankInGroup } = item;
   const crowd = copiesInGroup > 2;
   const flags = [
@@ -708,6 +743,9 @@ function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null): string {
   const jobBadge = job
     ? `<span class="badge-job badge-job--${jobKind}${item.pvpJob ? "" : " badge-job--look"}">${escapeHtml(job)}</span>`
     : "";
+  const tradeBadge = forTrade
+    ? `<span class="badge-trade" title="Trade for candy. A transfer pays less.">TRADE</span>`
+    : "";
   const line = [speciesBit, `IVs ${formatIvs(mon)}`, flags, formatRanks(item, meta)].filter(Boolean).join(" · ");
   const action =
     verdict === "KEEP" || verdict === "LOOK" || verdict === "DUMP"
@@ -718,7 +756,7 @@ function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null): string {
 
   return `<article class="row row--${verdict.toLowerCase()}${crowd ? " row--crowd" : ""}">
     <div class="row-top">
-      <div class="species">${escapeHtml(title)}${jobBadge}${crowdBadge}</div>
+      <div class="species">${escapeHtml(title)}${tradeBadge}${jobBadge}${crowdBadge}</div>
       <div class="row-end"><div class="cp">${mon.cp}</div>${action}</div>
     </div>
     <div class="meta">${escapeHtml(line)}</div>
@@ -742,6 +780,26 @@ function paintTrack(
   listEl.innerHTML =
     shown.map((row) => renderRow(row, verdict, meta)).join("") +
     (extra > 0 ? `<p class="list-more">${extra} more in scan order</p>` : "");
+}
+
+function paintDumpList(listEl: HTMLElement, rows: GradedMon[], meta: Meta | null): void {
+  if (rows.length === 0) {
+    listEl.innerHTML = `<p class="empty">None</p>`;
+    return;
+  }
+  const flags = tradeFlags();
+  if (!flags.tradeRaid && !flags.tradePvp) {
+    paintTrack(listEl, rows, "DUMP", rows.length, meta);
+    return;
+  }
+  const { trade, transfer } = splitDump(rows, flags);
+  const block = (label: string, group: GradedMon[], forTrade: boolean) => {
+    const body = group.length
+      ? group.map((row) => renderRow(row, "DUMP", meta, forTrade)).join("")
+      : `<p class="empty">None</p>`;
+    return `<h3 class="dump-subhead">${label} <span class="count">${group.length}</span></h3>${body}`;
+  };
+  listEl.innerHTML = block("FOR TRADE", trade, true) + block("TRANSFER", transfer, false);
 }
 
 function pvpokeStatus(meta: Meta | null): string {
@@ -932,7 +990,8 @@ function renderBoxDetail(item: GradedMon): string {
   const line = [`CP ${mon.cp}`, `IVs ${formatIvs(mon)}`, sub, formatRanks(item, state.meta)]
     .filter(Boolean)
     .join(" · ");
-  return `<div class="box-detail-title">${escapeHtml(title)} <span class="box-detail-verdict box-detail-verdict--${item.verdict.toLowerCase()}">${item.verdict}</span></div>
+  const tradeMark = rowForTrade(item) ? `<span class="badge-trade">TRADE</span>` : "";
+  return `<div class="box-detail-title">${escapeHtml(title)} <span class="box-detail-verdict box-detail-verdict--${item.verdict.toLowerCase()}">${item.verdict}</span>${tradeMark}</div>
     <div class="meta">${escapeHtml(line)}</div>
     ${rowChips(item, item.verdict, state.meta)}
     <div class="row-end">${coreifyButton(mon)}</div>`;
@@ -942,16 +1001,19 @@ function renderBoxTile(item: GradedMon, selected: boolean): string {
   const { mon } = item;
   const { title, sub } = boxLabel(item);
   const verdict = item.verdict.toLowerCase();
+  const forTrade = rowForTrade(item);
   const starTitle = state.keepFavorite
     ? "Favorite — always keep"
     : "Favorite — can dump if other rules do not save it";
   const star = mon.favorite ? `<span class="box-star" title="${starTitle}">★</span>` : "";
   const subHtml = sub ? `<div class="box-sub">${escapeHtml(sub)}</div>` : "";
-  const openLabel = `${title}, CP ${mon.cp}, ${item.verdict}. Show details.`;
-  return `<div class="box-tile box-tile--${verdict}${selected ? " is-selected" : ""}">
+  const tradeHtml = forTrade ? `<div class="box-trade">TRADE</div>` : "";
+  const openLabel = `${title}, CP ${mon.cp}, ${item.verdict}${forTrade ? ", for trade" : ""}. Show details.`;
+  return `<div class="box-tile box-tile--${verdict}${forTrade ? " box-tile--trade" : ""}${selected ? " is-selected" : ""}">
     <button type="button" class="box-open" data-box-open="${mon.sourceRow}" aria-pressed="${selected ? "true" : "false"}" aria-label="${escapeHtml(openLabel)}">
       <div class="box-cp">${star}<span class="box-cp-k">CP</span> ${mon.cp}</div>
       <div class="box-name">${escapeHtml(title)}</div>
+      ${tradeHtml}
       ${subHtml}
     </button>
     <button type="button" class="box-x" data-box-dismiss="${mon.sourceRow}" aria-label="Remove ${escapeHtml(title)} CP ${mon.cp} from the list" title="Remove from the list"></button>
@@ -1234,7 +1296,13 @@ export function mountApp(root: HTMLElement): void {
             <div id="list-look" class="list"></div>
           </section>
           <section class="track track--dump" data-track="DUMP">
-            <header class="track-head">DUMP <span class="count" id="count-dump">0</span></header>
+            <header class="track-head">
+              <span class="track-head-label">DUMP <span class="count" id="count-dump">0</span></span>
+              <div class="trade-switches" role="group" aria-label="For trade">
+                <button type="button" class="chip chip--raid keep-chip${state.tradeRaid ? "" : " is-off"}" data-trade="raid" aria-pressed="${state.tradeRaid ? "true" : "false"}" title="${escapeHtml(tradeChipTitle("raid", state.tradeRaid))}">Raid</button>
+                <button type="button" class="chip chip--gl keep-chip${state.tradePvp ? "" : " is-off"}" data-trade="pvp" aria-pressed="${state.tradePvp ? "true" : "false"}" title="${escapeHtml(tradeChipTitle("pvp", state.tradePvp))}">PvP</button>
+              </div>
+            </header>
             <div id="list-dump" class="list"></div>
           </section>
           <section class="track track--box" id="box-card" data-track="BOX" aria-labelledby="box-title">
@@ -1445,6 +1513,38 @@ export function mountApp(root: HTMLElement): void {
     }
   }
 
+  function persistTrade(kind: "raid" | "pvp", on: boolean): void {
+    try {
+      localStorage.setItem(kind === "raid" ? TRADE_RAID_KEY : TRADE_PVP_KEY, on ? "1" : "0");
+    } catch {
+      /* private mode */
+    }
+  }
+
+  function paintTradeSwitches(): void {
+    root.querySelectorAll("[data-trade]").forEach((btn) => {
+      const kind = btn.getAttribute("data-trade");
+      if (kind !== "raid" && kind !== "pvp") return;
+      const on = kind === "raid" ? state.tradeRaid : state.tradePvp;
+      btn.classList.toggle("is-off", !on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      btn.setAttribute("title", tradeChipTitle(kind, on));
+    });
+  }
+
+  function applyTrade(kind: "raid" | "pvp"): void {
+    const on = kind === "raid" ? !state.tradeRaid : !state.tradePvp;
+    if (kind === "raid") state.tradeRaid = on;
+    else state.tradePvp = on;
+    persistTrade(kind, on);
+    paintTradeSwitches();
+    if (!state.result) return;
+    const saved = listScrolls();
+    paintList();
+    paintBox();
+    restoreListScrolls(saved);
+  }
+
   function persistFillOrder(order: readonly PvpLeague[]): void {
     try {
       localStorage.setItem(FILL_ORDER_KEY, JSON.stringify(order));
@@ -1634,6 +1734,7 @@ function pvpCopiesNote(): string {
       btn.classList.toggle("is-off", !on);
       btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    paintTradeSwitches();
     const transferLockEl = root.querySelector("#transfer-lock");
     if (transferLockEl) {
       transferLockEl.textContent = state.keepFavorite
@@ -1907,10 +2008,10 @@ function pvpCopiesNote(): string {
     root.querySelectorAll(".track").forEach((track) => {
       track.classList.toggle("is-active", track.getAttribute("data-track") === state.tab);
     });
+    paintTradeSwitches();
     paintTrack(listKeepEl, shownRows(result.keep), "KEEP", LIST_PAINT_MAX, state.meta);
     paintTrack(listLookEl, shownRows(result.look), "LOOK", LIST_PAINT_MAX, state.meta);
-    const dumpRows = shownRows(result.dump);
-    paintTrack(listDumpEl, dumpRows, "DUMP", dumpRows.length, state.meta);
+    paintDumpList(listDumpEl, shownRows(result.dump), state.meta);
     const parts = splitCoreRows(result.core ?? [], coreMons());
     paintTrack(listCoreEl, parts.file, "CORE", parts.file.length, state.meta);
     paintExtended(parts.extended);
@@ -2125,7 +2226,8 @@ function pvpCopiesNote(): string {
     }
     boxTipEl.classList.remove("box-tip--keep", "box-tip--look", "box-tip--dump");
     boxTipEl.classList.add(`box-tip--${item.verdict.toLowerCase()}`);
-    boxTipEl.textContent = mainBoxReason(item);
+    const reason = mainBoxReason(item);
+    boxTipEl.textContent = rowForTrade(item) ? `Trade · ${reason}` : reason;
     boxTipEl.style.left = "-9999px";
     boxTipEl.classList.remove("hidden");
     const margin = 8;
@@ -2939,6 +3041,12 @@ function pvpCopiesNote(): string {
   root.addEventListener("click", (event) => {
     const target = event.target as HTMLElement | null;
     if (!target) return;
+
+    const tradeBtn = target.closest("[data-trade]") as HTMLElement | null;
+    if (tradeBtn?.dataset.trade === "raid" || tradeBtn?.dataset.trade === "pvp") {
+      applyTrade(tradeBtn.dataset.trade);
+      return;
+    }
 
     const rankBtn = target.closest("[data-rank]") as HTMLElement | null;
     if (rankBtn?.dataset.rank && !rankBtn.hasAttribute("disabled")) {
