@@ -32,6 +32,7 @@ import {
   DEFAULT_RAID_IV_KEEP,
   DEFAULT_RAID_KEEP,
   GL_LIST_CAP,
+  rankingListCap,
   isPokemonType,
   LC_LIST_CAP,
   ML_LIST_CAP,
@@ -96,7 +97,6 @@ function skipScanString(opts: { keepLucky?: boolean; keepFavorite?: boolean } = 
 const SKIP_SCAN = skipScanString();
 const LIST_PAINT_MAX = 200;
 const RANK_PRESETS = [50, 150, 500, 4096] as const;
-const LIST_KEEP_PRESETS = [100, 300, 500, 1000] as const;
 const PVP_KEEP_PRESETS = [1, 2, 3] as const;
 const RAID_KEEP_PRESETS = [1, 3, 6, 12] as const;
 const RAID_IV_PRESETS = [RAID_IV_KEEP_MIN, 80, 90, 95, RAID_IV_KEEP_MAX] as const;
@@ -149,7 +149,7 @@ interface AppState {
   engine: Engine | null;
   meta: Meta | null;
   pvpRankKeep: number;
-  pvpListKeep: number;
+  pvpListKeep: Record<PvpLeague, number>;
   pvpAny: boolean;
   pvpKeep: number;
   raidKeep: number;
@@ -190,13 +190,31 @@ function readStoredRankKeep(): number {
   }
 }
 
-function readStoredListKeep(): number {
+function defaultListKeep(): Record<PvpLeague, number> {
+  return {
+    gl: DEFAULT_PVP_LIST_KEEP,
+    ul: DEFAULT_PVP_LIST_KEEP,
+    ml: DEFAULT_PVP_LIST_KEEP,
+    lc: DEFAULT_PVP_LIST_KEEP,
+  };
+}
+
+function readStoredListKeep(): Record<PvpLeague, number> {
+  const next = defaultListKeep();
   try {
     const raw = localStorage.getItem(LIST_KEEP_KEY);
-    if (raw == null || raw === "") return DEFAULT_PVP_LIST_KEEP;
-    return clampPvpListKeep(Number(raw));
+    if (raw == null || raw.trim() === "") return next;
+    if (!raw.trim().startsWith("{")) {
+      const n = clampPvpListKeep(Number(raw));
+      return { gl: n, ul: n, ml: n, lc: n };
+    }
+    const parsed = JSON.parse(raw) as Partial<Record<PvpLeague, unknown>>;
+    for (const league of DEFAULT_PVP_FILL_ORDER) {
+      if (parsed[league] != null) next[league] = clampPvpListKeep(parsed[league]);
+    }
+    return next;
   } catch {
-    return DEFAULT_PVP_LIST_KEEP;
+    return defaultListKeep();
   }
 }
 
@@ -650,9 +668,11 @@ function reasonClass(reason: string): string {
   if (r.startsWith("pvp/raid family") && r.includes("no keeper")) return "chip chip--family-open";
   if (r.startsWith("pvp/raid family")) return "chip chip--family";
   if (r.includes("useless for pvp") || r.includes("keep 0 per family")) return "chip chip--junk";
+  if (r.includes("no pvp or raid seat") && r.includes("only one you have")) return "chip chip--solo";
+  if (r.includes("no pvp or raid seat") && r.includes("highest attack")) return "chip chip--junk-best";
+  if (r.includes("no pvp or raid seat") || r.includes("not gl/lc/raid")) return "chip chip--unlisted";
   if (r === "only copy") return "chip chip--solo";
   if (r.includes("best junk")) return "chip chip--junk-best";
-  if (r.includes("not gl/lc/raid")) return "chip chip--unlisted";
   if (r.startsWith("limited")) return "chip chip--limited";
   if (r.includes("already has a keeper") || r.includes("seats are filled")) return "chip chip--extra-keep";
   if (r.startsWith("extra copy")) return "chip chip--extra-spare";
@@ -665,6 +685,7 @@ function isNegativeReason(reason: string): boolean {
   if (r.includes("no pvp/raid job")) return false;
   if (r.includes("% iv worse") || r.includes("raid iv unavailable") || r.includes("worse than keep")) return true;
   if (r.includes("useless for pvp") || r.includes("keep 0 per family") || r.includes("not gl/lc/raid")) return true;
+  if (r.includes("no pvp or raid seat") && r.includes("extra copy")) return true;
   if (/^(gl|lc) rank unknown/.test(r)) return true;
   if (r.startsWith("extra copy") || r.startsWith("raid copies") || r.includes("duplicate")) return true;
   return false;
@@ -721,9 +742,25 @@ function tradeChipTitle(kind: "raid" | "pvp", on: boolean): string {
   return "FOR TRADE includes families with a seat in a bright league. Click to fade. Shadows stay in TRANSFER.";
 }
 
+function isCrowd(item: GradedMon): boolean {
+  return item.copiesInGroup > 2;
+}
+
+function crowdBadge(item: GradedMon, title: string): string {
+  if (!isCrowd(item)) return "";
+  return `<span class="badge-crowd" title="${escapeHtml(title)}">${item.copyRankInGroup}/${item.copiesInGroup}</span>`;
+}
+
+function crowdLine(item: GradedMon): string {
+  if (!isCrowd(item)) return "";
+  const { copyRankInGroup, copiesInGroup } = item;
+  const note = copyRankInGroup === 1 ? `best of ${copiesInGroup}` : `copy ${copyRankInGroup} of ${copiesInGroup}`;
+  return `<div class="box-detail-crowd">${crowdBadge(item, "Family copy rank, best first. Other copies of this family are in this scan.")}<span class="box-detail-crowd-note">${note}</span></div>`;
+}
+
 function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null, forTrade = false): string {
-  const { mon, copiesInGroup, copyRankInGroup } = item;
-  const crowd = copiesInGroup > 2;
+  const { mon } = item;
+  const crowd = isCrowd(item);
   const flags = [
     mon.shadow ? "shadow" : "",
     mon.purified ? "purified" : "",
@@ -735,9 +772,10 @@ function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null, forTrade = 
   const species = mon.speciesName || mon.speciesId;
   const title = nick || species;
   const speciesBit = nick && species && nick !== species ? species : "";
-  const crowdBadge = crowd
-    ? `<span class="badge-crowd" title="Family copy rank (best first). Rows stay in scan order (first scanned at top).">${copyRankInGroup}/${copiesInGroup}</span>`
-    : "";
+  const crowdMark = crowdBadge(
+    item,
+    "Family copy rank (best first). Rows stay in scan order (first scanned at top).",
+  );
   const job = jobLabel(item);
   const jobKind = item.pvpJob?.kind ?? item.lookJob?.kind ?? "gl";
   const jobBadge = job
@@ -756,7 +794,7 @@ function renderRow(item: GradedMon, verdict: Tab, meta: Meta | null, forTrade = 
 
   return `<article class="row row--${verdict.toLowerCase()}${crowd ? " row--crowd" : ""}">
     <div class="row-top">
-      <div class="species">${escapeHtml(title)}${tradeBadge}${jobBadge}${crowdBadge}</div>
+      <div class="species">${escapeHtml(title)}${tradeBadge}${jobBadge}${crowdMark}</div>
       <div class="row-end"><div class="cp">${mon.cp}</div>${action}</div>
     </div>
     <div class="meta">${escapeHtml(line)}</div>
@@ -973,12 +1011,12 @@ function mainBoxReason(item: GradedMon): string {
   }
   if (item.verdict === "LOOK") {
     const deciding = reasons.find((reason) =>
-      /never dump|cannot dump|only copy|best junk|pvp\/raid family/i.test(reason),
+      /never dump|cannot dump|only one you have|highest attack of|only copy|best junk|no pvp or raid seat|pvp\/raid family/i.test(reason),
     );
     return deciding ?? reasons[reasons.length - 1] ?? "Worth a look";
   }
   const deciding = [...reasons].reverse().find((reason) =>
-    /extra copy|useless for pvp|keep 0 per family|not gl\/lc\/raid/i.test(reason),
+    /extra copy|useless for pvp|keep 0 per family|not gl\/lc\/raid|no pvp or raid seat/i.test(reason),
   );
   const rest = reasons.filter((reason) => !isBetterAsReason(reason));
   return deciding ?? rest[rest.length - 1] ?? reasons[reasons.length - 1] ?? "Dump";
@@ -992,6 +1030,7 @@ function renderBoxDetail(item: GradedMon): string {
     .join(" · ");
   const tradeMark = rowForTrade(item) ? `<span class="badge-trade">TRADE</span>` : "";
   return `<div class="box-detail-title">${escapeHtml(title)} <span class="box-detail-verdict box-detail-verdict--${item.verdict.toLowerCase()}">${item.verdict}</span>${tradeMark}</div>
+    ${crowdLine(item)}
     <div class="meta">${escapeHtml(line)}</div>
     ${rowChips(item, item.verdict, state.meta)}
     <div class="row-end">${coreifyButton(mon)}</div>`;
@@ -1154,39 +1193,20 @@ export function mountApp(root: HTMLElement): void {
             <div class="rule">
               <div class="rule-copy">
                 <p class="rule-title" id="rules-leagues">Leagues</p>
-                <p class="rule-hint">Bright leagues have seats and fill from the top. One Pokémon takes the first seat it qualifies for. Ultra League and Master League start faded and fetch their lists when you brighten them.</p>
+                <p class="rule-hint">Bright leagues have seats and fill from the top. One Pokémon takes the first seat it qualifies for. Each league keeps species through its own rank. The max is that league's fetched list. Ultra League and Master League start faded and fetch their lists when you brighten them.</p>
               </div>
               <div class="rule-control">
+                <div class="mode-row" role="group" aria-label="Who gets a seat">
+                  <button type="button" class="btn btn--preset" data-pvp-any="0">Top list</button>
+                  <button type="button" class="btn btn--preset" data-pvp-any="1">Any species</button>
+                </div>
+                <p class="rule-hint" id="pvp-list-note"></p>
                 <div class="league-order">
                   <p class="league-order-end">Fills first</p>
                   <div id="league-order-list" class="league-order-list" role="list" aria-labelledby="rules-leagues"></div>
                   <p class="league-order-end">Fills last</p>
-                  <p class="rule-hint">Inside a league, better PvPoke species fill first.</p>
+                  <p class="rule-hint">Inside a league, better PvPoke species fill first. The number is the species rank, not the IV rank.</p>
                   <button type="button" class="btn btn--preset" data-fill-default>Default order</button>
-                </div>
-              </div>
-            </div>
-            <div class="rule">
-              <div class="rule-copy">
-                <p class="rule-title" id="pvp-species-label">Who gets a seat</p>
-                <p class="rule-hint" id="pvp-list-note"></p>
-              </div>
-              <div class="rule-control">
-                <div class="mode-row" role="group" aria-labelledby="pvp-species-label">
-                  <button type="button" class="btn btn--preset" data-pvp-any="0">Top list</button>
-                  <button type="button" class="btn btn--preset" data-pvp-any="1">Any species</button>
-                </div>
-                <div id="pvp-list-cutoff">
-                  <div class="rank-row">
-                    <input id="pvp-list-keep" type="number" inputmode="numeric" min="1" max="${GL_LIST_CAP}" step="1" value="${state.pvpListKeep}" aria-label="PvPoke species cutoff" />
-                    <span class="rank-suffix">/ ${GL_LIST_CAP}</span>
-                  </div>
-                  <div class="rank-presets" role="group" aria-label="PvPoke species cutoff">
-                    ${LIST_KEEP_PRESETS.map(
-                      (n) =>
-                        `<button type="button" class="btn btn--preset" data-list-keep="${n}">${n}</button>`,
-                    ).join("")}
-                  </div>
                 </div>
               </div>
             </div>
@@ -1269,7 +1289,7 @@ export function mountApp(root: HTMLElement): void {
             <div class="rule">
               <div class="rule-copy">
                 <p class="rule-title">Empty seat</p>
-                <p class="rule-hint">If a seat has no KEEP, LOOK the best copy left for it, even when that copy misses the IV bar. Other copies DUMP. A species with no seat still LOOKs its one best copy.</p>
+                <p class="rule-hint">If a seat has no KEEP, LOOK the best copy left for it, even when that copy misses the IV bar. Other copies DUMP. A species with no seat LOOKs its best copy in case you want to keep one.</p>
               </div>
             </div>
           </section>
@@ -1384,7 +1404,6 @@ export function mountApp(root: HTMLElement): void {
   const coreClear = root.querySelector("#core-clear") as HTMLButtonElement;
   const coreIssuesEl = root.querySelector("#core-issues") as HTMLElement;
   const rankInput = root.querySelector("#rank-keep") as HTMLInputElement;
-  const listKeepInput = root.querySelector("#pvp-list-keep") as HTMLInputElement;
   const listNoteEl = root.querySelector("#pvp-list-note") as HTMLElement;
   const pvpIvNoteEl = root.querySelector("#pvp-iv-note") as HTMLElement;
   const pvpKeepNoteEl = root.querySelector("#pvp-keep-note") as HTMLElement;
@@ -1433,9 +1452,9 @@ export function mountApp(root: HTMLElement): void {
     }
   }
 
-  function persistListKeep(n: number): void {
+  function persistListKeep(keeps: Record<PvpLeague, number>): void {
     try {
-      localStorage.setItem(LIST_KEEP_KEY, String(n));
+      localStorage.setItem(LIST_KEEP_KEY, JSON.stringify(keeps));
     } catch {
       /* private mode */
     }
@@ -1591,8 +1610,100 @@ export function mountApp(root: HTMLElement): void {
       bits.push("The IV rank below still decides KEEP.");
       return bits.join(" ");
     }
-    if (open.length === 1) return `${open[0]} species through this PvPoke rank get a seat. This number is the species rank, not the IV rank.`;
-    return `${open.join(", ")} species through this PvPoke rank get a seat. This number is the species rank, not the IV rank.`;
+    return "Each bright league keeps species through its own rank. The max is that league's fetched list.";
+  }
+
+  function leagueRowsFor(kind: PvpLeague): { rank: number }[] | undefined {
+    const meta = state.meta;
+    if (!meta) return undefined;
+    if (kind === "gl") return meta.glRankings;
+    if (kind === "ul") return meta.ulRankings;
+    if (kind === "ml") return meta.mlRankings;
+    return meta.lcRankings;
+  }
+
+  function leagueListMax(kind: PvpLeague): number | null {
+    const cap = rankingListCap(leagueRowsFor(kind));
+    return cap > 0 ? cap : null;
+  }
+
+  function shownListKeep(kind: PvpLeague): number {
+    const max = leagueListMax(kind);
+    const stored = state.pvpListKeep[kind];
+    return max == null ? stored : Math.min(stored, max);
+  }
+
+  function leagueCutoffDisabled(kind: PvpLeague): boolean {
+    return state.pvpAny || !leagueOn(kind) || leagueListMax(kind) == null;
+  }
+
+  function leagueCutoffTitle(kind: PvpLeague): string {
+    const name = LEAGUE_LABEL[kind];
+    const max = leagueListMax(kind);
+    if (max == null) return `${name} list is not loaded, so this rank waits.`;
+    return `${name} species through this rank get a seat. Max is the fetched list, ${max}.`;
+  }
+
+  function fillRankLabels(): Map<PvpLeague, string> {
+    const labels = new Map<PvpLeague, string>();
+    let rank = 0;
+    for (const kind of state.pvpFillOrder) {
+      if (!leagueOn(kind)) {
+        labels.set(kind, "");
+        continue;
+      }
+      rank += 1;
+      labels.set(kind, String(rank));
+    }
+    return labels;
+  }
+
+  function leagueRowMarkup(kind: PvpLeague, index: number, rankLabel: string): string {
+    const on = leagueOn(kind);
+    const name = LEAGUE_LABEL[kind];
+    const max = leagueListMax(kind);
+    const upOff = index === 0 ? " disabled" : "";
+    const downOff = index === state.pvpFillOrder.length - 1 ? " disabled" : "";
+    const maxLabel = max == null ? "—" : String(max);
+    const off = leagueCutoffDisabled(kind) ? " disabled" : "";
+    return `<div class="league-order-row" role="listitem" data-league-row="${kind}">
+      <button type="button" class="chip chip--${kind} keep-chip${on ? "" : " is-off"}" data-league="${kind}" aria-pressed="${on ? "true" : "false"}" title="${escapeHtml(leagueChipTitle(kind, on))}">
+        <span class="league-order-rank" aria-hidden="true">${rankLabel}</span>
+        ${name}
+      </button>
+      <label class="league-cutoff rank-row">
+        <input type="number" inputmode="numeric" min="1" max="${max ?? GL_LIST_CAP}" step="1" value="${shownListKeep(kind)}" data-list-keep-league="${kind}" aria-label="${escapeHtml(name)} species cutoff" title="${escapeHtml(leagueCutoffTitle(kind))}"${off} />
+        <span class="rank-suffix" data-league-max="${kind}">/ ${maxLabel}</span>
+      </label>
+      <button type="button" class="league-move" data-league-move="up" data-league-id="${kind}" aria-label="Move ${escapeHtml(name)} earlier"${upOff}>↑</button>
+      <button type="button" class="league-move" data-league-move="down" data-league-id="${kind}" aria-label="Move ${escapeHtml(name)} later"${downOff}>↓</button>
+    </div>`;
+  }
+
+  function syncLeagueRow(row: HTMLElement, kind: PvpLeague, index: number, rankLabel: string): void {
+    const on = leagueOn(kind);
+    const chip = row.querySelector("[data-league]");
+    if (chip instanceof HTMLButtonElement) {
+      chip.classList.toggle("is-off", !on);
+      chip.setAttribute("aria-pressed", on ? "true" : "false");
+      chip.title = leagueChipTitle(kind, on);
+      const rankEl = chip.querySelector(".league-order-rank");
+      if (rankEl) rankEl.textContent = rankLabel;
+    }
+    const max = leagueListMax(kind);
+    const input = row.querySelector("[data-list-keep-league]");
+    if (input instanceof HTMLInputElement) {
+      if (document.activeElement !== input) input.value = String(shownListKeep(kind));
+      input.max = String(max ?? GL_LIST_CAP);
+      input.disabled = leagueCutoffDisabled(kind);
+      input.title = leagueCutoffTitle(kind);
+    }
+    const suffix = row.querySelector("[data-league-max]");
+    if (suffix) suffix.textContent = `/ ${max == null ? "—" : String(max)}`;
+    const up = row.querySelector('[data-league-move="up"]');
+    const down = row.querySelector('[data-league-move="down"]');
+    if (up instanceof HTMLButtonElement) up.disabled = index === 0;
+    if (down instanceof HTMLButtonElement) down.disabled = index === state.pvpFillOrder.length - 1;
   }
 
   function pvpIvNote(): string {
@@ -1618,38 +1729,39 @@ function pvpCopiesNote(): string {
   function paintLeagueOrder(): void {
     const list = root.querySelector("#league-order-list");
     if (!(list instanceof HTMLElement)) return;
-    const active = document.activeElement;
-    const focusMove = active instanceof HTMLElement && list.contains(active) ? active.dataset.leagueMove ?? "" : "";
-    const focusId = active instanceof HTMLElement && list.contains(active) ? active.dataset.leagueId ?? "" : "";
-    const focusLeague = active instanceof HTMLElement && list.contains(active) ? active.dataset.league ?? "" : "";
-    let rank = 0;
-    list.innerHTML = state.pvpFillOrder
-      .map((kind, index) => {
-        const on = leagueOn(kind);
-        if (on) rank += 1;
-        const name = LEAGUE_LABEL[kind];
-        const upOff = index === 0 ? " disabled" : "";
-        const downOff = index === state.pvpFillOrder.length - 1 ? " disabled" : "";
-        return `<div class="league-order-row" role="listitem">
-          <button type="button" class="chip chip--${kind} keep-chip${on ? "" : " is-off"}" data-league="${kind}" aria-pressed="${on ? "true" : "false"}" title="${escapeHtml(leagueChipTitle(kind, on))}">
-            <span class="league-order-rank" aria-hidden="true">${on ? String(rank) : ""}</span>
-            ${name}
-          </button>
-          <button type="button" class="league-move" data-league-move="up" data-league-id="${kind}" aria-label="Move ${name} earlier"${upOff}>↑</button>
-          <button type="button" class="league-move" data-league-move="down" data-league-id="${kind}" aria-label="Move ${name} later"${downOff}>↓</button>
-        </div>`;
-      })
-      .join("");
+    const ranks = fillRankLabels();
+    const rows = [...list.querySelectorAll<HTMLElement>("[data-league-row]")];
+    const same =
+      rows.length === state.pvpFillOrder.length &&
+      rows.every((row, index) => row.dataset.leagueRow === state.pvpFillOrder[index]);
+    if (same) {
+      state.pvpFillOrder.forEach((kind, index) => {
+        syncLeagueRow(rows[index]!, kind, index, ranks.get(kind) ?? "");
+      });
+    } else {
+      const active = document.activeElement;
+      const focusMove = active instanceof HTMLElement && list.contains(active) ? active.dataset.leagueMove ?? "" : "";
+      const focusId = active instanceof HTMLElement && list.contains(active) ? active.dataset.leagueId ?? "" : "";
+      const focusLeague = active instanceof HTMLElement && list.contains(active) ? active.dataset.league ?? "" : "";
+      const focusCutoff =
+        active instanceof HTMLInputElement && list.contains(active) ? active.dataset.listKeepLeague ?? "" : "";
+      list.innerHTML = state.pvpFillOrder
+        .map((kind, index) => leagueRowMarkup(kind, index, ranks.get(kind) ?? ""))
+        .join("");
+      if (focusCutoff && isPvpLeague(focusCutoff)) {
+        const next = list.querySelector(`[data-list-keep-league="${focusCutoff}"]`);
+        if (next instanceof HTMLInputElement && !next.disabled) next.focus();
+      } else if (focusMove && focusId) {
+        const next = list.querySelector(`[data-league-move="${focusMove}"][data-league-id="${focusId}"]`);
+        if (next instanceof HTMLButtonElement && !next.disabled) next.focus();
+      } else if (focusLeague) {
+        const next = list.querySelector(`[data-league="${focusLeague}"]`);
+        if (next instanceof HTMLButtonElement) next.focus();
+      }
+    }
     const reset = root.querySelector("[data-fill-default]");
     if (reset instanceof HTMLButtonElement) {
       reset.classList.toggle("is-active", sameFillOrder(state.pvpFillOrder, DEFAULT_PVP_FILL_ORDER));
-    }
-    if (focusMove && focusId) {
-      const next = list.querySelector(`[data-league-move="${focusMove}"][data-league-id="${focusId}"]`);
-      if (next instanceof HTMLButtonElement && !next.disabled) next.focus();
-    } else if (focusLeague) {
-      const next = list.querySelector(`[data-league="${focusLeague}"]`);
-      if (next instanceof HTMLButtonElement) next.focus();
     }
   }
 
@@ -1663,7 +1775,6 @@ function pvpCopiesNote(): string {
 
   function paintRankControls(): void {
     rankInput.value = String(state.pvpRankKeep);
-    listKeepInput.value = String(state.pvpListKeep);
     pvpKeepInput.value = String(state.pvpKeep);
     raidKeepInput.value = String(state.raidKeep);
     raidIvKeepInput.value = String(state.raidIvKeep);
@@ -1672,18 +1783,11 @@ function pvpCopiesNote(): string {
       btn.classList.toggle("is-active", n === state.pvpRankKeep);
     });
     const pvpLeaguesOn = state.keepGl || state.keepUl || state.keepMl || state.keepLc;
-    const listOff = state.pvpAny || !pvpLeaguesOn;
-    listKeepInput.disabled = listOff;
     listNoteEl.textContent = pvpSpeciesNote();
     pvpIvNoteEl.textContent = pvpIvNote();
     pvpKeepNoteEl.textContent = pvpCopiesNote();
     rankInput.disabled = !pvpLeaguesOn;
     pvpKeepInput.disabled = !pvpLeaguesOn;
-    root.querySelectorAll("[data-list-keep]").forEach((btn) => {
-      const n = Number(btn.getAttribute("data-list-keep"));
-      (btn as HTMLButtonElement).disabled = listOff;
-      btn.classList.toggle("is-active", !listOff && n === state.pvpListKeep);
-    });
     root.querySelectorAll("[data-pvp-any]").forEach((btn) => {
       const on = btn.getAttribute("data-pvp-any") === "1";
       (btn as HTMLButtonElement).disabled = !pvpLeaguesOn;
@@ -1876,6 +1980,7 @@ function pvpCopiesNote(): string {
       rankingsMlEl.innerHTML = `<p class="empty">Waiting for PvPoke lists</p>`;
       rankingsLcEl.innerHTML = `<p class="empty">Waiting for PvPoke lists</p>`;
       rankingsRaidEl.innerHTML = `<p class="empty">Waiting for raid list</p>`;
+      paintLeagueOrder();
       return;
     }
     const gl = meta.glRankings ?? [];
@@ -1885,10 +1990,12 @@ function pvpCopiesNote(): string {
     const raid = meta.raidRankings ?? [];
     const raidKeepCount = raid.filter((row) => !row.asSpeciesId && row.viable !== false).length;
     const raidPre = raid.filter((row) => Boolean(row.asSpeciesId)).length;
-    const glIn = state.pvpAny ? gl.length : gl.filter((row) => row.rank <= state.pvpListKeep).length;
-    const ulIn = state.pvpAny ? ul.length : ul.filter((row) => row.rank <= state.pvpListKeep).length;
-    const mlIn = state.pvpAny ? ml.length : ml.filter((row) => row.rank <= state.pvpListKeep).length;
-    const lcIn = state.pvpAny ? lc.length : lc.filter((row) => row.rank <= state.pvpListKeep).length;
+    const inPlay = (rows: PvpokeRankRow[], kind: PvpLeague) =>
+      state.pvpAny ? rows.length : rows.filter((row) => row.rank <= shownListKeep(kind)).length;
+    const glIn = inPlay(gl, "gl");
+    const ulIn = inPlay(ul, "ul");
+    const mlIn = inPlay(ml, "ml");
+    const lcIn = inPlay(lc, "lc");
     const raidType = state.rankingsRaidType;
     const raidTypeLabel = raidType ? prettyPokemonType(raidType) : "";
     const raidTyped = raidType ? raid.filter((row) => raidRowHasType(row, raidType)).length : 0;
@@ -1930,29 +2037,30 @@ function pvpCopiesNote(): string {
       : "Dittobase eDPS (1 = best across types). A tier and better are raid KEEP. Dimmed rows are ranked but not kept. Pre-evolutions sit with the attacker they count as.";
     rankingsGlEl.innerHTML = renderRankingTable(
       gl,
-      state.pvpAny ? null : state.pvpListKeep,
+      state.pvpAny ? null : shownListKeep("gl"),
       "Great League list missing",
     );
     rankingsUlEl.innerHTML = state.keepUl
       ? renderRankingTable(
           ul,
-          state.pvpAny ? null : state.pvpListKeep,
+          state.pvpAny ? null : shownListKeep("ul"),
           openLeagueBusy === "ul" ? "Loading Ultra League rankings…" : "Ultra League list missing",
         )
       : "";
     rankingsMlEl.innerHTML = state.keepMl
       ? renderRankingTable(
           ml,
-          state.pvpAny ? null : state.pvpListKeep,
+          state.pvpAny ? null : shownListKeep("ml"),
           openLeagueBusy === "ml" ? "Loading Master League rankings…" : "Master League list missing",
         )
       : "";
     rankingsLcEl.innerHTML = renderRankingTable(
       lc,
-      state.pvpAny ? null : state.pvpListKeep,
+      state.pvpAny ? null : shownListKeep("lc"),
       "Little Cup list missing",
     );
     rankingsRaidEl.innerHTML = renderRaidTable(raid, "Raid attacker list missing");
+    paintLeagueOrder();
   }
 
   function showError(message: string): void {
@@ -2080,7 +2188,9 @@ function pvpCopiesNote(): string {
     }
     const item = selected == null ? undefined : findGraded(selected);
     const hiddenByFilter = item != null && !state.boxFilter[item.verdict];
-    if (!item || gone.has(item.mon.sourceRow) || hiddenByFilter) {
+    const showDetail = Boolean(item && !gone.has(item.mon.sourceRow) && !hiddenByFilter);
+    boxDetailEl.classList.toggle("is-crowd", Boolean(showDetail && item && isCrowd(item)));
+    if (!showDetail || !item) {
       boxDetailEl.classList.add("is-empty");
       boxDetailEl.innerHTML = "";
     } else {
@@ -2284,7 +2394,7 @@ function pvpCopiesNote(): string {
       result.keepGl || result.keepUl || result.keepMl || result.keepLc
         ? [
             `KEEP PvP ≤${result.pvpRankKeep}/${PVP_RANK_OF}`,
-            result.pvpAny ? "PvP any species" : `PvPoke top ${result.pvpListKeep}/${GL_LIST_CAP}`,
+            listKeepStatus(result),
             `Keep ${result.pvpKeep}/seat`,
           ]
             .filter(Boolean)
@@ -2779,14 +2889,45 @@ function pvpCopiesNote(): string {
     regradeLive();
   }
 
-  function applyListKeep(raw: unknown): void {
-    const next = clampPvpListKeep(raw);
-    state.pvpListKeep = next;
+  function listKeepStatus(result: GradeResult): string {
+    if (result.pvpAny) return "PvP any species";
+    const parts: string[] = [];
+    const add = (on: boolean, label: string, kind: PvpLeague) => {
+      if (!on) return;
+      const max = leagueListMax(kind);
+      const n = result.pvpListKeeps[kind];
+      parts.push(max == null ? `${label} ${n}` : `${label} ${n}/${max}`);
+    };
+    add(result.keepGl, "GL", "gl");
+    add(result.keepUl, "UL", "ul");
+    add(result.keepMl, "ML", "ml");
+    add(result.keepLc, "LC", "lc");
+    return parts.length ? `PvPoke ${parts.join(" · ")}` : "PvPoke";
+  }
+
+  let applyingListKeep = false;
+
+  function applyLeagueListKeep(kind: PvpLeague, raw: unknown): void {
+    if (applyingListKeep) return;
+    const max = leagueListMax(kind);
+    const next = clampPvpListKeep(raw, max ?? GL_LIST_CAP);
+    const stored = state.pvpListKeep[kind];
+    const shown = max == null ? stored : Math.min(stored, max);
+    if (max != null && next === shown && stored > max) return;
+    if (next === stored && !state.pvpAny) return;
+    state.pvpListKeep = { ...state.pvpListKeep, [kind]: next };
     state.pvpAny = false;
-    persistListKeep(next);
+    persistListKeep(state.pvpListKeep);
     persistPvpAny(false);
-    paintRankControls();
-    regradeLive();
+    applyingListKeep = true;
+    try {
+      paintRankControls();
+      const input = root.querySelector(`[data-list-keep-league="${kind}"]`);
+      if (input instanceof HTMLInputElement) input.value = String(shownListKeep(kind));
+      regradeLive();
+    } finally {
+      applyingListKeep = false;
+    }
   }
 
   function applyPvpAny(on: boolean): void {
@@ -2953,11 +3094,17 @@ function pvpCopiesNote(): string {
   rankInput.addEventListener("blur", () => {
     applyRankKeep(rankInput.value);
   });
-  listKeepInput.addEventListener("change", () => {
-    applyListKeep(listKeepInput.value);
+  root.addEventListener("change", (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    const league = input.dataset.listKeepLeague;
+    if (league && isPvpLeague(league)) applyLeagueListKeep(league, input.value);
   });
-  listKeepInput.addEventListener("blur", () => {
-    applyListKeep(listKeepInput.value);
+  root.addEventListener("focusout", (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    const league = input.dataset.listKeepLeague;
+    if (league && isPvpLeague(league)) applyLeagueListKeep(league, input.value);
   });
   pvpKeepInput.addEventListener("change", () => {
     applyPvpKeep(pvpKeepInput.value);
@@ -3051,12 +3198,6 @@ function pvpCopiesNote(): string {
     const rankBtn = target.closest("[data-rank]") as HTMLElement | null;
     if (rankBtn?.dataset.rank && !rankBtn.hasAttribute("disabled")) {
       applyRankKeep(rankBtn.dataset.rank);
-      return;
-    }
-
-    const listKeepBtn = target.closest("[data-list-keep]") as HTMLElement | null;
-    if (listKeepBtn?.dataset.listKeep && !listKeepBtn.hasAttribute("disabled")) {
-      applyListKeep(listKeepBtn.dataset.listKeep);
       return;
     }
 

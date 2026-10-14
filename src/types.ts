@@ -199,6 +199,9 @@ export function isPvpLeague(value: string): value is PvpLeague {
   return (DEFAULT_PVP_FILL_ORDER as readonly string[]).includes(value);
 }
 
+/** Species cutoff for each league. Rank 1 is best. */
+export type PvpListKeepByLeague = Record<PvpLeague, number>;
+
 /** A permutation of the four leagues. Unknown entries are dropped; missing leagues are appended in default order. */
 export function normalizePvpFillOrder(raw: unknown): PvpLeague[] {
   const seen = new Set<PvpLeague>();
@@ -233,8 +236,13 @@ export interface GradeResult {
   core: GradedMon[];
   /** GL/LC KEEP only if 4096-rank is this or better (1 = best). */
   pvpRankKeep: number;
-  /** Species in PvPoke GL overall this far down count as PvP. Rank 1 is best. */
+  /**
+   * Great League species cutoff used for this grade, after clamping to the
+   * fetched Great League list. `pvpListKeeps` is the cutoff for every league.
+   */
   pvpListKeep: number;
+  /** Species cutoff used for each league, after clamping to that league's fetched list. */
+  pvpListKeeps: PvpListKeepByLeague;
   /** When true, every species with stats is PvP-viable. The GL top-N cutoff is ignored. */
   pvpAny: boolean;
   /** Copies kept per Great League stage and per Little Cup species. */
@@ -299,8 +307,13 @@ export interface Meta {
   evoReach?: Record<string, string[]>;
   /** Keep GL/LC IVs at this rank or better. Rank 1 is best. Default 500. */
   pvpRankKeep?: number;
-  /** Keep PvPoke species this far down in each league, including Little Cup. Rank 1 is best. Default 500. Ignored when `pvpAny`. */
-  pvpListKeep?: number;
+  /**
+   * How far down a fetched league list a species still gets a seat.
+   * A number applies to every league. A record sets each league; omitted
+   * leagues use the default. Rank 1 is best. Default 500. Clamped to that
+   * league's fetched list. Ignored when `pvpAny`.
+   */
+  pvpListKeep?: number | Partial<PvpListKeepByLeague>;
   /**
    * When true, Great League is any species with base stats (not only the PvPoke list),
    * and Little Cup is any unevolved species that can still evolve (not only the Little Cup list).
@@ -424,10 +437,29 @@ export function clampPvpRankKeep(n: unknown): number {
   return Math.min(PVP_RANK_OF, Math.max(1, Math.round(v)));
 }
 
-export function clampPvpListKeep(n: unknown): number {
+export function clampPvpListKeep(n: unknown, cap = PVP_LIST_CAP): number {
   const v = typeof n === "number" ? n : Number(n);
-  if (!Number.isFinite(v)) return DEFAULT_PVP_LIST_KEEP;
-  return Math.min(PVP_LIST_CAP, Math.max(1, Math.round(v)));
+  const limit = Number.isFinite(cap) && cap >= 1 ? Math.round(cap) : PVP_LIST_CAP;
+  if (!Number.isFinite(v)) return Math.min(DEFAULT_PVP_LIST_KEEP, limit);
+  return Math.min(limit, Math.max(1, Math.round(v)));
+}
+
+/** Worst rank on a fetched list. Real lists are 1..length, so this is the list size. */
+export function rankingListCap(rows: readonly { rank: number }[] | undefined): number {
+  if (!rows?.length) return 0;
+  let max = 0;
+  for (const row of rows) if (row.rank > max) max = row.rank;
+  return max;
+}
+
+/** Cutoff for one league. A number applies to every league. `cap` is that league's fetched list. */
+export function pvpListKeepValue(
+  raw: number | Partial<PvpListKeepByLeague> | null | undefined,
+  league: PvpLeague,
+  cap?: number,
+): number {
+  const requested = raw != null && typeof raw === "object" ? raw[league] : raw;
+  return clampPvpListKeep(requested ?? DEFAULT_PVP_LIST_KEEP, cap);
 }
 
 export function clampPvpKeep(n: unknown): number {

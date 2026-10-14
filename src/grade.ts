@@ -14,15 +14,15 @@ import type {
 } from "./types";
 import {
   clampPvpKeep,
-  clampPvpListKeep,
   clampPvpRankKeep,
   clampRaidIvKeep,
   clampRaidKeep,
   normalizePvpFillOrder,
   DEFAULT_PVP_ANY,
   DEFAULT_PVP_KEEP,
-  DEFAULT_PVP_LIST_KEEP,
   DEFAULT_PVP_RANK_KEEP,
+  pvpListKeepValue,
+  rankingListCap,
   DEFAULT_RAID_IV_KEEP,
   DEFAULT_RAID_KEEP,
   GL_LIST_CAP,
@@ -556,8 +556,10 @@ function pvpCutoff(meta: Meta): number {
   return clampPvpRankKeep(meta.pvpRankKeep ?? DEFAULT_PVP_RANK_KEEP);
 }
 
-function pvpListCutoff(meta: Meta): number {
-  return clampPvpListKeep(meta.pvpListKeep ?? DEFAULT_PVP_LIST_KEEP);
+/** Species cutoff for one league, clamped to that league's fetched list when it is loaded. */
+function listKeepFor(meta: Meta, kind: PvpLeague): number {
+  const cap = rankingListCap(leagueRows(meta, kind));
+  return pvpListKeepValue(meta.pvpListKeep, kind, cap > 0 ? cap : undefined);
 }
 
 function pvpAnyOn(meta: Meta): boolean {
@@ -1041,7 +1043,12 @@ function scanTimeMs(raw?: string): number | null {
 export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult {
   const gm: RankGm = getRankGm(meta.glEvolution);
   const cutoff = pvpCutoff(meta);
-  const listKeep = pvpListCutoff(meta);
+  const listKeeps = {
+    gl: listKeepFor(meta, "gl"),
+    ul: listKeepFor(meta, "ul"),
+    ml: listKeepFor(meta, "ml"),
+    lc: listKeepFor(meta, "lc"),
+  };
   const pvpAny = pvpAnyOn(meta);
   const pvpKeep = pvpKeepCap(meta);
   const raidKeep = raidKeepCap(meta);
@@ -1068,8 +1075,8 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
   const lcOf = meta.lcRankings?.length || LC_LIST_CAP;
   const gateMeta: Meta = {
     ...meta,
-    glTop500: gatedGlSet(meta, listKeep),
-    lcTop100: gatedLcSet(meta, listKeep),
+    glTop500: gatedGlSet(meta, listKeeps.gl),
+    lcTop100: gatedLcSet(meta, listKeeps.lc),
   };
   const families = membersByFamily(meta);
   const independentGlCache = new Map<string, string[]>();
@@ -1096,10 +1103,10 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
         independentGlCache.set(key, listed.filter((id) => gateMeta.glTop500.has(id)));
         independentLcCache.set(key, independentLcIds(members, gateMeta));
       }
-      const ultra = openLeagueIds(members, meta.ulRankings, listKeep, pvpAny, meta, gm);
+      const ultra = openLeagueIds(members, meta.ulRankings, listKeeps.ul, pvpAny, meta, gm);
       listedUlCache.set(key, ultra.listed);
       independentUlCache.set(key, ultra.gated);
-      const master = openLeagueIds(members, meta.mlRankings, listKeep, pvpAny, meta, gm);
+      const master = openLeagueIds(members, meta.mlRankings, listKeeps.ml, pvpAny, meta, gm);
       listedMlCache.set(key, master.listed);
       independentMlCache.set(key, master.gated);
       independentRaidCache.set(key, independentRaidIds(members, meta));
@@ -1616,7 +1623,12 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
 
     if (!anchored && (g.copiesInGroup === 1 || g.copyRankInGroup === 1)) {
       g.verdict = "LOOK";
-      pushReason(g, g.copiesInGroup === 1 ? "only copy" : "best junk copy — not the last");
+      pushReason(
+        g,
+        g.copiesInGroup === 1
+          ? "No PvP or raid seat — only one you have"
+          : `No PvP or raid seat — highest Attack of ${g.copiesInGroup}, keep it if you want the species`,
+      );
       continue;
     }
 
@@ -1631,7 +1643,7 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
         ? `Core holds this seat · ${blockedScan.has(g) ? roleLabel(blockedScan.get(g)!) : "4*"}`
         : extraOfKeeper.has(g)
           ? "Extra copy — seats are filled"
-          : "Not GL/LC/raid/limited; unique IVs",
+          : "No PvP or raid seat — extra copy",
     );
   }
 
@@ -1673,7 +1685,8 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
     dump,
     core: coreOut,
     pvpRankKeep: cutoff,
-    pvpListKeep: listKeep,
+    pvpListKeep: listKeeps.gl,
+    pvpListKeeps: listKeeps,
     pvpAny,
     pvpKeep,
     raidKeep,

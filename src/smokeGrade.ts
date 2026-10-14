@@ -43,6 +43,9 @@ must(parsed.dialect === "pokegenie", `expected pokegenie, got ${parsed.dialect}`
 must(parsed.mons.length === 10, `expected 10 mons, got ${parsed.mons.length}`);
 must(result.pvpRankKeep === 500, "echo pvpRankKeep 500");
 must(result.pvpListKeep === 500, "default pvpListKeep 500");
+must(result.pvpListKeeps.gl === 500, "default GL species cutoff is 500");
+must(result.pvpListKeeps.lc === meta.lcRankings!.length, "default LC species cutoff clamps to the fetched list");
+must(result.pvpListKeeps.ul === 500 && result.pvpListKeeps.ml === 500, "unfetched leagues keep the requested cutoff");
 must(result.pvpAny === false, "default pvpAny off");
 must(result.pvpKeep === 1, "default pvpKeep 1");
 must(clampPvpKeep(0) === PVP_KEEP_MIN && PVP_KEEP_MIN === 1, "pvpKeep clamps down to 1");
@@ -80,6 +83,8 @@ must(Array.isArray(meta.lcRankings) && meta.lcRankings.length === 100, "bundled 
 must(clampPvpListKeep(1000) === 1000, "species cutoff allows 1000");
 must(clampPvpListKeep(1001) === 1000, "species cutoff stops at 1000");
 must(clampPvpListKeep(500) === 500, "default species cutoff stays 500");
+must(clampPvpListKeep(800, 623) === 623, "species cutoff clamps to a fetched list");
+must(clampPvpListKeep(40, 623) === 40, "species cutoff under the list length stays");
 const raidFinals = meta.raidRankings?.filter((row) => !row.asSpeciesId) ?? [];
 const raidKeepFinals = raidFinals.filter((row) => row.viable !== false);
 must(
@@ -378,6 +383,40 @@ const cutToad = [...cutList.keep, ...cutList.look, ...cutList.dump].find(
 must(cutToad?.keepClasses.includes("gl") !== true, "GL species cutoff drops seismitoad PvP keep");
 must(cutToad?.glMeta?.rank === toadRow?.rank, "cutoff still shows PvPoke rank on the graded row");
 must(cutToad?.verdict === "KEEP", "favorite seismitoad still KEEP when off the PvPoke list");
+const splitList = gradeBox(parsed.mons, {
+  ...meta,
+  pvpRankKeep: 500,
+  pvpListKeep: { gl: listCut, lc: 1000 },
+});
+must(splitList.pvpListKeep === listCut, "echo GL cutoff when leagues differ");
+must(splitList.pvpListKeeps.gl === listCut, "GL cutoff uses the record value");
+must(splitList.pvpListKeeps.lc === (meta.lcRankings?.length ?? 0), "LC cutoff clamps to the fetched list");
+const splitToad = [...splitList.keep, ...splitList.look, ...splitList.dump].find(
+  (g) => g.mon.speciesId === "seismitoad" && g.mon.favorite === true,
+);
+must(splitToad?.keepClasses.includes("gl") !== true, "per-league GL cutoff drops seismitoad");
+const splitWooper = [...splitList.keep, ...splitList.look, ...splitList.dump].find((g) => g.mon.speciesId === "wooper");
+const baseWooper = all.find((g) => g.mon.speciesId === "wooper");
+must(
+  splitWooper?.keepClasses.includes("lc") === baseWooper?.keepClasses.includes("lc"),
+  "a tighter GL cutoff does not change Little Cup",
+);
+const lcTightCut = Math.max(1, (wooperLcRow?.rank ?? 2) - 1);
+const lcTight = gradeBox(parsed.mons, {
+  ...meta,
+  pvpRankKeep: 500,
+  pvpListKeep: { gl: 1000, lc: lcTightCut },
+});
+must(lcTight.pvpListKeeps.lc === lcTightCut, "LC cutoff uses the record value");
+must(lcTight.pvpListKeeps.gl === (meta.glRankings?.length ?? 0), "GL cutoff clamps to the fetched list");
+const lcTightToad = [...lcTight.keep, ...lcTight.look, ...lcTight.dump].find(
+  (g) => g.mon.speciesId === "seismitoad" && g.mon.favorite === true,
+);
+const baseToad = all.find((g) => g.mon.speciesId === "seismitoad" && g.mon.favorite === true);
+must(
+  lcTightToad?.keepClasses.includes("gl") === baseToad?.keepClasses.includes("gl"),
+  "a tighter LC cutoff does not change Great League",
+);
 
 function hundoAt(speciesId: string, speciesName: string, row: number, atk = 15): Mon {
   return {
@@ -519,7 +558,10 @@ const bidoofZero = gradeBox([ivMon("bidoof", "Bidoof", 902, 0, 0, 0)], {
   keepFavorite: false,
 });
 must(bidoofZero.look.length === 1 && bidoofZero.dump.length === 0, "lone non-meta Bidoof LOOKs");
-must(bidoofZero.look[0]?.reasons.some((r) => r === "only copy") === true, "lone Bidoof is the only copy");
+must(
+  bidoofZero.look[0]?.reasons.some((r) => r === "No PvP or raid seat — only one you have") === true,
+  "lone Bidoof is the only copy of a species with no seat",
+);
 
 const trashBulb = ivMon("bulbasaur", "Bulbasaur", 450, 0, 0, 0);
 const trashGrade = gradeBox([trashBulb], bulbMeta);
@@ -884,12 +926,23 @@ must(
   keepShadowOff.look[0].reasons.every((r) => !/never dump/i.test(r)),
   "lone junk shadow is not a never-dump lock",
 );
-must(keepShadowOff.look[0].reasons.some((r) => r === "only copy"), "lone junk shadow explains only copy");
+must(
+  keepShadowOff.look[0].reasons.some((r) => r === "No PvP or raid seat — only one you have"),
+  "lone junk shadow explains it is the only copy",
+);
 
 const extraShadow = { ...junkShadow, sourceRow: 501, nickname: "junk-shadow-2" };
 const shadowExtras = gradeBox([junkShadow, extraShadow], { ...meta, keepShadow: false });
 must(shadowExtras.dump.length === 1, "faded Shadow dumps the extra junk shadow");
-must(shadowExtras.look.length === 1, "faded Shadow LOOKs the best junk shadow");
+must(shadowExtras.look.length === 1, "faded Shadow LOOKs the best leftover shadow");
+must(
+  shadowExtras.look[0].reasons.some((r) => r === "No PvP or raid seat — highest Attack of 2, keep it if you want the species"),
+  "best leftover shadow says to keep it only if you want the species",
+);
+must(
+  shadowExtras.dump[0].reasons.some((r) => r === "No PvP or raid seat — extra copy"),
+  "extra leftover shadow says it has no seat",
+);
 must(
   shadowExtras.dump[0].mon.shadow === true && shadowExtras.dump[0].keepClasses.length === 0,
   "dumped extra is a shadow with no keep class",
@@ -967,7 +1020,10 @@ must(
   keepFavOff.look[0].reasons.every((r) => !/favorite/i.test(r)),
   "only-copy LOOK is not a favorite lock",
 );
-must(keepFavOff.look[0].reasons.some((r) => r === "only copy"), "lone junk star explains only copy");
+must(
+  keepFavOff.look[0].reasons.some((r) => r === "No PvP or raid seat — only one you have"),
+  "lone junk star explains it is the only copy",
+);
 
 const shinyStar = gradeBox([{ ...junkFav, shiny: true }], { ...meta, keepFavorite: false });
 must(
