@@ -1115,7 +1115,7 @@ export function mountApp(root: HTMLElement): void {
       <details class="card rankings-card">
         <summary class="rankings-head">
           <h2 id="rankings-title">Rankings</h2>
-          <p class="note rankings-status" id="rankings-status">Loading lists…</p>
+          <p class="note rankings-status status-spin is-busy" id="rankings-status">Loading lists…</p>
         </summary>
         <nav class="rankings-tabs" aria-label="Rankings lists">
           <button type="button" class="btn btn--preset" data-rankings-tab="gl">Great League</button>
@@ -1171,7 +1171,7 @@ export function mountApp(root: HTMLElement): void {
       </details>
 
       <div id="error" class="banner banner--error hidden" role="alert"></div>
-      <p id="busy" class="status-line hidden"></p>
+      <p id="busy" class="status-line status-spin hidden"></p>
 
       <div id="results" class="hidden">
         <p class="banner banner--lock hidden" id="transfer-lock"></p>
@@ -1978,6 +1978,9 @@ function pvpCopiesNote(): string {
 
   function paintRankings(): void {
     const meta = state.meta;
+    const listsLoading = !meta || openLeagueBusy !== "";
+    rankingsStatusEl.classList.toggle("is-busy", listsLoading);
+    rankingsStatusEl.closest(".rankings-card")?.setAttribute("aria-busy", listsLoading ? "true" : "false");
     if (!meta) {
       rankingsStatusEl.textContent = "Loading lists…";
       rankingsGlEl.innerHTML = `<p class="empty">Waiting for PvPoke lists</p>`;
@@ -2078,6 +2081,7 @@ function pvpCopiesNote(): string {
     state.busy = message;
     busyEl.textContent = message;
     busyEl.classList.toggle("hidden", !message);
+    busyEl.classList.toggle("is-busy", Boolean(message));
   }
 
   function coreLoaded(): boolean {

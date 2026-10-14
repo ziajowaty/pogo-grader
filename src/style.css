@@ -637,6 +637,32 @@ body {
   margin: 0 0 10px;
 }
 
+.status-spin.is-busy::before {
+  content: "";
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  margin-right: 0.45em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.1em;
+  animation: status-spin 0.7s linear infinite;
+}
+
+@keyframes status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-spin.is-busy::before {
+    animation: none;
+    border-right-color: currentColor;
+  }
+}
+
 .card--csv .csv-loaded,
 .card--csv .issues {
   margin: 8px 0 0;
