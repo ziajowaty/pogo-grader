@@ -28,6 +28,8 @@ const parsed = parseInventoryCsv(csv);
 const meta = await loadMeta();
 must(meta.pvpokeSource === "bundled", "Node loadMeta must stay on vendored PvPoke lists");
 must(meta.raidSource === "bundled", "Node loadMeta must stay on vendored raid lists");
+const raidPin = JSON.parse(readFileSync(new URL("../data/raid-attackers.json", import.meta.url), "utf8")) as { fetched: string };
+must(meta.raidFetchedAt === Date.parse(raidPin.fetched), "bundled raid list keeps its pin date");
 must(dittoSlugToSpeciesId("gardevoir-mega") === "gardevoir_mega", "mega slug");
 must(dittoSlugToSpeciesId("ninetales-alola-shadow") === "ninetales_alolan_shadow", "alola → alolan + shadow");
 must(dittoSlugToSpeciesId("zacian") === "zacian_hero", "zacian default form");
@@ -36,8 +38,52 @@ must(dittoSlugToSpeciesId("landorus") === "landorus_incarnate", "landorus defaul
 must(dittoSlugToSpeciesId("ho-oh-s") === "ho_oh_shadow", "apex shadow ho-oh");
 must(dittoSlugToSpeciesId("florges-red") === "florges", "florges color form");
 must(dittoSlugToSpeciesId("genesect-normal") === "genesect", "genesect normal drive");
+must(dittoSlugToSpeciesId("toxtricity-amped") === "toxtricity", "amped toxtricity is the ranked id");
+must(dittoSlugToSpeciesId("toxtricity-low-key") === "toxtricity", "low key toxtricity is the ranked id");
 const result = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500 });
 const all = [...result.keep, ...result.look, ...result.dump];
+
+const formNameCsv = `Name,Form,CP,HP,Atk IV,Def IV,Sta IV,Level Min,Level Max,Favorite
+Toxtricity Amped,,1386,111,7,12,5,20,20,0
+Mimikyu Disguised,,1219,93,10,15,10,20,20,0
+Shellos East Sea,,196,68,5,8,13,7,7,0
+`;
+const formGraded = gradeBox(parseInventoryCsv(formNameCsv).mons, { ...meta, pvpRankKeep: 500, keepFavorite: false });
+const formRows = [...formGraded.keep, ...formGraded.look, ...formGraded.dump];
+const formTox = formRows.find((g) => g.mon.speciesName === "Toxtricity Amped");
+const formMimikyu = formRows.find((g) => g.mon.speciesName === "Mimikyu Disguised");
+const formShellos = formRows.find((g) => g.mon.speciesName === "Shellos East Sea");
+must(formTox?.mon.speciesId === "toxtricity" && formTox.gl?.evoSpeciesId === "toxtricity", "Toxtricity Amped is ranked as toxtricity");
+must(formTox?.gl?.rank === 864, `Toxtricity Amped GL IV rank ${formTox?.gl?.rank}`);
+must(formTox?.verdict === "LOOK", `Toxtricity Amped with a weak IV stays on LOOK, got ${formTox?.verdict}`);
+must(formMimikyu?.mon.speciesId === "mimikyu" && formMimikyu.gl?.evoSpeciesId === "mimikyu", "Mimikyu Disguised is ranked as mimikyu");
+must(formShellos?.mon.speciesId === "shellos" && formShellos.gl?.evoSpeciesId === "gastrodon", "Shellos East Sea is ranked as Gastrodon");
+const storedAmped = gradeBox(
+  [
+    {
+      source: "calcyiv",
+      sourceRow: 1,
+      speciesName: "Toxtricity Amped",
+      speciesId: "toxtricity_amped",
+      form: "1640",
+      gender: "male",
+      cp: 1386,
+      hp: 111,
+      atk: 7,
+      def: 12,
+      sta: 5,
+      ivUnique: true,
+      ivPercent: 53.3,
+      level: 20,
+      shadow: false,
+      purified: false,
+      favorite: false,
+    },
+  ],
+  { ...meta, pvpRankKeep: 500, keepFavorite: false },
+);
+const storedRow = [...storedAmped.keep, ...storedAmped.look, ...storedAmped.dump][0];
+must(storedRow?.gl?.evoSpeciesId === "toxtricity" && storedRow.gl.rank === 864, "a stored toxtricity_amped id still ranks as toxtricity");
 
 must(parsed.dialect === "pokegenie", `expected pokegenie, got ${parsed.dialect}`);
 must(parsed.mons.length === 10, `expected 10 mons, got ${parsed.mons.length}`);

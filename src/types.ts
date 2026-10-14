@@ -389,7 +389,7 @@ export interface Meta {
   /** How KEEP PvP species lists were loaded. */
   pvpokeSource?: "live" | "cache" | "bundled";
   pvpokeFetchedAt?: number;
-  /** How the raid list was loaded (Dittobase live, then cache, then the vendored snapshot). */
+  /** How the raid list was loaded. Production uses the vendored snapshot. Dev can load Dittobase through the Vite proxy. */
   raidSource?: "live" | "cache" | "bundled";
   raidFetchedAt?: number;
 }

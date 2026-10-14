@@ -849,7 +849,12 @@ function pvpokeStatus(meta: Meta | null): string {
 }
 
 function raidListStatus(meta: Meta | null): string {
-  if (!meta?.raidSource || meta.raidSource === "bundled") return "Dittobase bundled";
+  if (!meta?.raidSource) return "Dittobase bundled";
+  if (meta.raidSource === "bundled") {
+    const at = meta.raidFetchedAt ?? 0;
+    if (!at) return "Dittobase bundled";
+    return `Dittobase snapshot ${new Date(at).toISOString().slice(0, 10)}`;
+  }
   const at = meta.raidFetchedAt ?? 0;
   const hours = Math.max(0, Math.floor((Date.now() - at) / 3_600_000));
   const age = hours < 1 ? "<1h" : `${hours}h`;

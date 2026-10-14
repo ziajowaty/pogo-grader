@@ -2,8 +2,9 @@
  * Refresh data/raid-attackers.json from Dittobase best-attackers pages.
  * Run: npm run pin:raid
  *
- * The file is the fallback when a live fetch fails (GitHub Pages has no CORS
- * to dittobase.com). A failed fetch leaves the previous snapshot in place.
+ * GitHub Pages serves this file. The browser cannot call dittobase.com
+ * (no CORS header). Local `npm run dev` refreshes through the Vite `/ditto`
+ * proxy. A failed fetch leaves the previous snapshot in place.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

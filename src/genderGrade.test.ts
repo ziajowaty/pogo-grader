@@ -1,5 +1,6 @@
 import { gradeBox } from "./grade";
 import { loadMeta } from "./meta";
+import { parseInventoryCsv } from "./parseCsv";
 import type { Gender, Mon } from "./types";
 
 function must(cond: boolean, message: string): void {
@@ -120,5 +121,23 @@ must(reach.zorua_hisuian?.includes("zoroark_hisuian") === true, "Hisuian Zorua s
 must(!reach.rattata_alolan?.includes("raticate"), "Alolan Rattata is not Kanto Raticate");
 must(reach.rattata_alolan?.includes("raticate_alolan") === true, "Alolan Rattata still becomes Alolan Raticate");
 must(!reach.slowpoke_galarian?.includes("slowbro_mega"), "Galarian Slowpoke is not Mega Slowbro");
+
+const frillParsed = parseInventoryCsv(`Name,Gender,CP,HP,Atk IV,Def IV,Sta IV,Level Min,Level Max
+Frillish ♂,♂,668,91,9,14,8,20,20
+`);
+const frillMon = frillParsed.mons[0];
+must(frillMon?.speciesId === "frillish" && frillMon.gender === "male", `parsed Frillish ♂ ${frillMon?.speciesId}`);
+const frillGrade = gradeBox(frillMon ? [frillMon] : [], { ...base, keepFavorite: false, pvpRankKeep: 500 });
+const frillRow = [...frillGrade.keep, ...frillGrade.look, ...frillGrade.dump][0];
+const frillEvos = (frillRow?.glAs ?? []).map((r) => r.evoSpeciesId);
+must(frillEvos.includes("jellicent") && frillEvos.includes("frillish"), `Frillish GL evos ${frillEvos}`);
+must(
+  frillGrade.look.length === 1 && frillGrade.dump.length === 0,
+  `Frillish holds a seat, got keep/look/dump ${frillGrade.keep.length}/${frillGrade.look.length}/${frillGrade.dump.length}`,
+);
+must(
+  (frillRow?.reasons ?? []).some((reason) => /jellicent/i.test(reason)),
+  `Jellicent missing from reasons: ${frillRow?.reasons?.join(" | ")}`,
+);
 
 console.log("genderGrade tests passed");

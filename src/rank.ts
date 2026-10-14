@@ -1,3 +1,4 @@
+import { rankedSpeciesId } from "./dittobase";
 import { evolutionGenderOk } from "./genderForm";
 import type { Gender, LeagueRank, Mon, RaidIvRank } from "./types";
 // @ts-ignore Vite JSON snapshots
@@ -34,12 +35,14 @@ const defaultGlEvolution = glEvolutionJson as Record<string, string>;
 const tableCache = new Map<string, { rank: Uint16Array; sp: Float64Array }>();
 
 function canonId(id: string): string {
-  return id
-    .trim()
-    .toLowerCase()
-    .replace(/['’`]/g, "")
-    .replace(/[\s-]+/g, "_")
-    .replace(/_+/g, "_");
+  return rankedSpeciesId(
+    id
+      .trim()
+      .toLowerCase()
+      .replace(/['’`]/g, "")
+      .replace(/[\s-]+/g, "_")
+      .replace(/_+/g, "_"),
+  );
 }
 
 export function getRankGm(glEvolution?: Record<string, string>): RankGm {

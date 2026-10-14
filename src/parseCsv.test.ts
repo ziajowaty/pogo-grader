@@ -155,8 +155,50 @@ check("meowstic female id", gid("Meowstic", "female") === "meowstic_female");
 check("basculegion male id", gid("Basculegion", "male") === "basculegion_male");
 check("nidoran female id", gid("Nidoran", "female") === "nidoran_female");
 check("pikachu gender is cosmetic", gid("Pikachu", "female") === "pikachu");
+
+const COSMETIC = `Name,Gender,Form,CP,HP,Atk IV,Def IV,Sta IV,Level Min,Level Max
+Frillish ♂,♂,,668,91,9,14,8,20,20
+Frillish ♂ Shadow,♂,,400,80,9,14,8,15,15
+Pyroar ♀,♀,,400,90,10,10,10,15,15
+Jellicent ♀,♀,,800,140,9,14,8,20,20
+Oinkologne ♂,♂,,800,140,0,15,15,20,20
+Indeedee ♂,♂,,500,120,10,10,10,15,15
+Nidoran♂,♂,,200,40,10,10,10,10,10
+`;
+const cosmetic = parseInventoryCsv(COSMETIC);
+const cid = (name: string) => cosmetic.mons.find((m) => m.speciesName === name)?.speciesId;
+check("frillish male symbol stays frillish", cid("Frillish ♂") === "frillish");
+check("frillish male shadow stays frillish_shadow", cid("Frillish ♂ Shadow") === "frillish_shadow");
+check("pyroar female symbol stays pyroar", cid("Pyroar ♀") === "pyroar");
+check("jellicent female symbol stays jellicent", cid("Jellicent ♀") === "jellicent");
+check("oinkologne male symbol stays unsuffixed", cid("Oinkologne ♂") === "oinkologne");
+check("indeedee male symbol keeps split id", cid("Indeedee ♂") === "indeedee_male");
+check("nidoran male symbol keeps split id", cid("Nidoran♂") === "nidoran_male");
 const formFemale = gendered.mons.find((m) => m.speciesName === "Oinkologne" && m.form === "Female");
 check("form label selects oinkologne female", formFemale?.speciesId === "oinkologne_female" && formFemale.gender === "female");
+
+const FORM_NAMES = `Name,Form,CP,HP,Atk IV,Def IV,Sta IV,Level Min,Level Max
+Toxtricity Amped,,1386,111,7,12,5,20,20
+Toxtricity (Amped),,1386,111,7,12,5,20,20
+Toxtricity Low Key,,1386,111,7,12,5,20,20
+Toxtricity Amped Shadow,,1386,111,7,12,5,20,20
+Toxtricity,Amped,1386,111,7,12,5,20,20
+Mimikyu Disguised,,1219,93,10,15,10,20,20
+Shellos East Sea,,196,68,5,8,13,7,7
+Gastrodon West Sea,,1498,162,1,15,14,22,22
+Sandshrew Alolan,,400,60,0,15,15,15,15
+`;
+const formNames = parseInventoryCsv(FORM_NAMES);
+const formId = (name: string) => formNames.mons.find((m) => m.speciesName === name)?.speciesId;
+check("toxtricity amped name is the ranked id", formId("Toxtricity Amped") === "toxtricity");
+check("toxtricity amped paren is the ranked id", formId("Toxtricity (Amped)") === "toxtricity");
+check("toxtricity low key is the ranked id", formId("Toxtricity Low Key") === "toxtricity");
+check("toxtricity amped shadow keeps shadow", formId("Toxtricity Amped Shadow") === "toxtricity_shadow");
+check("toxtricity amped form column is the ranked id", formId("Toxtricity") === "toxtricity");
+check("mimikyu disguised is mimikyu", formId("Mimikyu Disguised") === "mimikyu");
+check("shellos east sea is shellos", formId("Shellos East Sea") === "shellos");
+check("gastrodon west sea is gastrodon", formId("Gastrodon West Sea") === "gastrodon");
+check("alolan sandshrew is not folded", formId("Sandshrew Alolan") === "sandshrew_alolan");
 
 if (failed > 0) {
   throw new Error(`${failed} parseCsv checks failed`);

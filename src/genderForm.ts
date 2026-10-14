@@ -3,7 +3,8 @@ import type { Gender } from "./types.ts";
 /**
  * PvPoke ids where gender is a different species. Male Oinkologne and male
  * Meowstic keep the unsuffixed id. Other splits use an explicit suffix.
- * Cosmetic genders (Pyroar, Frillish, Hippowdon, …) are not listed.
+ * Cosmetic genders (Pyroar, Frillish, Hippowdon, …) are not listed. A ♂/♀
+ * on the scan name must not invent an id like `frillish_male`.
  */
 const GENDERED_SPECIES: Record<string, Partial<Record<"male" | "female", string>>> = {
   oinkologne: { female: "oinkologne_female" },
@@ -54,6 +55,19 @@ function evolutionCore(speciesId: string): string {
   if (id.endsWith("_shadow")) id = id.slice(0, -7);
   id = id.replace(/_mega(?:_[xy])?$/, "").replace(/_primal$/, "");
   return id;
+}
+
+/**
+ * Drop a `_male` / `_female` suffix that only came from a cosmetic name mark.
+ * Real splits stay: `indeedee_male`, `oinkologne_female`, `nidoran_female`.
+ */
+export function dropCosmeticGenderSlug(speciesId: string): string {
+  const shadow = speciesId.endsWith("_shadow");
+  const core = shadow ? speciesId.slice(0, -7) : speciesId;
+  if (!/_(?:male|female)$/.test(core) || ALREADY_GENDERED.has(core)) return speciesId;
+  const base = core.replace(/_(?:male|female)$/, "");
+  if (!base) return speciesId;
+  return shadow ? `${base}_shadow` : base;
 }
 
 /** Rewrite a base species id when gender selects the PvPoke form. */

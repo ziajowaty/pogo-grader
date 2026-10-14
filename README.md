@@ -33,6 +33,6 @@ This app never talks to Scopely/Niantic and never taps Transfer.
 
 ## Data
 
-The browser fetches **PvPoke ranking lists** (Great League overall 1500 → top 500 unique `speciesId`, Little Cup overall 500 → top 100) and **Dittobase raid attackers** (eDPS per attacking type, A tier and better are raid KEEP). Those lists are stored in `localStorage` for **24 hours**. Offline or a failed fetch uses a stale cache, then the vendored files under `data/`. Refresh the vendored raid snapshot with `npm run pin:raid`. GitHub Pages cannot fetch Dittobase (no CORS); local `npm run dev` proxies `/ditto`, and Pages deploys re-pin before build.
+The browser fetches **PvPoke ranking lists** (Great League overall 1500 → top 500 unique `speciesId`, Little Cup overall 500 → top 100). Those lists are stored in `localStorage` for **24 hours**. Offline or a failed fetch uses a stale cache, then the vendored files under `data/`. Raid attackers are the vendored Dittobase snapshot (`data/raid-attackers.json`, A tier and better are raid KEEP). Refresh it with `npm run pin:raid`; Pages deploys pin again before build. Local `npm run dev` can refresh that list through the `/ditto` proxy. The production site does not call dittobase.com, which sends no CORS header.
 
 IV rank math, CPM, evolution remaps, and legendary / mythical / limited lists stay vendored. They do not move with weekly ranking churn, and we do not pull PvPoke's full gamemaster.

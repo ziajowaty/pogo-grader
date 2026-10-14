@@ -1,10 +1,10 @@
 import {
-  dittobaseTypeUrl,
   DITTOBASE_UA,
   entriesFromRaidFile,
   entryIsViable,
   parseDittobaseTypePage,
   raidFileFromPages,
+  rankedSpeciesId,
   type DittoRaidEntry,
   type DittoRaidFile,
 } from "./dittobase";
@@ -67,19 +67,27 @@ interface CachedLists {
 }
 
 export function canonId(id: string): string {
-  return id
-    .trim()
-    .toLowerCase()
-    .replace(/['’`]/g, "")
-    .replace(/[\s-]+/g, "_")
-    .replace(/_+/g, "_");
+  return rankedSpeciesId(
+    id
+      .trim()
+      .toLowerCase()
+      .replace(/['’`]/g, "")
+      .replace(/[\s-]+/g, "_")
+      .replace(/_+/g, "_"),
+  );
 }
 
 function dittobaseTypeFetchUrl(type: PokemonType): string {
-  if (typeof window !== "undefined" && import.meta.env?.DEV) {
-    return `/ditto/pokemon-go/best-attackers/${type}`;
-  }
-  return dittobaseTypeUrl(type);
+  return `/ditto/pokemon-go/best-attackers/${type}`;
+}
+
+/**
+ * Dittobase does not send Access-Control-Allow-Origin. The Vite dev server
+ * proxies `/ditto`. A static host such as GitHub Pages cannot, so production
+ * stays on the snapshot pinned at build time.
+ */
+function dittobaseLiveEnabled(): boolean {
+  return typeof window !== "undefined" && import.meta.env?.DEV === true;
 }
 
 function toSet(ids: string[]): Set<string> {
@@ -792,6 +800,16 @@ function bundledRaidFile(): DittoRaidFile {
   return raidAttackersJson as DittoRaidFile;
 }
 
+function snapshotFetchedAt(file: DittoRaidFile): number {
+  const ms = Date.parse(file.fetched);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function bundledRaidLists(): RaidLists {
+  const file = bundledRaidFile();
+  return { file, fetchedAt: snapshotFetchedAt(file), source: "bundled" };
+}
+
 function raidFileUsable(file: DittoRaidFile | null): file is DittoRaidFile {
   if (!file?.lists) return false;
   if (!POKEMON_TYPES.every((type) => (file.lists[type]?.length ?? 0) >= 20)) return false;
@@ -845,12 +863,13 @@ async function fetchLiveRaid(stale: CachedRaidFile | null): Promise<RaidLists> {
     if (stale && raidFileUsable(stale)) {
       return { file: stale, fetchedAt: stale.fetchedAt, source: "cache" };
     }
-    return { file: bundledRaidFile(), fetchedAt: 0, source: "bundled" };
+    return bundledRaidLists();
   }
 }
 
 async function loadRaidLists(): Promise<RaidLists> {
-  const bundled = { file: bundledRaidFile(), fetchedAt: 0, source: "bundled" as const };
+  const bundled = bundledRaidLists();
+  if (!dittobaseLiveEnabled()) return bundled;
   const canFetch = typeof fetch === "function" && typeof localStorage !== "undefined";
   if (!canFetch) return bundled;
 
