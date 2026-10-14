@@ -6,15 +6,19 @@
  * sends no CORS header) and caches it for 24 hours. The scheduled workflow
  * refreshes it. Local `npm run dev` still reads Dittobase through the Vite
  * `/ditto` proxy. A failed fetch leaves the previous snapshot in place.
- * Unchanged attacker lists are not rewritten.
+ * Unchanged attacker lists are not rewritten. Type pages are fetched two at a
+ * time with a short pause. Dittobase has no combined attackers endpoint.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  DITTOBASE_TYPE_BATCH,
+  DITTOBASE_TYPE_GAP_MS,
   DITTOBASE_UA,
   dittoSlugToSpeciesId,
   dittobaseTypeUrl,
+  mapInBatches,
   pageTruncatesViable,
   parseDittobaseTypePage,
   raidFileFromPages,
@@ -44,14 +48,12 @@ async function fetchType(type: (typeof POKEMON_TYPES)[number]): Promise<Dittobas
 }
 
 async function main(): Promise<void> {
-  const pages: DittobaseTypePage[] = [];
-  for (const type of POKEMON_TYPES) {
-    process.stdout.write(`fetch ${type}… `);
+  const pages = await mapInBatches(POKEMON_TYPES, DITTOBASE_TYPE_BATCH, DITTOBASE_TYPE_GAP_MS, async (type) => {
     const page = await fetchType(type);
     const last = page.rows[page.rows.length - 1];
-    console.log(`${page.rows.length}/${page.resultCount} last ${last?.tier} #${last?.rank}`);
-    pages.push(page);
-  }
+    console.log(`fetch ${type}: ${page.rows.length}/${page.resultCount} last ${last?.tier} #${last?.rank}`);
+    return page;
+  });
 
   const types = JSON.parse(readFileSync(typesPath, "utf8")) as { types: Record<string, string[]> };
   const known = new Set(Object.keys(types.types));

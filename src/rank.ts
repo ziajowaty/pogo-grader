@@ -1,4 +1,3 @@
-import { rankedSpeciesId } from "./dittobase";
 import { evolutionGenderOk } from "./genderForm";
 import type { Gender, LeagueRank, Mon, RaidIvRank } from "./types";
 // @ts-ignore Vite JSON snapshots
@@ -35,14 +34,53 @@ const defaultGlEvolution = glEvolutionJson as Record<string, string>;
 const tableCache = new Map<string, { rank: Uint16Array; sp: Float64Array }>();
 
 function canonId(id: string): string {
-  return rankedSpeciesId(
-    id
-      .trim()
-      .toLowerCase()
-      .replace(/['’`]/g, "")
-      .replace(/[\s-]+/g, "_")
-      .replace(/_+/g, "_"),
-  );
+  return id
+    .trim()
+    .toLowerCase()
+    .replace(/['’`]/g, "")
+    .replace(/[\s-]+/g, "_")
+    .replace(/_+/g, "_");
+}
+
+function statSignature(id: string): string | null {
+  const stats = baseStats[id];
+  if (!stats) return null;
+  return `${stats.atk}:${stats.def}:${stats.hp}`;
+}
+
+/**
+ * Grade a Calcy form label as the species PvPoke actually ranks.
+ * A longer id folds onto a shorter one only while the longer id is absent
+ * from PvPoke's rankings and the base stats match. Once PvPoke ranks
+ * `toxtricity_low_key` on its own, that id stays.
+ * A label with no gamemaster row (`shellos_east_sea`) peels back to the
+ * longest known species (`shellos`).
+ */
+export function foldBattleSpecies(id: string, ranked: ReadonlySet<string> | undefined): string {
+  const shadow = id.endsWith("_shadow");
+  const core = shadow ? id.slice(0, -7) : id;
+  const folded = foldBattleCore(core, ranked ?? new Set());
+  return shadow ? `${folded}_shadow` : folded;
+}
+
+function foldBattleCore(core: string, ranked: ReadonlySet<string>): string {
+  if (!core || ranked.has(core)) return core;
+  if (!baseStats[core]) {
+    const parts = core.split("_");
+    for (let n = parts.length - 1; n >= 1; n--) {
+      const prefix = parts.slice(0, n).join("_");
+      if (baseStats[prefix] || ranked.has(prefix)) return foldBattleCore(prefix, ranked);
+    }
+    return core;
+  }
+  const mine = statSignature(core);
+  const parts = core.split("_");
+  for (let n = parts.length - 1; n >= 1; n--) {
+    const prefix = parts.slice(0, n).join("_");
+    if (!ranked.has(prefix) || statSignature(prefix) !== mine) continue;
+    return prefix;
+  }
+  return core;
 }
 
 export function getRankGm(glEvolution?: Record<string, string>): RankGm {

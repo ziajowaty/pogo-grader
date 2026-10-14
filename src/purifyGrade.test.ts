@@ -143,6 +143,7 @@ must(
 
 const raidMeta: Meta = {
   ...loaded,
+  raidAttackers: new Set([...loaded.raidAttackers, "gengar", "gengar_shadow"]),
   familyOf: mergeReturnFamilies(loaded.familyOf, ["gengar"]),
   keepGl: false,
   keepLc: false,

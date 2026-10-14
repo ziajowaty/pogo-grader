@@ -301,6 +301,12 @@ export interface Meta {
   mythical: Set<string>;
   /** unevolved -> family GL evo id */
   glEvolution: Record<string, string>;
+  /**
+   * Species ids PvPoke ranks as their own battle species. A same-stats form
+   * missing from this set is graded as the shorter ranked id until PvPoke
+   * publishes that form.
+   */
+  pvpokeSpecies: Set<string>;
   /** Evolution-graph family id (min member). Shadows are their own family. */
   familyOf?: Record<string, string>;
   /** Forward-reachable evo ids including self. */

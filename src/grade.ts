@@ -44,6 +44,7 @@ import {
   rankCappedLeagueAs,
   rankLittleCup,
   rankPurifiedAs,
+  foldBattleSpecies,
   ULTRA_LEAGUE_CAP,
   raidIvPercent,
   type RankGm,
@@ -131,8 +132,12 @@ function uniqueIds(ids: string[]): string[] {
   return out;
 }
 
+function pvpSpecies(speciesId: string, meta: Meta): string {
+  return foldBattleSpecies(canonId(speciesId), meta.pvpokeSpecies);
+}
+
 function familyKey(speciesId: string, meta: Meta): string {
-  const id = canonId(speciesId);
+  const id = pvpSpecies(speciesId, meta);
   return meta.familyOf?.[id] ?? id;
 }
 
@@ -154,12 +159,12 @@ function familyMembers(
 ): string[] {
   const members = byFamily.get(familyKey(speciesId, meta));
   if (members && members.length) return members;
-  return [canonId(speciesId)];
+  return [pvpSpecies(speciesId, meta)];
 }
 
 function canBecome(from: string, target: string, meta: Meta, gender: Gender): boolean {
-  const a = canonId(from);
-  const b = canonId(target);
+  const a = pvpSpecies(from, meta);
+  const b = pvpSpecies(target, meta);
   if (a === b) return true;
   if (!evolutionGenderOk(b, gender)) return false;
   if (meta.evoReach?.[a]?.includes(b)) return true;
@@ -237,7 +242,11 @@ function anyGlIds(members: string[], meta: Meta, gm: RankGm): string[] {
     const mapped = meta.glEvolution[id];
     if (mapped) ids.push(mapped);
   }
-  return uniqueIds(ids.filter((id) => !isMegaStage(id) && hasBaseStats(id, gm)));
+  return uniqueIds(
+    ids
+      .filter((id) => !isMegaStage(id) && hasBaseStats(id, gm))
+      .map((id) => pvpSpecies(id, meta)),
+  );
 }
 
 /** Unevolved species that can still evolve. Little Cup when any species is viable. */
@@ -1214,11 +1223,12 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
     const master = keepMl
       ? rankStages(mon, withPurifyTarget(mon, reachable(ind.listedMl), meta.mlRankings), MASTER_LEAGUE_CAP, mlIndex, mlOf, meta.mlRankings)
       : null;
-    const lcOwn = pvpAny ? ind.lc.includes(canonId(mon.speciesId)) : isLcSpecies(mon.speciesId, gateMeta);
+    const species = pvpSpecies(mon.speciesId, meta);
+    const lcOwn = pvpAny ? ind.lc.includes(species) : isLcSpecies(species, gateMeta);
     const lcPurify = returnPurifyBase(mon.speciesId, meta.lcRankings);
     const lcAs: LeagueRank[] = [];
     if (lcOwn && mon.cp <= LITTLE_CUP_CAP) {
-      const ownRank = rankLittleCup(mon, gm);
+      const ownRank = rankLittleCup({ ...mon, speciesId: species }, gm);
       if (ownRank) lcAs.push(ownRank);
     }
     if (
@@ -1229,7 +1239,7 @@ export function gradeBox(mons: Mon[], meta: Meta, core: Mon[] = []): GradeResult
       const purifiedRank = rankPurifiedAs(mon, gm, lcPurify, LITTLE_CUP_CAP);
       if (purifiedRank) lcAs.push(purifiedRank);
     }
-    const lcRow = lookupRank(mon.speciesId, lcIndex);
+    const lcRow = lookupRank(species, lcIndex);
     const raidTarget =
       raidGateId(mon.speciesId, meta, mon.gender) ??
       ind.raid.find((t) => canBecome(mon.speciesId, t, meta, mon.gender)) ??

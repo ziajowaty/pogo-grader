@@ -1,5 +1,5 @@
 {
-  "comment": "Dittobase eDPS raid attackers (level 40, best moveset per attacking type). Embedded first page of each type list. A tier and better are raid KEEP; lower tiers stay on the ranking table. Pinned for GitHub Pages; local dev can refresh through the Vite proxy.",
+  "comment": "Dittobase eDPS raid attackers (level 40, best moveset per attacking type). Embedded first page of each type list. A tier and better are raid KEEP; lower tiers stay on the ranking table. Published for the site, which caches it for 24 hours. Local dev can refresh through the Vite proxy.",
   "fetched": "2026-10-14",
   "updatedAt": "2026-10-11T14:03:06.724Z",
   "source": "https://www.dittobase.com/pokemon-go/best-attackers/{type}",

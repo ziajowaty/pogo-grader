@@ -190,14 +190,14 @@ Sandshrew Alolan,,400,60,0,15,15,15,15
 `;
 const formNames = parseInventoryCsv(FORM_NAMES);
 const formId = (name: string) => formNames.mons.find((m) => m.speciesName === name)?.speciesId;
-check("toxtricity amped name is the ranked id", formId("Toxtricity Amped") === "toxtricity");
-check("toxtricity amped paren is the ranked id", formId("Toxtricity (Amped)") === "toxtricity");
-check("toxtricity low key is the ranked id", formId("Toxtricity Low Key") === "toxtricity");
-check("toxtricity amped shadow keeps shadow", formId("Toxtricity Amped Shadow") === "toxtricity_shadow");
-check("toxtricity amped form column is the ranked id", formId("Toxtricity") === "toxtricity");
-check("mimikyu disguised is mimikyu", formId("Mimikyu Disguised") === "mimikyu");
-check("shellos east sea is shellos", formId("Shellos East Sea") === "shellos");
-check("gastrodon west sea is gastrodon", formId("Gastrodon West Sea") === "gastrodon");
+check("toxtricity amped name keeps the form id", formId("Toxtricity Amped") === "toxtricity_amped");
+check("toxtricity amped paren keeps the form id", formId("Toxtricity (Amped)") === "toxtricity_amped");
+check("toxtricity low key keeps the form id", formId("Toxtricity Low Key") === "toxtricity_low_key");
+check("toxtricity amped shadow keeps the form id", formId("Toxtricity Amped Shadow") === "toxtricity_amped_shadow");
+check("toxtricity amped form column keeps the form id", formId("Toxtricity") === "toxtricity_amped");
+check("mimikyu disguised keeps the form id", formId("Mimikyu Disguised") === "mimikyu_disguised");
+check("shellos east sea keeps the form id", formId("Shellos East Sea") === "shellos_east_sea");
+check("gastrodon west sea keeps the form id", formId("Gastrodon West Sea") === "gastrodon_west_sea");
 check("alolan sandshrew is not folded", formId("Sandshrew Alolan") === "sandshrew_alolan");
 
 if (failed > 0) {

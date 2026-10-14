@@ -1,10 +1,12 @@
 import {
+  DITTOBASE_TYPE_BATCH,
+  DITTOBASE_TYPE_GAP_MS,
   DITTOBASE_UA,
   entriesFromRaidFile,
   entryIsViable,
+  mapInBatches,
   parseDittobaseTypePage,
   raidFileFromPages,
-  rankedSpeciesId,
   type DittoRaidEntry,
   type DittoRaidFile,
 } from "./dittobase";
@@ -28,10 +30,12 @@ import raidAttackersJson from "../data/raid-attackers.json";
 import evolutionsJson from "../data/evolutions.json";
 // @ts-ignore Vite JSON snapshots
 import speciesTypesJson from "../data/species-types.json";
+// @ts-ignore Vite JSON snapshots
+import pvpokeSpeciesJson from "../data/pvpoke-species.json";
 
 const PVPOKE_TTL_MS = 24 * 60 * 60 * 1000;
-/** v3 keeps each row's simulated moveset. v2 stored up to 1000 species and dropped moves. */
-const PVPOKE_CACHE_KEY = "pogo-grader.pvpokeLists.v3";
+/** v4 also keeps every species id from the fetched lists, past the keep cap. */
+const PVPOKE_CACHE_KEY = "pogo-grader.pvpokeLists.v4";
 const RAID_TTL_MS = 24 * 60 * 60 * 1000;
 const RAID_CACHE_KEY = "pogo-grader.raidAttackers.dittobase";
 /**
@@ -69,18 +73,18 @@ interface SpeciesTypesFile {
 interface CachedLists {
   gl: PvpokeRankRow[];
   lc: PvpokeRankRow[];
+  /** Every species id in the fetched payloads, including rows past the keep cap. */
+  speciesIds: string[];
   fetchedAt: number;
 }
 
 export function canonId(id: string): string {
-  return rankedSpeciesId(
-    id
-      .trim()
-      .toLowerCase()
-      .replace(/['’`]/g, "")
-      .replace(/[\s-]+/g, "_")
-      .replace(/_+/g, "_"),
-  );
+  return id
+    .trim()
+    .toLowerCase()
+    .replace(/['’`]/g, "")
+    .replace(/[\s-]+/g, "_")
+    .replace(/_+/g, "_");
 }
 
 function dittobaseTypeFetchUrl(type: PokemonType): string {
@@ -648,6 +652,24 @@ export function mergeReturnFamilies(
   return next;
 }
 
+function allSpeciesIds(rows: unknown): string[] {
+  if (!Array.isArray(rows)) return [];
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const id =
+      typeof row === "string"
+        ? canonId(row)
+        : row && typeof row === "object" && "speciesId" in row
+          ? canonId(String((row as { speciesId?: unknown }).speciesId ?? ""))
+          : "";
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
 function uniqueRankRows(rows: unknown, cap: number): PvpokeRankRow[] {
   if (!Array.isArray(rows)) return [];
   const out: PvpokeRankRow[] = [];
@@ -690,11 +712,14 @@ function readPvpokeCache(): CachedLists | null {
   try {
     const raw = localStorage.getItem(PVPOKE_CACHE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { gl?: unknown; lc?: unknown; fetchedAt?: unknown };
+    const parsed = JSON.parse(raw) as { gl?: unknown; lc?: unknown; speciesIds?: unknown; fetchedAt?: unknown };
     const gl = coerceRankRows(parsed.gl, GL_LIST_CAP);
     const lc = coerceRankRows(parsed.lc, LC_LIST_CAP);
-    if (!gl || !lc || !Number.isFinite(parsed.fetchedAt)) return null;
-    return { gl, lc, fetchedAt: Number(parsed.fetchedAt) };
+    const speciesIds = Array.isArray(parsed.speciesIds)
+      ? parsed.speciesIds.filter((id): id is string => typeof id === "string" && id.length > 0)
+      : [];
+    if (!gl || !lc || speciesIds.length < 20 || !Number.isFinite(parsed.fetchedAt)) return null;
+    return { gl, lc, speciesIds, fetchedAt: Number(parsed.fetchedAt) };
   } catch {
     return null;
   }
@@ -708,18 +733,24 @@ function writePvpokeCache(lists: CachedLists): void {
   }
 }
 
-async function fetchRankingRows(url: string, cap: number): Promise<PvpokeRankRow[]> {
+async function fetchRankingRows(url: string, cap: number): Promise<{ rows: PvpokeRankRow[]; speciesIds: string[] }> {
   const res = await fetch(url, { cache: "no-cache" });
   if (!res.ok) throw new Error(`PvPoke ${res.status}`);
-  const rows = uniqueRankRows(await res.json(), cap);
+  const payload = await res.json();
+  const rows = uniqueRankRows(payload, cap);
   if (rows.length < Math.min(20, cap)) throw new Error("PvPoke list too small");
-  return rows;
+  return { rows, speciesIds: allSpeciesIds(payload) };
+}
+
+function bundledPvpokeSpecies(): string[] {
+  return listFile(pvpokeSpeciesJson as NamedListFile);
 }
 
 function bundledLists(): CachedLists {
   return {
     gl: uniqueRankRows(glTop500Json, GL_LIST_CAP),
     lc: uniqueRankRows(lcTop100Json, LC_LIST_CAP),
+    speciesIds: bundledPvpokeSpecies(),
     fetchedAt: 0,
   };
 }
@@ -742,6 +773,7 @@ function cacheUsable(cached: CachedLists | null): cached is CachedLists {
 type PvpokeLists = {
   gl: PvpokeRankRow[];
   lc: PvpokeRankRow[];
+  speciesIds: string[];
   source: NonNullable<Meta["pvpokeSource"]>;
   fetchedAt: number;
 };
@@ -756,11 +788,12 @@ async function fetchLiveLists(stale: CachedLists | null): Promise<PvpokeLists> {
       fetchRankingRows(LC_RANKINGS_URL, LC_LIST_CAP),
     ]);
     const fetchedAt = Date.now();
-    writePvpokeCache({ gl, lc, fetchedAt });
-    return { gl, lc, fetchedAt, source: "live" };
+    const speciesIds = [...new Set([...gl.speciesIds, ...lc.speciesIds])];
+    writePvpokeCache({ gl: gl.rows, lc: lc.rows, speciesIds, fetchedAt });
+    return { gl: gl.rows, lc: lc.rows, speciesIds, fetchedAt, source: "live" };
   } catch {
     if (cacheUsable(stale)) {
-      return { gl: stale.gl, lc: stale.lc, fetchedAt: stale.fetchedAt, source: "cache" };
+      return { gl: stale.gl, lc: stale.lc, speciesIds: stale.speciesIds, fetchedAt: stale.fetchedAt, source: "cache" };
     }
     return { ...bundled, source: "bundled" };
   }
@@ -775,7 +808,7 @@ async function loadPvpokeLists(): Promise<PvpokeLists> {
 
   const cached = readPvpokeCache();
   if (cacheUsable(cached) && Date.now() - cached.fetchedAt < PVPOKE_TTL_MS) {
-    return { gl: cached.gl, lc: cached.lc, fetchedAt: cached.fetchedAt, source: "cache" };
+    return { gl: cached.gl, lc: cached.lc, speciesIds: cached.speciesIds, fetchedAt: cached.fetchedAt, source: "cache" };
   }
 
   if (!pvpokeInflight) {
@@ -849,15 +882,13 @@ async function fetchPublishedRaidFile(): Promise<DittoRaidFile> {
 async function fetchDittobaseRaidFile(): Promise<DittoRaidFile> {
   const headers: Record<string, string> = {};
   if (typeof window === "undefined") headers["User-Agent"] = DITTOBASE_UA;
-  const pages = await Promise.all(
-    POKEMON_TYPES.map(async (type) => {
-      const res = await fetch(dittobaseTypeFetchUrl(type), { cache: "no-cache", headers });
-      if (!res.ok) throw new Error(`Dittobase ${type} ${res.status}`);
-      const page = parseDittobaseTypePage(await res.text());
-      if (page.type !== type) throw new Error(`Dittobase asked for ${type}, got ${page.type}`);
-      return page;
-    }),
-  );
+  const pages = await mapInBatches(POKEMON_TYPES, DITTOBASE_TYPE_BATCH, DITTOBASE_TYPE_GAP_MS, async (type) => {
+    const res = await fetch(dittobaseTypeFetchUrl(type), { cache: "no-cache", headers });
+    if (!res.ok) throw new Error(`Dittobase ${type} ${res.status}`);
+    const page = parseDittobaseTypePage(await res.text());
+    if (page.type !== type) throw new Error(`Dittobase asked for ${type}, got ${page.type}`);
+    return page;
+  });
   const file = raidFileFromPages(pages, new Date().toISOString().slice(0, 10));
   if (!raidFileUsable(file)) throw new Error("Dittobase attacker list too small");
   return file;
@@ -962,8 +993,8 @@ async function fetchOptionalLeague(which: "ultra" | "master"): Promise<LoadedOpt
   try {
     const rows = await fetchRankingRows(url, cap);
     const fetchedAt = Date.now();
-    writeOptionalCache(key, { rows, fetchedAt });
-    return { rows, source: "live", fetchedAt };
+    writeOptionalCache(key, { rows: rows.rows, fetchedAt });
+    return { rows: rows.rows, source: "live", fetchedAt };
   } catch {
     if (cached) return { rows: cached.rows, source: "cache", fetchedAt: cached.fetchedAt };
     return { rows: [], source: "missing", fetchedAt: 0 };
@@ -996,6 +1027,10 @@ export async function loadMeta(request?: LeagueListRequest): Promise<Meta> {
     builtFamilies.familyOf,
     returnPurifyBases([lists.gl, lists.lc, ultra?.rows, master?.rows]),
   );
+  const pvpokeSpecies = new Set<string>(lists.speciesIds.map(canonId));
+  for (const id of bundledPvpokeSpecies()) pvpokeSpecies.add(canonId(id));
+  for (const row of ultra?.rows ?? []) pvpokeSpecies.add(row.speciesId);
+  for (const row of master?.rows ?? []) pvpokeSpecies.add(row.speciesId);
   return {
     glTop500: toSet(lists.gl.map((row) => row.speciesId)),
     lcTop100: toSet(lists.lc.map((row) => row.speciesId)),
@@ -1021,6 +1056,7 @@ export async function loadMeta(request?: LeagueListRequest): Promise<Meta> {
         canonId(v),
       ]),
     ),
+    pvpokeSpecies,
     pvpokeSource: lists.source,
     pvpokeFetchedAt: lists.fetchedAt || undefined,
     raidSource: raidLive.source,

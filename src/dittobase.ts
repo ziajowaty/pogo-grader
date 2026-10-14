@@ -17,34 +17,6 @@ const SLUG_ALIAS: Record<string, string> = {
   "sinistcha-masterpiece": "sinistcha",
 };
 
-/**
- * Calcy form names, and unreleased PvPoke twins, for a species the rankings
- * list without that suffix. Amped and Low Key share stats; the ranked id is
- * `toxtricity`. `toxtricity_amped` never matches that row.
- */
-const RANKED_FORM: Record<string, string> = {
-  toxtricity_amped: "toxtricity",
-  toxtricity_low_key: "toxtricity",
-  mimikyu_disguised: "mimikyu",
-  shellos_east: "shellos",
-  shellos_west: "shellos",
-  shellos_east_sea: "shellos",
-  shellos_west_sea: "shellos",
-  gastrodon_east: "gastrodon",
-  gastrodon_west: "gastrodon",
-  gastrodon_east_sea: "gastrodon",
-  gastrodon_west_sea: "gastrodon",
-};
-
-/** Fold a default-form label onto the species id PvPoke actually ranks. */
-export function rankedSpeciesId(id: string): string {
-  const shadow = id.endsWith("_shadow");
-  const core = shadow ? id.slice(0, -7) : id;
-  const mapped = RANKED_FORM[core];
-  if (!mapped) return id;
-  return shadow ? `${mapped}_shadow` : mapped;
-}
-
 /** Dittobase omits the default form suffix that PvPoke-style ids use. */
 const DEFAULT_FORM: Record<string, string> = {
   giratina: "giratina_altered",
@@ -103,6 +75,32 @@ export function dittobaseTypeUrl(type: PokemonType): string {
   return `${DITTOBASE_ATTACKERS_ORIGIN}/pokemon-go/best-attackers/${type}`;
 }
 
+/**
+ * Dittobase publishes one best-attackers HTML page per move type. The page
+ * embeds that type's first results only, and nothing on the site returns all
+ * 18 lists together. Keep refreshes to a couple of pages at a time.
+ */
+export const DITTOBASE_TYPE_BATCH = 2;
+export const DITTOBASE_TYPE_GAP_MS = 600;
+
+/** Run `fn` over `items` in small batches, waiting `gapMs` between batches. */
+export async function mapInBatches<T, R>(
+  items: readonly T[],
+  batchSize: number,
+  gapMs: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const out: R[] = [];
+  const size = Math.max(1, batchSize);
+  for (let i = 0; i < items.length; i += size) {
+    if (i > 0 && gapMs > 0) await new Promise((resolve) => setTimeout(resolve, gapMs));
+    const batch = items.slice(i, i + size);
+    const rows = await Promise.all(batch.map((item, offset) => fn(item, i + offset)));
+    out.push(...rows);
+  }
+  return out;
+}
+
 /** SSS / SSSS / S+ and A / A+ are raid KEEP. B, C, and D are ranked only. */
 export function viableRaidTier(tier: string): boolean {
   return /^S+\+?$/.test(tier) || tier === "A" || tier === "A+";
@@ -118,7 +116,7 @@ export function dittoSlugToSpeciesId(slug: string): string {
     .replace(/_hisui(?=_|$)/g, "_hisuian")
     .replace(/_paldea(?=_|$)/g, "_paldean");
   if (DEFAULT_FORM[id]) id = DEFAULT_FORM[id];
-  return rankedSpeciesId(id);
+  return id;
 }
 
 export function pageTruncatesViable(rows: DittobaseMovesetRow[], resultCount: number): boolean {
@@ -293,7 +291,7 @@ export function raidFileFromPages(pages: DittobaseTypePage[], fetched: string): 
   }
   return {
     comment:
-      "Dittobase eDPS raid attackers (level 40, best moveset per attacking type). Embedded first page of each type list. A tier and better are raid KEEP; lower tiers stay on the ranking table. Pinned for GitHub Pages; local dev can refresh through the Vite proxy.",
+      "Dittobase eDPS raid attackers (level 40, best moveset per attacking type). Embedded first page of each type list. A tier and better are raid KEEP; lower tiers stay on the ranking table. Published for the site, which caches it for 24 hours. Local dev can refresh through the Vite proxy.",
     fetched,
     updatedAt,
     source: `${DITTOBASE_ATTACKERS_ORIGIN}/pokemon-go/best-attackers/{type}`,

@@ -1,4 +1,3 @@
-import { rankedSpeciesId } from "./dittobase.ts";
 import { applyGenderedSpecies, dropCosmeticGenderSlug } from "./genderForm.ts";
 import type { Gender, Mon, ParseIssue, ParseResult } from "./types.ts";
 
@@ -16,9 +15,6 @@ import type { Gender, Mon, ParseIssue, ParseResult } from "./types.ts";
  *   cosmetic name (Frillish ♂, Pyroar ♀) is not part of the id. Lechonk stays
  *   `lechonk`; the evolution gate applies gender later.
  * - Calcy Name suffixes (`Onix Shadow`, `Sandshrew Alolan Shadow`) peel like prefixes
- * - Default-form labels PvPoke ranks without the suffix fold onto that id:
- *   `Toxtricity Amped` / `Low Key` → `toxtricity`, `Mimikyu Disguised` → `mimikyu`,
- *   `Shellos East Sea` → `shellos` (and the same for Gastrodon)
  * - Calcy `ShadowForm`: 2 = this copy is shadow, 3 = purified; 1/7 mean the species
  *   can have a shadow, not that this row is one
  * Example: Alolan Ninetales shadow -> ninetales_alolan_shadow
@@ -433,9 +429,7 @@ function rowToMon(
   const gender = genderCol !== "unknown" ? genderCol : formGender(formRaw);
   const baseSlug = applyGenderedSpecies(rawSlug, gender);
   const shadowBit = shadow && !baseSlug.endsWith("_shadow") ? "shadow" : "";
-  const speciesId = rankedSpeciesId(
-    dropCosmeticGenderSlug([baseSlug, ...formParts, shadowBit].filter(Boolean).join("_")),
-  );
+  const speciesId = dropCosmeticGenderSlug([baseSlug, ...formParts, shadowBit].filter(Boolean).join("_"));
 
   const form =
     formRaw && !/^(normal|standard|none|default)$/i.test(formRaw)

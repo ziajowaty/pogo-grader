@@ -8,7 +8,7 @@ import {
 } from "./meta";
 import { gradeBox, compareScanStream } from "./grade";
 import { clampPvpKeep, clampPvpListKeep, clampRaidIvKeep, clampRaidKeep, normalizePvpFillOrder, PVP_KEEP_MAX, PVP_KEEP_MIN, RAID_IV_KEEP_MIN, RAID_KEEP_MAX, RAID_KEEP_MIN, type Mon } from "./types";
-import { cpAsSpecies, fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, LITTLE_CUP_CAP, MASTER_LEAGUE_CAP, ULTRA_LEAGUE_CAP } from "./rank";
+import { cpAsSpecies, fitsLeagueCap, getRankGm, GREAT_LEAGUE_CAP, LITTLE_CUP_CAP, MASTER_LEAGUE_CAP, ULTRA_LEAGUE_CAP, foldBattleSpecies } from "./rank";
 
 function must(cond: boolean, message: string): void {
   if (!cond) throw new Error(message);
@@ -38,8 +38,17 @@ must(dittoSlugToSpeciesId("landorus") === "landorus_incarnate", "landorus defaul
 must(dittoSlugToSpeciesId("ho-oh-s") === "ho_oh_shadow", "apex shadow ho-oh");
 must(dittoSlugToSpeciesId("florges-red") === "florges", "florges color form");
 must(dittoSlugToSpeciesId("genesect-normal") === "genesect", "genesect normal drive");
-must(dittoSlugToSpeciesId("toxtricity-amped") === "toxtricity", "amped toxtricity is the ranked id");
-must(dittoSlugToSpeciesId("toxtricity-low-key") === "toxtricity", "low key toxtricity is the ranked id");
+must(foldBattleSpecies("toxtricity_amped", meta.pvpokeSpecies) === "toxtricity", "unranked amped folds onto toxtricity");
+must(foldBattleSpecies("toxtricity_low_key", meta.pvpokeSpecies) === "toxtricity", "unranked low key folds onto toxtricity");
+must(
+  foldBattleSpecies("toxtricity_low_key", new Set([...meta.pvpokeSpecies, "toxtricity_low_key"])) === "toxtricity_low_key",
+  "a ranked low key form stays its own species",
+);
+must(foldBattleSpecies("linoone_galarian", meta.pvpokeSpecies) === "linoone_galarian", "a ranked regional form stays");
+must(foldBattleSpecies("genesect_burn", meta.pvpokeSpecies) === "genesect_burn", "a ranked Genesect drive stays");
+must(foldBattleSpecies("shellos_east_sea", meta.pvpokeSpecies) === "shellos", "unknown sea label peels to shellos");
+must(foldBattleSpecies("mimikyu_disguised", meta.pvpokeSpecies) === "mimikyu", "unknown disguised label peels to mimikyu");
+must(foldBattleSpecies("ninetales_alolan_shadow", meta.pvpokeSpecies) === "ninetales_alolan_shadow", "shadow regional stays");
 const result = gradeBox(parsed.mons, { ...meta, pvpRankKeep: 500 });
 const all = [...result.keep, ...result.look, ...result.dump];
 
@@ -53,11 +62,11 @@ const formRows = [...formGraded.keep, ...formGraded.look, ...formGraded.dump];
 const formTox = formRows.find((g) => g.mon.speciesName === "Toxtricity Amped");
 const formMimikyu = formRows.find((g) => g.mon.speciesName === "Mimikyu Disguised");
 const formShellos = formRows.find((g) => g.mon.speciesName === "Shellos East Sea");
-must(formTox?.mon.speciesId === "toxtricity" && formTox.gl?.evoSpeciesId === "toxtricity", "Toxtricity Amped is ranked as toxtricity");
+must(formTox?.mon.speciesId === "toxtricity_amped" && formTox.gl?.evoSpeciesId === "toxtricity", "Toxtricity Amped keeps its form id and ranks as toxtricity");
 must((formTox?.gl?.rank ?? 0) > 500, `Toxtricity Amped GL IV rank ${formTox?.gl?.rank} should miss the default keep`);
 must(formTox?.verdict === "LOOK", `Toxtricity Amped with a weak IV stays on LOOK, got ${formTox?.verdict}`);
-must(formMimikyu?.mon.speciesId === "mimikyu" && formMimikyu.gl?.evoSpeciesId === "mimikyu", "Mimikyu Disguised is ranked as mimikyu");
-must(formShellos?.mon.speciesId === "shellos" && formShellos.gl?.evoSpeciesId === "gastrodon", "Shellos East Sea is ranked as Gastrodon");
+must(formMimikyu?.mon.speciesId === "mimikyu_disguised" && formMimikyu.gl?.evoSpeciesId === "mimikyu", "Mimikyu Disguised ranks as mimikyu");
+must(formShellos?.mon.speciesId === "shellos_east_sea" && formShellos.gl?.evoSpeciesId === "gastrodon", "Shellos East Sea ranks as Gastrodon");
 const storedAmped = gradeBox(
   [
     {
@@ -87,6 +96,37 @@ must(
   storedRow?.gl?.evoSpeciesId === "toxtricity" && storedRow.gl.rank === formTox?.gl?.rank,
   "a stored toxtricity_amped id still ranks as toxtricity",
 );
+const rankedLowKey = gradeBox(
+  [
+    {
+      source: "calcyiv",
+      sourceRow: 2,
+      speciesName: "Toxtricity Low Key",
+      speciesId: "toxtricity_low_key",
+      form: "",
+      gender: "male",
+      cp: 1386,
+      hp: 111,
+      atk: 7,
+      def: 12,
+      sta: 5,
+      ivUnique: true,
+      ivPercent: 53.3,
+      level: 20,
+      shadow: false,
+      purified: false,
+      favorite: false,
+    },
+  ],
+  {
+    ...meta,
+    pvpRankKeep: 500,
+    keepFavorite: false,
+    pvpokeSpecies: new Set([...meta.pvpokeSpecies, "toxtricity_low_key"]),
+  },
+);
+const lowKeyRow = [...rankedLowKey.keep, ...rankedLowKey.look, ...rankedLowKey.dump][0];
+must(lowKeyRow?.gl?.evoSpeciesId !== "toxtricity", "a published Low Key form is not graded as Amped Toxtricity");
 
 must(parsed.dialect === "pokegenie", `expected pokegenie, got ${parsed.dialect}`);
 must(parsed.mons.length === 10, `expected 10 mons, got ${parsed.mons.length}`);

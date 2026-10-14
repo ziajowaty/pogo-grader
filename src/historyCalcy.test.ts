@@ -177,8 +177,8 @@ const all = [...result.keep, ...result.look, ...result.dump];
 must(all.length === 134, "KEEP/LOOK/DUMP partition the box");
 must(result.keep.length + result.look.length + result.dump.length === 134, "no dropped rows");
 must(
-  result.keep.length === 38 && result.look.length === 46 && result.dump.length === 50,
-  `verdict snapshot keep/look/dump 38/46/50, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
+  result.keep.length === 38 && result.look.length === 45 && result.dump.length === 51,
+  `verdict snapshot keep/look/dump 38/45/51, got ${result.keep.length}/${result.look.length}/${result.dump.length}`,
 );
 
 must(
@@ -225,9 +225,9 @@ const DUMP_HEAD = [
   "119|Stu♀51|Stunky|46",
   "122|Rhy♀60|Rhyhorn|577",
   "123|Pik♂40|Pikachu|347",
+  "129|GL 163|Tepig|592",
   "132|TRRhy♂58|Rhyhorn|1298",
   "134|TRRhy♂71|Rhyhorn|1404",
-  "111|GL 150|Charmander|832",
 ];
 must(
   result.keep.slice(0, KEEP_HEAD.length).map((g) => rowKey(g.mon)).join(" || ") === KEEP_HEAD.join(" || "),
