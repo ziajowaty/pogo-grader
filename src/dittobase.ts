@@ -1,4 +1,4 @@
-import { isPokemonType, POKEMON_TYPES, type PokemonType } from "./types";
+import { isPokemonType, POKEMON_TYPES, type PokemonType } from "./types.ts";
 
 /** Dittobase best-attackers page. One path segment per attacking move type. */
 export const DITTOBASE_ATTACKERS_ORIGIN = "https://www.dittobase.com";

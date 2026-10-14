@@ -1,7 +1,7 @@
 {
   "comment": "Dittobase eDPS raid attackers (level 40, best moveset per attacking type). Embedded first page of each type list. A tier and better are raid KEEP; lower tiers stay on the ranking table. Pinned for GitHub Pages; local dev can refresh through the Vite proxy.",
-  "fetched": "2026-10-03",
-  "updatedAt": "2026-10-02T13:27:34.334Z",
+  "fetched": "2026-10-14",
+  "updatedAt": "2026-10-11T14:03:06.724Z",
   "source": "https://www.dittobase.com/pokemon-go/best-attackers/{type}",
   "lists": {
     "normal": [
@@ -9,301 +9,301 @@
         "id": "regigigas_shadow",
         "rank": 1,
         "tier": "SSS",
-        "edps": 18.422
-      },
-      {
-        "id": "staraptor_mega",
-        "rank": 2,
-        "tier": "SS",
-        "edps": 17.029
+        "edps": 18.893
       },
       {
         "id": "delphox_mega",
+        "rank": 2,
+        "tier": "SSS",
+        "edps": 17.263
+      },
+      {
+        "id": "staraptor_mega",
         "rank": 3,
         "tier": "SS",
-        "edps": 16.566
+        "edps": 17.251
       },
       {
         "id": "mewtwo_mega_x",
         "rank": 4,
         "tier": "SS",
-        "edps": 16.269
+        "edps": 16.514
       },
       {
         "id": "regigigas",
         "rank": 5,
         "tier": "SS",
-        "edps": 16.148
+        "edps": 16.477
       },
       {
         "id": "mewtwo_mega_y",
         "rank": 6,
         "tier": "SS",
-        "edps": 16.016
+        "edps": 16.465
       },
       {
         "id": "zacian_crowned_sword",
         "rank": 7,
         "tier": "SS",
-        "edps": 15.085
-      },
-      {
-        "id": "gigalith_shadow",
-        "rank": 8,
-        "tier": "S",
-        "edps": 14.867
+        "edps": 15.876
       },
       {
         "id": "starmie_mega",
+        "rank": 8,
+        "tier": "SS",
+        "edps": 15.35
+      },
+      {
+        "id": "gigalith_shadow",
         "rank": 9,
         "tier": "S",
-        "edps": 14.502
+        "edps": 15.123
       },
       {
-        "id": "ursaluna_shadow",
+        "id": "regieleki",
         "rank": 10,
         "tier": "S",
-        "edps": 13.766
-      },
-      {
-        "id": "victini",
-        "rank": 11,
-        "tier": "A",
-        "edps": 13.576
-      },
-      {
-        "id": "staraptor_shadow",
-        "rank": 12,
-        "tier": "A",
-        "edps": 13.324
+        "edps": 14.471
       },
       {
         "id": "tapu_koko",
-        "rank": 13,
-        "tier": "A",
-        "edps": 13.309
+        "rank": 11,
+        "tier": "S",
+        "edps": 14.251
       },
       {
-        "id": "dragonite_mega",
+        "id": "ursaluna_shadow",
+        "rank": 12,
+        "tier": "S",
+        "edps": 13.887
+      },
+      {
+        "id": "staraptor_shadow",
+        "rank": 13,
+        "tier": "A",
+        "edps": 13.784
+      },
+      {
+        "id": "victini",
         "rank": 14,
         "tier": "A",
-        "edps": 13.193
+        "edps": 13.639
       },
       {
         "id": "diancie_mega",
         "rank": 15,
         "tier": "A",
-        "edps": 13.19
+        "edps": 13.618
+      },
+      {
+        "id": "dragonite_mega",
+        "rank": 16,
+        "tier": "A",
+        "edps": 13.5
       },
       {
         "id": "gigalith",
-        "rank": 16,
-        "tier": "A",
-        "edps": 13.171
-      },
-      {
-        "id": "regieleki",
         "rank": 17,
         "tier": "A",
-        "edps": 13.15
+        "edps": 13.365
       },
       {
-        "id": "lopunny_mega",
+        "id": "mewtwo_shadow",
         "rank": 18,
         "tier": "A",
-        "edps": 13.043
+        "edps": 13.346
       },
       {
         "id": "dragonite_shadow",
         "rank": 19,
         "tier": "A",
-        "edps": 12.928
+        "edps": 13.327
       },
       {
-        "id": "mewtwo_shadow",
+        "id": "lopunny_mega",
         "rank": 20,
         "tier": "A",
-        "edps": 12.766
+        "edps": 13.174
       },
       {
-        "id": "zacian_hero",
+        "id": "delphox_shadow",
         "rank": 21,
         "tier": "A",
-        "edps": 12.623
+        "edps": 13.134
       },
       {
         "id": "xerneas",
         "rank": 22,
         "tier": "A",
-        "edps": 12.605
+        "edps": 13.055
       },
       {
-        "id": "rhyperior_shadow",
+        "id": "zacian_hero",
         "rank": 23,
         "tier": "A",
-        "edps": 12.564
-      },
-      {
-        "id": "delphox_shadow",
-        "rank": 24,
-        "tier": "A",
-        "edps": 12.556
+        "edps": 12.96
       },
       {
         "id": "aerodactyl_mega",
-        "rank": 25,
+        "rank": 24,
         "tier": "A",
-        "edps": 12.401
+        "edps": 12.701
       },
       {
-        "id": "nihilego",
-        "rank": 26,
+        "id": "rhyperior_shadow",
+        "rank": 25,
         "tier": "A",
-        "edps": 12.04
+        "edps": 12.589
       },
       {
         "id": "staraptor",
-        "rank": 27,
-        "tier": "B",
-        "edps": 12.029
+        "rank": 26,
+        "tier": "A",
+        "edps": 12.422
       },
       {
         "id": "zamazenta_crowned_shield",
-        "rank": 28,
+        "rank": 27,
         "tier": "B",
-        "edps": 11.98
-      },
-      {
-        "id": "ursaluna",
-        "rank": 29,
-        "tier": "B",
-        "edps": 11.979
-      },
-      {
-        "id": "darmanitan_galarian_standard",
-        "rank": 30,
-        "tier": "B",
-        "edps": 11.887
+        "edps": 12.354
       },
       {
         "id": "inteleon",
-        "rank": 31,
+        "rank": 28,
         "tier": "B",
-        "edps": 11.783
+        "edps": 12.182
       },
       {
-        "id": "cetitan",
+        "id": "nihilego",
+        "rank": 29,
+        "tier": "B",
+        "edps": 12.068
+      },
+      {
+        "id": "ursaluna",
+        "rank": 30,
+        "tier": "B",
+        "edps": 12.048
+      },
+      {
+        "id": "cinderace",
+        "rank": 31,
+        "tier": "B",
+        "edps": 11.956
+      },
+      {
+        "id": "porygon_z_shadow",
         "rank": 32,
         "tier": "B",
-        "edps": 11.725
+        "edps": 11.81
       },
       {
         "id": "meloetta_aria",
         "rank": 33,
         "tier": "B",
-        "edps": 11.655
-      },
-      {
-        "id": "cinderace",
-        "rank": 34,
-        "tier": "B",
-        "edps": 11.568
+        "edps": 11.783
       },
       {
         "id": "palkia_shadow",
-        "rank": 35,
+        "rank": 34,
         "tier": "B",
-        "edps": 11.338
+        "edps": 11.774
       },
       {
-        "id": "porygon_z_shadow",
-        "rank": 36,
+        "id": "raichu_mega_y",
+        "rank": 35,
         "tier": "B",
-        "edps": 11.337
+        "edps": 11.684
       },
       {
         "id": "dragonite",
-        "rank": 37,
+        "rank": 36,
         "tier": "B",
-        "edps": 11.246
-      },
-      {
-        "id": "regice_shadow",
-        "rank": 38,
-        "tier": "B",
-        "edps": 11.229
-      },
-      {
-        "id": "delphox",
-        "rank": 39,
-        "tier": "B",
-        "edps": 11.221
+        "edps": 11.609
       },
       {
         "id": "mewtwo",
+        "rank": 37,
+        "tier": "B",
+        "edps": 11.588
+      },
+      {
+        "id": "delphox",
+        "rank": 38,
+        "tier": "B",
+        "edps": 11.499
+      },
+      {
+        "id": "tornadus_incarnate_shadow",
+        "rank": 39,
+        "tier": "B",
+        "edps": 11.494
+      },
+      {
+        "id": "haxorus_shadow",
         "rank": 40,
         "tier": "B",
-        "edps": 11.189
+        "edps": 11.479
       },
       {
-        "id": "bewear_shadow",
+        "id": "darmanitan_standard_shadow",
         "rank": 41,
         "tier": "B",
-        "edps": 11.176
+        "edps": 11.437
       },
       {
-        "id": "snorlax_shadow",
+        "id": "darmanitan_galarian_standard",
         "rank": 42,
         "tier": "B",
-        "edps": 11.009
+        "edps": 11.421
       },
       {
         "id": "salamence_shadow",
         "rank": 43,
-        "tier": "C",
-        "edps": 11.006
+        "tier": "B",
+        "edps": 11.416
       },
       {
-        "id": "haxorus_shadow",
+        "id": "cetitan",
         "rank": 44,
-        "tier": "C",
-        "edps": 10.967
+        "tier": "B",
+        "edps": 11.374
       },
       {
         "id": "rampardos_shadow",
         "rank": 45,
-        "tier": "C",
-        "edps": 10.967
+        "tier": "B",
+        "edps": 11.357
       },
       {
-        "id": "rhyperior",
+        "id": "regice_shadow",
         "rank": 46,
-        "tier": "C",
-        "edps": 10.859
-      },
-      {
-        "id": "tornadus_incarnate_shadow",
-        "rank": 47,
-        "tier": "C",
-        "edps": 10.806
+        "tier": "B",
+        "edps": 11.243
       },
       {
         "id": "reshiram_shadow",
-        "rank": 48,
-        "tier": "C",
-        "edps": 10.806
+        "rank": 47,
+        "tier": "B",
+        "edps": 11.21
       },
       {
         "id": "garchomp_shadow",
-        "rank": 49,
-        "tier": "C",
-        "edps": 10.782
+        "rank": 48,
+        "tier": "B",
+        "edps": 11.134
       },
       {
         "id": "yveltal",
+        "rank": 49,
+        "tier": "C",
+        "edps": 11.082
+      },
+      {
+        "id": "bewear_shadow",
         "rank": 50,
         "tier": "C",
-        "edps": 10.772
+        "edps": 11.077
       }
     ],
     "fire": [
@@ -311,597 +311,597 @@
         "id": "delphox_mega",
         "rank": 1,
         "tier": "SSS",
-        "edps": 33.045
+        "edps": 35.987
       },
       {
         "id": "charizard_mega_y",
         "rank": 2,
         "tier": "SSS",
-        "edps": 29.311
+        "edps": 31.564
       },
       {
         "id": "blaziken_mega",
         "rank": 3,
         "tier": "SS",
-        "edps": 28.938
+        "edps": 31.425
       },
       {
         "id": "reshiram_shadow",
         "rank": 4,
         "tier": "SS",
-        "edps": 28.548
-      },
-      {
-        "id": "heatran_shadow",
-        "rank": 5,
-        "tier": "SS",
-        "edps": 27.112
-      },
-      {
-        "id": "charizard_mega_x",
-        "rank": 6,
-        "tier": "SS",
-        "edps": 25.658
+        "edps": 30.999
       },
       {
         "id": "blacephalon",
-        "rank": 7,
-        "tier": "S",
-        "edps": 24.984
+        "rank": 5,
+        "tier": "SS",
+        "edps": 30.697
       },
       {
-        "id": "reshiram",
-        "rank": 8,
-        "tier": "S",
-        "edps": 24.974
-      },
-      {
-        "id": "mewtwo_mega_y",
-        "rank": 9,
-        "tier": "S",
-        "edps": 24.533
-      },
-      {
-        "id": "mewtwo_mega_x",
-        "rank": 10,
-        "tier": "S",
-        "edps": 24.053
-      },
-      {
-        "id": "delphox_shadow",
-        "rank": 11,
-        "tier": "S",
-        "edps": 23.744
-      },
-      {
-        "id": "entei_shadow",
-        "rank": 12,
-        "tier": "S",
-        "edps": 23.713
-      },
-      {
-        "id": "ho_oh_shadow",
-        "rank": 13,
-        "tier": "S",
-        "edps": 23.697
-      },
-      {
-        "id": "salamence_mega",
-        "rank": 14,
-        "tier": "S",
-        "edps": 23.478
-      },
-      {
-        "id": "moltres_shadow",
-        "rank": 15,
-        "tier": "S",
-        "edps": 23.431
-      },
-      {
-        "id": "groudon_primal",
-        "rank": 16,
-        "tier": "S",
-        "edps": 23.372
-      },
-      {
-        "id": "emboar_shadow",
-        "rank": 17,
-        "tier": "S",
-        "edps": 23.366
-      },
-      {
-        "id": "heatran",
-        "rank": 18,
-        "tier": "S",
-        "edps": 23.265
-      },
-      {
-        "id": "charizard_shadow",
-        "rank": 19,
-        "tier": "S",
-        "edps": 22.906
-      },
-      {
-        "id": "salamence_shadow",
-        "rank": 20,
-        "tier": "S",
-        "edps": 22.612
-      },
-      {
-        "id": "blaziken_shadow",
-        "rank": 21,
-        "tier": "A",
-        "edps": 22.61
-      },
-      {
-        "id": "houndoom_mega",
-        "rank": 23,
-        "tier": "A",
-        "edps": 22.198
-      },
-      {
-        "id": "victini",
-        "rank": 24,
-        "tier": "A",
-        "edps": 21.728
-      },
-      {
-        "id": "typhlosion_shadow",
-        "rank": 25,
-        "tier": "A",
-        "edps": 21.712
-      },
-      {
-        "id": "volcarona",
-        "rank": 26,
-        "tier": "A",
-        "edps": 21.459
+        "id": "heatran_shadow",
+        "rank": 6,
+        "tier": "SS",
+        "edps": 28.353
       },
       {
         "id": "chandelure_shadow",
-        "rank": 27,
-        "tier": "A",
-        "edps": 21.329
+        "rank": 7,
+        "tier": "S",
+        "edps": 26.945
       },
       {
-        "id": "infernape_shadow",
-        "rank": 28,
-        "tier": "A",
-        "edps": 21.326
+        "id": "charizard_mega_x",
+        "rank": 8,
+        "tier": "S",
+        "edps": 26.822
       },
       {
-        "id": "cinderace",
-        "rank": 29,
-        "tier": "A",
-        "edps": 21.306
+        "id": "reshiram",
+        "rank": 9,
+        "tier": "S",
+        "edps": 26.559
+      },
+      {
+        "id": "delphox_shadow",
+        "rank": 10,
+        "tier": "S",
+        "edps": 26.353
+      },
+      {
+        "id": "moltres_shadow",
+        "rank": 11,
+        "tier": "S",
+        "edps": 26.304
+      },
+      {
+        "id": "charizard_shadow",
+        "rank": 12,
+        "tier": "S",
+        "edps": 25.803
+      },
+      {
+        "id": "blaziken_shadow",
+        "rank": 13,
+        "tier": "S",
+        "edps": 25.718
+      },
+      {
+        "id": "emboar_shadow",
+        "rank": 14,
+        "tier": "S",
+        "edps": 25.586
+      },
+      {
+        "id": "ho_oh_shadow",
+        "rank": 15,
+        "tier": "S",
+        "edps": 25.47
+      },
+      {
+        "id": "entei_shadow",
+        "rank": 16,
+        "tier": "S",
+        "edps": 25.353
       },
       {
         "id": "darmanitan_standard_shadow",
-        "rank": 30,
+        "rank": 17,
         "tier": "A",
-        "edps": 21.225
+        "edps": 25.106
       },
       {
-        "id": "delphox",
-        "rank": 31,
+        "id": "mewtwo_mega_y",
+        "rank": 18,
         "tier": "A",
-        "edps": 21.126
+        "edps": 24.751
       },
       {
-        "id": "emboar",
-        "rank": 32,
+        "id": "mewtwo_mega_x",
+        "rank": 19,
         "tier": "A",
-        "edps": 20.796
+        "edps": 24.705
       },
       {
-        "id": "moltres",
-        "rank": 33,
-        "tier": "B",
-        "edps": 20.689
+        "id": "typhlosion_shadow",
+        "rank": 20,
+        "tier": "A",
+        "edps": 24.314
       },
       {
-        "id": "entei",
-        "rank": 34,
-        "tier": "B",
-        "edps": 20.655
+        "id": "groudon_primal",
+        "rank": 21,
+        "tier": "A",
+        "edps": 24.306
       },
       {
-        "id": "blaziken",
-        "rank": 35,
-        "tier": "B",
-        "edps": 20.624
+        "id": "salamence_shadow",
+        "rank": 23,
+        "tier": "A",
+        "edps": 24.09
       },
       {
-        "id": "regigigas_shadow",
-        "rank": 36,
-        "tier": "B",
-        "edps": 20.584
+        "id": "infernape_shadow",
+        "rank": 24,
+        "tier": "A",
+        "edps": 24.09
       },
       {
-        "id": "incineroar",
-        "rank": 37,
-        "tier": "B",
-        "edps": 20.55
+        "id": "heatran",
+        "rank": 25,
+        "tier": "A",
+        "edps": 23.958
       },
       {
-        "id": "magmortar_shadow",
-        "rank": 38,
-        "tier": "B",
-        "edps": 20.469
+        "id": "salamence_mega",
+        "rank": 26,
+        "tier": "A",
+        "edps": 23.816
       },
       {
-        "id": "arcanine_shadow",
-        "rank": 39,
-        "tier": "B",
-        "edps": 20.45
-      },
-      {
-        "id": "charizard",
-        "rank": 40,
-        "tier": "B",
-        "edps": 20.233
-      },
-      {
-        "id": "salamence",
-        "rank": 41,
-        "tier": "B",
-        "edps": 19.975
-      },
-      {
-        "id": "kyurem_white",
-        "rank": 42,
-        "tier": "B",
-        "edps": 19.842
-      },
-      {
-        "id": "mewtwo_shadow",
-        "rank": 43,
-        "tier": "B",
-        "edps": 19.818
-      },
-      {
-        "id": "volcanion",
-        "rank": 44,
-        "tier": "B",
-        "edps": 19.813
-      },
-      {
-        "id": "garchomp_mega",
-        "rank": 45,
-        "tier": "B",
-        "edps": 19.71
-      },
-      {
-        "id": "skeledirge",
-        "rank": 46,
-        "tier": "B",
-        "edps": 19.705
+        "id": "volcarona",
+        "rank": 27,
+        "tier": "A",
+        "edps": 23.403
       },
       {
         "id": "chandelure",
-        "rank": 47,
+        "rank": 28,
         "tier": "B",
-        "edps": 19.674
+        "edps": 23.275
+      },
+      {
+        "id": "houndoom_mega",
+        "rank": 29,
+        "tier": "B",
+        "edps": 23.196
+      },
+      {
+        "id": "cinderace",
+        "rank": 30,
+        "tier": "B",
+        "edps": 22.864
+      },
+      {
+        "id": "blaziken",
+        "rank": 31,
+        "tier": "B",
+        "edps": 22.717
+      },
+      {
+        "id": "magmortar_shadow",
+        "rank": 32,
+        "tier": "B",
+        "edps": 22.641
+      },
+      {
+        "id": "delphox",
+        "rank": 33,
+        "tier": "B",
+        "edps": 22.56
+      },
+      {
+        "id": "moltres",
+        "rank": 34,
+        "tier": "B",
+        "edps": 22.542
       },
       {
         "id": "darmanitan_standard",
-        "rank": 48,
+        "rank": 35,
         "tier": "B",
-        "edps": 19.533
+        "edps": 22.383
+      },
+      {
+        "id": "arcanine_shadow",
+        "rank": 36,
+        "tier": "B",
+        "edps": 22.297
+      },
+      {
+        "id": "emboar",
+        "rank": 37,
+        "tier": "B",
+        "edps": 22.065
+      },
+      {
+        "id": "charizard",
+        "rank": 38,
+        "tier": "B",
+        "edps": 22.06
+      },
+      {
+        "id": "victini",
+        "rank": 39,
+        "tier": "B",
+        "edps": 21.96
+      },
+      {
+        "id": "entei",
+        "rank": 40,
+        "tier": "B",
+        "edps": 21.669
+      },
+      {
+        "id": "volcanion",
+        "rank": 41,
+        "tier": "B",
+        "edps": 21.478
+      },
+      {
+        "id": "regigigas_shadow",
+        "rank": 42,
+        "tier": "C",
+        "edps": 21.42
+      },
+      {
+        "id": "incineroar",
+        "rank": 43,
+        "tier": "C",
+        "edps": 21.176
       },
       {
         "id": "lucario_mega",
-        "rank": 49,
-        "tier": "B",
-        "edps": 19.452
+        "rank": 44,
+        "tier": "C",
+        "edps": 21.089
+      },
+      {
+        "id": "skeledirge",
+        "rank": 45,
+        "tier": "C",
+        "edps": 21.006
+      },
+      {
+        "id": "typhlosion",
+        "rank": 46,
+        "tier": "C",
+        "edps": 20.986
+      },
+      {
+        "id": "infernape",
+        "rank": 47,
+        "tier": "C",
+        "edps": 20.946
+      },
+      {
+        "id": "salamence",
+        "rank": 48,
+        "tier": "C",
+        "edps": 20.679
       },
       {
         "id": "ho_oh",
+        "rank": 49,
+        "tier": "C",
+        "edps": 20.553
+      },
+      {
+        "id": "mewtwo_shadow",
         "rank": 50,
-        "tier": "B",
-        "edps": 19.284
+        "tier": "C",
+        "edps": 20.537
       }
     ],
     "water": [
       {
         "id": "kyogre_primal",
         "rank": 1,
-        "tier": "SSS",
-        "edps": 29.737
+        "tier": "SS",
+        "edps": 30.283
       },
       {
         "id": "greninja_mega",
         "rank": 2,
         "tier": "SS",
-        "edps": 28.239
+        "edps": 29.755
       },
       {
         "id": "starmie_mega",
         "rank": 3,
         "tier": "SS",
-        "edps": 27.177
+        "edps": 28.168
       },
       {
         "id": "swampert_mega",
         "rank": 4,
         "tier": "SS",
-        "edps": 26.621
+        "edps": 26.623
       },
       {
         "id": "kyogre_shadow",
         "rank": 5,
-        "tier": "SS",
-        "edps": 25.025
+        "tier": "S",
+        "edps": 26.045
       },
       {
         "id": "blastoise_mega",
         "rank": 6,
         "tier": "S",
-        "edps": 24.039
+        "edps": 24.19
       },
       {
         "id": "gyarados_mega",
         "rank": 7,
         "tier": "S",
-        "edps": 22.568
-      },
-      {
-        "id": "swampert_shadow",
-        "rank": 8,
-        "tier": "S",
-        "edps": 22.354
+        "edps": 22.887
       },
       {
         "id": "kyogre",
+        "rank": 8,
+        "tier": "A",
+        "edps": 22.514
+      },
+      {
+        "id": "swampert_shadow",
         "rank": 9,
-        "tier": "S",
-        "edps": 22.113
-      },
-      {
-        "id": "empoleon_shadow",
-        "rank": 10,
-        "tier": "S",
-        "edps": 21.253
-      },
-      {
-        "id": "feraligatr_shadow",
-        "rank": 11,
         "tier": "A",
-        "edps": 21.214
-      },
-      {
-        "id": "samurott_shadow",
-        "rank": 12,
-        "tier": "A",
-        "edps": 21.077
-      },
-      {
-        "id": "greninja_shadow",
-        "rank": 13,
-        "tier": "A",
-        "edps": 20.804
+        "edps": 22.299
       },
       {
         "id": "kingler_shadow",
-        "rank": 14,
+        "rank": 10,
         "tier": "A",
-        "edps": 20.597
+        "edps": 21.829
       },
       {
-        "id": "regigigas_shadow",
-        "rank": 15,
+        "id": "greninja_shadow",
+        "rank": 11,
         "tier": "A",
-        "edps": 20.569
+        "edps": 21.762
       },
       {
-        "id": "primarina",
-        "rank": 16,
+        "id": "feraligatr_shadow",
+        "rank": 12,
         "tier": "A",
-        "edps": 20.397
-      },
-      {
-        "id": "quaquaval",
-        "rank": 17,
-        "tier": "A",
-        "edps": 20.397
-      },
-      {
-        "id": "inteleon",
-        "rank": 18,
-        "tier": "A",
-        "edps": 20.352
+        "edps": 21.624
       },
       {
         "id": "gyarados_shadow",
+        "rank": 13,
+        "tier": "A",
+        "edps": 21.526
+      },
+      {
+        "id": "samurott_shadow",
+        "rank": 14,
+        "tier": "A",
+        "edps": 21.444
+      },
+      {
+        "id": "golisopod_shadow",
+        "rank": 15,
+        "tier": "A",
+        "edps": 21.44
+      },
+      {
+        "id": "quaquaval",
+        "rank": 16,
+        "tier": "A",
+        "edps": 20.888
+      },
+      {
+        "id": "empoleon_shadow",
+        "rank": 17,
+        "tier": "A",
+        "edps": 20.858
+      },
+      {
+        "id": "primarina",
+        "rank": 18,
+        "tier": "A",
+        "edps": 20.831
+      },
+      {
+        "id": "inteleon",
         "rank": 19,
         "tier": "A",
-        "edps": 20.3
+        "edps": 20.803
+      },
+      {
+        "id": "regigigas_shadow",
+        "rank": 20,
+        "tier": "A",
+        "edps": 20.561
       },
       {
         "id": "palkia_shadow",
-        "rank": 20,
-        "tier": "A",
-        "edps": 19.729
-      },
-      {
-        "id": "rhyperior_shadow",
         "rank": 21,
         "tier": "A",
-        "edps": 19.527
-      },
-      {
-        "id": "swampert",
-        "rank": 22,
-        "tier": "A",
-        "edps": 19.424
+        "edps": 20.506
       },
       {
         "id": "greninja",
-        "rank": 23,
+        "rank": 22,
         "tier": "A",
-        "edps": 19.024
+        "edps": 19.513
       },
       {
         "id": "kingler",
+        "rank": 23,
+        "tier": "B",
+        "edps": 19.49
+      },
+      {
+        "id": "swampert",
         "rank": 24,
         "tier": "B",
-        "edps": 18.806
+        "edps": 19.347
       },
       {
-        "id": "samurott",
+        "id": "rhyperior_shadow",
         "rank": 25,
         "tier": "B",
-        "edps": 18.804
-      },
-      {
-        "id": "empoleon",
-        "rank": 26,
-        "tier": "B",
-        "edps": 18.592
+        "edps": 18.995
       },
       {
         "id": "feraligatr",
-        "rank": 27,
+        "rank": 26,
         "tier": "B",
-        "edps": 18.559
+        "edps": 18.828
       },
       {
-        "id": "golisopod",
-        "rank": 28,
+        "id": "samurott",
+        "rank": 27,
         "tier": "B",
-        "edps": 18.522
+        "edps": 18.799
       },
       {
         "id": "volcanion",
-        "rank": 29,
+        "rank": 28,
         "tier": "B",
-        "edps": 18.341
+        "edps": 18.636
       },
       {
-        "id": "lapras_shadow",
-        "rank": 30,
+        "id": "gyarados",
+        "rank": 29,
         "tier": "B",
-        "edps": 18.266
+        "edps": 18.618
       },
       {
         "id": "milotic_shadow",
+        "rank": 30,
+        "tier": "B",
+        "edps": 18.537
+      },
+      {
+        "id": "golisopod",
         "rank": 31,
         "tier": "B",
-        "edps": 18.233
+        "edps": 18.503
+      },
+      {
+        "id": "sharpedo_mega",
+        "rank": 32,
+        "tier": "B",
+        "edps": 18.459
       },
       {
         "id": "blastoise_shadow",
-        "rank": 32,
+        "rank": 33,
         "tier": "B",
-        "edps": 18.112
+        "edps": 18.433
+      },
+      {
+        "id": "empoleon",
+        "rank": 34,
+        "tier": "B",
+        "edps": 18.365
       },
       {
         "id": "slowbro_mega",
-        "rank": 33,
-        "tier": "B",
-        "edps": 18.026
-      },
-      {
-        "id": "samurott_hisuian",
-        "rank": 34,
-        "tier": "B",
-        "edps": 17.987
-      },
-      {
-        "id": "regigigas",
         "rank": 35,
         "tier": "B",
-        "edps": 17.926
+        "edps": 18.273
       },
       {
         "id": "clawitzer",
         "rank": 36,
         "tier": "B",
-        "edps": 17.822
+        "edps": 18.217
       },
       {
-        "id": "gyarados",
+        "id": "haxorus_shadow",
         "rank": 37,
         "tier": "B",
-        "edps": 17.679
-      },
-      {
-        "id": "politoed_shadow",
-        "rank": 38,
-        "tier": "B",
-        "edps": 17.645
+        "edps": 18.183
       },
       {
         "id": "salamence_mega",
+        "rank": 38,
+        "tier": "B",
+        "edps": 18.145
+      },
+      {
+        "id": "samurott_hisuian",
         "rank": 39,
         "tier": "B",
-        "edps": 17.539
+        "edps": 18.137
       },
       {
         "id": "crawdaunt_shadow",
         "rank": 40,
         "tier": "B",
-        "edps": 17.527
-      },
-      {
-        "id": "sharpedo_mega",
-        "rank": 41,
-        "tier": "B",
-        "edps": 17.459
-      },
-      {
-        "id": "palkia_origin",
-        "rank": 42,
-        "tier": "B",
-        "edps": 17.4
-      },
-      {
-        "id": "urshifu_rapid_strike",
-        "rank": 43,
-        "tier": "B",
-        "edps": 17.392
-      },
-      {
-        "id": "rhydon_shadow",
-        "rank": 44,
-        "tier": "B",
-        "edps": 17.315
-      },
-      {
-        "id": "haxorus_shadow",
-        "rank": 45,
-        "tier": "B",
-        "edps": 17.265
-      },
-      {
-        "id": "palkia",
-        "rank": 46,
-        "tier": "B",
-        "edps": 17.063
+        "edps": 18.13
       },
       {
         "id": "kingdra_shadow",
+        "rank": 41,
+        "tier": "B",
+        "edps": 17.985
+      },
+      {
+        "id": "regigigas",
+        "rank": 42,
+        "tier": "B",
+        "edps": 17.951
+      },
+      {
+        "id": "politoed_shadow",
+        "rank": 43,
+        "tier": "B",
+        "edps": 17.892
+      },
+      {
+        "id": "palkia_origin",
+        "rank": 44,
+        "tier": "B",
+        "edps": 17.872
+      },
+      {
+        "id": "urshifu_rapid_strike",
+        "rank": 45,
+        "tier": "B",
+        "edps": 17.789
+      },
+      {
+        "id": "salamence_shadow",
+        "rank": 46,
+        "tier": "B",
+        "edps": 17.714
+      },
+      {
+        "id": "palkia",
         "rank": 47,
         "tier": "B",
-        "edps": 16.85
+        "edps": 17.514
       },
       {
-        "id": "rhyperior",
+        "id": "lapras_shadow",
         "rank": 48,
-        "tier": "C",
-        "edps": 16.738
+        "tier": "B",
+        "edps": 17.457
       },
       {
-        "id": "raichu_mega_y",
+        "id": "keldeo_ordinary",
         "rank": 49,
-        "tier": "C",
-        "edps": 16.673
+        "tier": "B",
+        "edps": 17.102
       },
       {
-        "id": "crabominable",
+        "id": "keldeo_resolute",
         "rank": 50,
-        "tier": "C",
-        "edps": 16.665
+        "tier": "B",
+        "edps": 17.102
       }
     ],
     "grass": [
@@ -909,597 +909,591 @@
         "id": "chesnaught_mega",
         "rank": 1,
         "tier": "SS",
-        "edps": 28.09
+        "edps": 28.875
       },
       {
         "id": "sceptile_mega",
         "rank": 2,
-        "tier": "S",
-        "edps": 26.327
-      },
-      {
-        "id": "venusaur_mega",
-        "rank": 3,
-        "tier": "S",
-        "edps": 23.168
-      },
-      {
-        "id": "shaymin_sky",
-        "rank": 4,
-        "tier": "A",
-        "edps": 22.575
-      },
-      {
-        "id": "groudon_primal",
-        "rank": 5,
-        "tier": "A",
-        "edps": 22.513
-      },
-      {
-        "id": "chesnaught_shadow",
-        "rank": 6,
-        "tier": "A",
-        "edps": 22.385
-      },
-      {
-        "id": "zarude",
-        "rank": 7,
-        "tier": "A",
-        "edps": 22.321
+        "tier": "SS",
+        "edps": 27.591
       },
       {
         "id": "kartana",
-        "rank": 8,
+        "rank": 3,
+        "tier": "S",
+        "edps": 23.939
+      },
+      {
+        "id": "venusaur_mega",
+        "rank": 4,
         "tier": "A",
-        "edps": 22.211
+        "edps": 23.85
+      },
+      {
+        "id": "chesnaught_shadow",
+        "rank": 5,
+        "tier": "A",
+        "edps": 23.577
+      },
+      {
+        "id": "zarude",
+        "rank": 6,
+        "tier": "A",
+        "edps": 22.807
+      },
+      {
+        "id": "shaymin_sky",
+        "rank": 7,
+        "tier": "A",
+        "edps": 22.801
       },
       {
         "id": "regigigas_shadow",
-        "rank": 9,
+        "rank": 8,
         "tier": "A",
-        "edps": 22.007
+        "edps": 22.538
       },
       {
         "id": "tangrowth_shadow",
-        "rank": 10,
+        "rank": 9,
         "tier": "A",
-        "edps": 21.769
+        "edps": 22.48
       },
       {
         "id": "venusaur_shadow",
-        "rank": 11,
+        "rank": 10,
         "tier": "A",
-        "edps": 21.205
+        "edps": 22.142
       },
       {
-        "id": "rillaboom",
-        "rank": 12,
+        "id": "sceptile_shadow",
+        "rank": 11,
         "tier": "A",
-        "edps": 21.154
+        "edps": 21.939
       },
       {
         "id": "victreebel_mega",
-        "rank": 13,
+        "rank": 12,
         "tier": "A",
-        "edps": 21.105
+        "edps": 21.892
       },
       {
-        "id": "torterra_shadow",
+        "id": "rillaboom",
+        "rank": 13,
+        "tier": "A",
+        "edps": 21.664
+      },
+      {
+        "id": "groudon_primal",
         "rank": 14,
         "tier": "A",
-        "edps": 20.918
+        "edps": 21.546
       },
       {
         "id": "xurkitree",
         "rank": 15,
         "tier": "A",
-        "edps": 20.872
+        "edps": 21.54
+      },
+      {
+        "id": "torterra_shadow",
+        "rank": 16,
+        "tier": "A",
+        "edps": 21.093
       },
       {
         "id": "gallade_mega",
-        "rank": 16,
-        "tier": "A",
-        "edps": 20.333
-      },
-      {
-        "id": "sceptile_shadow",
         "rank": 17,
         "tier": "A",
-        "edps": 20.322
-      },
-      {
-        "id": "chesnaught",
-        "rank": 18,
-        "tier": "A",
-        "edps": 19.403
-      },
-      {
-        "id": "regigigas",
-        "rank": 19,
-        "tier": "B",
-        "edps": 19.187
-      },
-      {
-        "id": "groudon_shadow",
-        "rank": 20,
-        "tier": "B",
-        "edps": 19.146
-      },
-      {
-        "id": "tapu_bulu",
-        "rank": 21,
-        "tier": "B",
-        "edps": 19.093
-      },
-      {
-        "id": "shaymin_land",
-        "rank": 22,
-        "tier": "B",
-        "edps": 19.075
-      },
-      {
-        "id": "meowscarada",
-        "rank": 23,
-        "tier": "B",
-        "edps": 18.91
-      },
-      {
-        "id": "tangrowth",
-        "rank": 24,
-        "tier": "B",
-        "edps": 18.85
+        "edps": 20.833
       },
       {
         "id": "roserade",
-        "rank": 25,
+        "rank": 18,
         "tier": "B",
-        "edps": 18.729
+        "edps": 20.246
       },
       {
-        "id": "gardevoir_mega",
-        "rank": 26,
+        "id": "chesnaught",
+        "rank": 19,
         "tier": "B",
-        "edps": 18.71
+        "edps": 20.153
+      },
+      {
+        "id": "tapu_bulu",
+        "rank": 20,
+        "tier": "B",
+        "edps": 20.091
+      },
+      {
+        "id": "meowscarada",
+        "rank": 21,
+        "tier": "B",
+        "edps": 19.943
       },
       {
         "id": "decidueye",
-        "rank": 27,
+        "rank": 22,
         "tier": "B",
-        "edps": 18.616
+        "edps": 19.664
+      },
+      {
+        "id": "gardevoir_mega",
+        "rank": 23,
+        "tier": "B",
+        "edps": 19.632
       },
       {
         "id": "latios_mega",
-        "rank": 28,
+        "rank": 24,
         "tier": "B",
-        "edps": 18.593
+        "edps": 19.595
       },
       {
-        "id": "venusaur",
-        "rank": 29,
+        "id": "regigigas",
+        "rank": 25,
         "tier": "B",
-        "edps": 18.551
+        "edps": 19.533
+      },
+      {
+        "id": "shaymin_land",
+        "rank": 26,
+        "tier": "B",
+        "edps": 19.519
       },
       {
         "id": "meganium_shadow",
-        "rank": 30,
+        "rank": 27,
         "tier": "B",
-        "edps": 18.529
+        "edps": 19.438
       },
       {
-        "id": "torterra",
-        "rank": 31,
+        "id": "venusaur",
+        "rank": 28,
         "tier": "B",
-        "edps": 18.367
-      },
-      {
-        "id": "tsareena",
-        "rank": 32,
-        "tier": "B",
-        "edps": 18.269
-      },
-      {
-        "id": "exeggutor_alolan_shadow",
-        "rank": 33,
-        "tier": "B",
-        "edps": 18.261
-      },
-      {
-        "id": "sceptile",
-        "rank": 34,
-        "tier": "B",
-        "edps": 18.229
+        "edps": 19.367
       },
       {
         "id": "exeggutor_shadow",
+        "rank": 29,
+        "tier": "B",
+        "edps": 19.355
+      },
+      {
+        "id": "tangrowth",
+        "rank": 30,
+        "tier": "B",
+        "edps": 19.289
+      },
+      {
+        "id": "sceptile",
+        "rank": 31,
+        "tier": "B",
+        "edps": 19.269
+      },
+      {
+        "id": "exeggutor_alolan_shadow",
+        "rank": 32,
+        "tier": "B",
+        "edps": 19.261
+      },
+      {
+        "id": "tsareena",
+        "rank": 33,
+        "tier": "B",
+        "edps": 19.238
+      },
+      {
+        "id": "breloom",
+        "rank": 34,
+        "tier": "B",
+        "edps": 18.949
+      },
+      {
+        "id": "groudon_shadow",
         "rank": 35,
         "tier": "B",
-        "edps": 18.162
+        "edps": 18.795
       },
       {
-        "id": "ho_oh_shadow",
+        "id": "victreebel_shadow",
         "rank": 36,
         "tier": "B",
-        "edps": 17.92
-      },
-      {
-        "id": "celebi",
-        "rank": 38,
-        "tier": "B",
-        "edps": 17.555
+        "edps": 18.751
       },
       {
         "id": "serperior_shadow",
+        "rank": 37,
+        "tier": "B",
+        "edps": 18.381
+      },
+      {
+        "id": "torterra",
+        "rank": 38,
+        "tier": "C",
+        "edps": 18.29
+      },
+      {
+        "id": "celebi",
         "rank": 39,
         "tier": "C",
-        "edps": 17.503
+        "edps": 18.194
       },
       {
         "id": "decidueye_hisuian",
         "rank": 40,
         "tier": "C",
-        "edps": 17.349
-      },
-      {
-        "id": "enamorus_incarnate",
-        "rank": 41,
-        "tier": "C",
-        "edps": 17.34
-      },
-      {
-        "id": "gogoat",
-        "rank": 42,
-        "tier": "C",
-        "edps": 17.293
-      },
-      {
-        "id": "victreebel_shadow",
-        "rank": 43,
-        "tier": "C",
-        "edps": 17.227
-      },
-      {
-        "id": "ampharos_mega",
-        "rank": 44,
-        "tier": "C",
-        "edps": 17.2
+        "edps": 18.167
       },
       {
         "id": "raichu_mega_y",
-        "rank": 45,
+        "rank": 41,
         "tier": "C",
-        "edps": 17.178
+        "edps": 18.039
       },
       {
-        "id": "breloom",
-        "rank": 46,
+        "id": "starmie_mega",
+        "rank": 42,
         "tier": "C",
-        "edps": 16.953
-      },
-      {
-        "id": "abomasnow_mega",
-        "rank": 47,
-        "tier": "C",
-        "edps": 16.917
-      },
-      {
-        "id": "leafeon",
-        "rank": 48,
-        "tier": "C",
-        "edps": 16.873
+        "edps": 18.012
       },
       {
         "id": "porygon_z_shadow",
-        "rank": 49,
+        "rank": 43,
         "tier": "C",
-        "edps": 16.828
+        "edps": 17.974
       },
       {
-        "id": "gallade_shadow",
+        "id": "tangela_shadow",
+        "rank": 44,
+        "tier": "C",
+        "edps": 17.931
+      },
+      {
+        "id": "enamorus_incarnate",
+        "rank": 45,
+        "tier": "C",
+        "edps": 17.93
+      },
+      {
+        "id": "ampharos_mega",
+        "rank": 46,
+        "tier": "C",
+        "edps": 17.844
+      },
+      {
+        "id": "ho_oh_shadow",
+        "rank": 47,
+        "tier": "C",
+        "edps": 17.687
+      },
+      {
+        "id": "latios_shadow",
+        "rank": 49,
+        "tier": "C",
+        "edps": 17.654
+      },
+      {
+        "id": "lurantis_shadow",
         "rank": 50,
         "tier": "C",
-        "edps": 16.762
+        "edps": 17.626
       }
     ],
     "electric": [
       {
         "id": "raichu_mega_y",
         "rank": 1,
-        "tier": "SS",
-        "edps": 25.207
-      },
-      {
-        "id": "zekrom_shadow",
-        "rank": 2,
-        "tier": "SS",
-        "edps": 25.061
+        "tier": "SSS",
+        "edps": 28.942
       },
       {
         "id": "manectric_mega",
-        "rank": 3,
+        "rank": 2,
         "tier": "SS",
-        "edps": 25.053
+        "edps": 27.871
       },
       {
         "id": "raichu_mega_x",
+        "rank": 3,
+        "tier": "SS",
+        "edps": 27.225
+      },
+      {
+        "id": "zekrom_shadow",
         "rank": 4,
         "tier": "SS",
-        "edps": 24.551
+        "edps": 26.342
       },
       {
         "id": "mewtwo_mega_y",
         "rank": 5,
         "tier": "SS",
-        "edps": 24.44
+        "edps": 24.605
       },
       {
         "id": "zeraora",
         "rank": 6,
-        "tier": "SS",
-        "edps": 23.369
-      },
-      {
-        "id": "mewtwo_mega_x",
-        "rank": 7,
-        "tier": "SS",
-        "edps": 23.34
+        "tier": "S",
+        "edps": 24.434
       },
       {
         "id": "raikou_shadow",
+        "rank": 7,
+        "tier": "S",
+        "edps": 23.875
+      },
+      {
+        "id": "regieleki",
         "rank": 8,
-        "tier": "SS",
-        "edps": 22.909
+        "tier": "S",
+        "edps": 23.681
       },
       {
         "id": "xurkitree",
         "rank": 9,
-        "tier": "SS",
-        "edps": 22.152
+        "tier": "S",
+        "edps": 23.505
       },
       {
-        "id": "regigigas_shadow",
+        "id": "mewtwo_mega_x",
         "rank": 10,
         "tier": "S",
-        "edps": 22.065
+        "edps": 23.402
       },
       {
-        "id": "zekrom",
+        "id": "electivire_shadow",
         "rank": 11,
         "tier": "S",
-        "edps": 21.652
+        "edps": 23.024
       },
       {
         "id": "zapdos_shadow",
         "rank": 12,
         "tier": "S",
-        "edps": 21.549
-      },
-      {
-        "id": "electivire_shadow",
-        "rank": 13,
-        "tier": "S",
-        "edps": 20.981
+        "edps": 22.819
       },
       {
         "id": "thundurus_therian",
-        "rank": 14,
+        "rank": 13,
         "tier": "S",
-        "edps": 20.66
+        "edps": 22.748
       },
       {
-        "id": "regieleki",
+        "id": "regigigas_shadow",
+        "rank": 14,
+        "tier": "S",
+        "edps": 22.731
+      },
+      {
+        "id": "zekrom",
         "rank": 15,
         "tier": "S",
-        "edps": 20.627
+        "edps": 22.685
       },
       {
         "id": "magnezone_shadow",
         "rank": 16,
         "tier": "S",
-        "edps": 20.506
+        "edps": 22.511
       },
       {
         "id": "ampharos_mega",
         "rank": 17,
         "tier": "S",
-        "edps": 20.336
-      },
-      {
-        "id": "raikou",
-        "rank": 18,
-        "tier": "S",
-        "edps": 19.89
-      },
-      {
-        "id": "mewtwo_shadow",
-        "rank": 19,
-        "tier": "A",
-        "edps": 19.723
-      },
-      {
-        "id": "golem_alolan_shadow",
-        "rank": 20,
-        "tier": "A",
-        "edps": 19.303
-      },
-      {
-        "id": "regigigas",
-        "rank": 21,
-        "tier": "A",
-        "edps": 19.256
-      },
-      {
-        "id": "thundurus_incarnate_shadow",
-        "rank": 22,
-        "tier": "A",
-        "edps": 19.204
+        "edps": 21.482
       },
       {
         "id": "luxray_shadow",
+        "rank": 18,
+        "tier": "A",
+        "edps": 20.623
+      },
+      {
+        "id": "raikou",
+        "rank": 19,
+        "tier": "A",
+        "edps": 20.465
+      },
+      {
+        "id": "thundurus_incarnate_shadow",
+        "rank": 20,
+        "tier": "A",
+        "edps": 20.413
+      },
+      {
+        "id": "mewtwo_shadow",
+        "rank": 21,
+        "tier": "A",
+        "edps": 20.312
+      },
+      {
+        "id": "golem_alolan_shadow",
+        "rank": 22,
+        "tier": "A",
+        "edps": 20.275
+      },
+      {
+        "id": "electivire",
         "rank": 23,
         "tier": "A",
-        "edps": 18.932
+        "edps": 20.075
       },
       {
         "id": "vikavolt_shadow",
         "rank": 24,
         "tier": "A",
-        "edps": 18.93
+        "edps": 19.955
       },
       {
-        "id": "electivire",
+        "id": "regigigas",
         "rank": 25,
         "tier": "A",
-        "edps": 18.916
+        "edps": 19.681
       },
       {
         "id": "zapdos",
         "rank": 26,
         "tier": "A",
-        "edps": 18.771
-      },
-      {
-        "id": "kyurem_black",
-        "rank": 27,
-        "tier": "A",
-        "edps": 18.39
+        "edps": 19.586
       },
       {
         "id": "magnezone",
+        "rank": 27,
+        "tier": "A",
+        "edps": 19.383
+      },
+      {
+        "id": "kyurem_black",
         "rank": 28,
         "tier": "A",
-        "edps": 18.242
+        "edps": 18.872
+      },
+      {
+        "id": "manectric_shadow",
+        "rank": 29,
+        "tier": "A",
+        "edps": 18.319
       },
       {
         "id": "arcanine_shadow",
-        "rank": 29,
-        "tier": "A",
-        "edps": 17.631
-      },
-      {
-        "id": "ursaluna_shadow",
         "rank": 30,
         "tier": "B",
-        "edps": 17.214
+        "edps": 18.29
       },
       {
-        "id": "mewtwo",
+        "id": "tapu_koko",
         "rank": 31,
         "tier": "B",
-        "edps": 17.182
+        "edps": 18.251
       },
       {
         "id": "luxray",
         "rank": 32,
         "tier": "B",
-        "edps": 17.082
-      },
-      {
-        "id": "kyogre_primal",
-        "rank": 33,
-        "tier": "B",
-        "edps": 16.967
-      },
-      {
-        "id": "tapu_koko",
-        "rank": 34,
-        "tier": "B",
-        "edps": 16.914
-      },
-      {
-        "id": "thundurus_incarnate",
-        "rank": 35,
-        "tier": "B",
-        "edps": 16.893
-      },
-      {
-        "id": "golem_alolan",
-        "rank": 36,
-        "tier": "B",
-        "edps": 16.858
-      },
-      {
-        "id": "vikavolt",
-        "rank": 37,
-        "tier": "B",
-        "edps": 16.793
-      },
-      {
-        "id": "hippowdon_shadow",
-        "rank": 38,
-        "tier": "B",
-        "edps": 16.771
+        "edps": 18.014
       },
       {
         "id": "starmie_mega",
-        "rank": 39,
+        "rank": 33,
         "tier": "B",
-        "edps": 16.384
+        "edps": 17.963
       },
       {
-        "id": "pawmot",
-        "rank": 40,
+        "id": "thundurus_incarnate",
+        "rank": 34,
         "tier": "B",
-        "edps": 16.367
-      },
-      {
-        "id": "zacian_hero",
-        "rank": 41,
-        "tier": "B",
-        "edps": 16.162
-      },
-      {
-        "id": "jolteon",
-        "rank": 42,
-        "tier": "B",
-        "edps": 16.036
-      },
-      {
-        "id": "dragonite_shadow",
-        "rank": 43,
-        "tier": "C",
-        "edps": 15.838
-      },
-      {
-        "id": "dragonite_mega",
-        "rank": 44,
-        "tier": "C",
-        "edps": 15.828
-      },
-      {
-        "id": "manectric_shadow",
-        "rank": 45,
-        "tier": "C",
-        "edps": 15.79
+        "edps": 17.655
       },
       {
         "id": "zebstrika_shadow",
-        "rank": 46,
-        "tier": "C",
-        "edps": 15.707
+        "rank": 35,
+        "tier": "B",
+        "edps": 17.636
+      },
+      {
+        "id": "mewtwo",
+        "rank": 36,
+        "tier": "B",
+        "edps": 17.538
+      },
+      {
+        "id": "kyogre_primal",
+        "rank": 37,
+        "tier": "B",
+        "edps": 17.509
+      },
+      {
+        "id": "golem_alolan",
+        "rank": 38,
+        "tier": "B",
+        "edps": 17.505
+      },
+      {
+        "id": "vikavolt",
+        "rank": 39,
+        "tier": "B",
+        "edps": 17.499
+      },
+      {
+        "id": "magneton_shadow",
+        "rank": 40,
+        "tier": "B",
+        "edps": 17.493
+      },
+      {
+        "id": "pawmot",
+        "rank": 41,
+        "tier": "B",
+        "edps": 17.453
       },
       {
         "id": "ampharos_shadow",
-        "rank": 47,
-        "tier": "C",
-        "edps": 15.687
+        "rank": 42,
+        "tier": "B",
+        "edps": 17.447
       },
       {
-        "id": "aurorus_shadow",
-        "rank": 48,
-        "tier": "C",
-        "edps": 15.596
+        "id": "jolteon",
+        "rank": 43,
+        "tier": "B",
+        "edps": 17.148
       },
       {
         "id": "heliolisk_shadow",
-        "rank": 49,
-        "tier": "C",
-        "edps": 15.578
+        "rank": 44,
+        "tier": "B",
+        "edps": 17.137
       },
       {
-        "id": "toxtricity_amped",
+        "id": "ursaluna_shadow",
+        "rank": 45,
+        "tier": "B",
+        "edps": 17.103
+      },
+      {
+        "id": "hippowdon_shadow",
+        "rank": 46,
+        "tier": "B",
+        "edps": 16.886
+      },
+      {
+        "id": "zacian_hero",
+        "rank": 47,
+        "tier": "B",
+        "edps": 16.696
+      },
+      {
+        "id": "toxtricity",
+        "rank": 48,
+        "tier": "B",
+        "edps": 16.695
+      },
+      {
+        "id": "dialga_shadow",
         "rank": 50,
-        "tier": "C",
-        "edps": 15.498
+        "tier": "B",
+        "edps": 16.681
       }
     ],
     "ice": [
@@ -1507,295 +1501,295 @@
         "id": "kyurem_white",
         "rank": 1,
         "tier": "SS",
-        "edps": 31.007
+        "edps": 31.16
       },
       {
         "id": "kyurem_black",
         "rank": 2,
         "tier": "SS",
-        "edps": 28.088
+        "edps": 27.709
       },
       {
         "id": "mewtwo_mega_y",
         "rank": 3,
         "tier": "S",
-        "edps": 27.036
+        "edps": 27.243
       },
       {
         "id": "mewtwo_mega_x",
         "rank": 4,
         "tier": "S",
-        "edps": 26.178
+        "edps": 26.317
       },
       {
         "id": "mamoswine_shadow",
         "rank": 5,
         "tier": "S",
-        "edps": 23.867
+        "edps": 23.893
       },
       {
         "id": "regigigas_shadow",
         "rank": 6,
         "tier": "A",
-        "edps": 23.244
+        "edps": 23.854
       },
       {
         "id": "zamazenta_crowned_shield",
         "rank": 7,
         "tier": "A",
-        "edps": 22.015
-      },
-      {
-        "id": "baxcalibur",
-        "rank": 8,
-        "tier": "A",
-        "edps": 21.87
+        "edps": 22.63
       },
       {
         "id": "gardevoir_mega",
-        "rank": 9,
+        "rank": 8,
         "tier": "A",
-        "edps": 21.797
+        "edps": 22.573
       },
       {
         "id": "mewtwo_shadow",
-        "rank": 10,
+        "rank": 9,
         "tier": "A",
-        "edps": 21.702
+        "edps": 22.405
       },
       {
-        "id": "abomasnow_mega",
-        "rank": 11,
+        "id": "baxcalibur",
+        "rank": 10,
         "tier": "A",
-        "edps": 21.439
+        "edps": 21.631
       },
       {
         "id": "kyogre_primal",
-        "rank": 12,
+        "rank": 11,
         "tier": "A",
-        "edps": 21.316
+        "edps": 21.22
       },
       {
-        "id": "weavile_shadow",
-        "rank": 13,
-        "tier": "A",
-        "edps": 21.159
+        "id": "abomasnow_mega",
+        "rank": 12,
+        "tier": "B",
+        "edps": 21.116
       },
       {
         "id": "mamoswine",
-        "rank": 14,
-        "tier": "A",
-        "edps": 20.906
-      },
-      {
-        "id": "aurorus_shadow",
-        "rank": 15,
-        "tier": "A",
-        "edps": 20.853
-      },
-      {
-        "id": "darmanitan_galarian_standard",
-        "rank": 16,
-        "tier": "A",
-        "edps": 20.464
-      },
-      {
-        "id": "glalie_mega",
-        "rank": 17,
+        "rank": 13,
         "tier": "B",
-        "edps": 20.387
+        "edps": 20.905
+      },
+      {
+        "id": "weavile_shadow",
+        "rank": 14,
+        "tier": "B",
+        "edps": 20.894
       },
       {
         "id": "regigigas",
-        "rank": 18,
+        "rank": 15,
         "tier": "B",
-        "edps": 20.271
+        "edps": 20.646
       },
       {
-        "id": "kyurem",
-        "rank": 19,
+        "id": "glalie_mega",
+        "rank": 16,
         "tier": "B",
-        "edps": 19.996
+        "edps": 20.484
+      },
+      {
+        "id": "darmanitan_galarian_standard",
+        "rank": 17,
+        "tier": "B",
+        "edps": 20.447
       },
       {
         "id": "articuno_shadow",
+        "rank": 18,
+        "tier": "B",
+        "edps": 20.319
+      },
+      {
+        "id": "aurorus_shadow",
+        "rank": 19,
+        "tier": "B",
+        "edps": 20.102
+      },
+      {
+        "id": "kyurem",
         "rank": 20,
         "tier": "B",
-        "edps": 19.991
+        "edps": 19.98
       },
       {
         "id": "cetitan",
         "rank": 21,
         "tier": "B",
-        "edps": 19.877
-      },
-      {
-        "id": "glaceon",
-        "rank": 22,
-        "tier": "B",
-        "edps": 19.202
+        "edps": 19.603
       },
       {
         "id": "mewtwo",
+        "rank": 22,
+        "tier": "B",
+        "edps": 19.576
+      },
+      {
+        "id": "glaceon",
         "rank": 23,
         "tier": "B",
-        "edps": 19.131
+        "edps": 19.38
+      },
+      {
+        "id": "gardevoir_shadow",
+        "rank": 24,
+        "tier": "B",
+        "edps": 18.993
       },
       {
         "id": "weavile",
-        "rank": 24,
+        "rank": 25,
         "tier": "B",
-        "edps": 18.979
+        "edps": 18.826
       },
       {
         "id": "kyogre_shadow",
-        "rank": 25,
-        "tier": "B",
-        "edps": 18.604
-      },
-      {
-        "id": "aurorus",
         "rank": 26,
-        "tier": "B",
-        "edps": 17.896
+        "tier": "C",
+        "edps": 18.701
       },
       {
-        "id": "walrein_shadow",
+        "id": "porygon_z_shadow",
         "rank": 27,
         "tier": "C",
-        "edps": 17.879
+        "edps": 17.993
       },
       {
-        "id": "avalugg",
+        "id": "regice_shadow",
         "rank": 28,
         "tier": "C",
-        "edps": 17.743
+        "edps": 17.972
       },
       {
         "id": "lopunny_mega",
         "rank": 29,
         "tier": "C",
-        "edps": 17.715
+        "edps": 17.89
+      },
+      {
+        "id": "avalugg",
+        "rank": 30,
+        "tier": "C",
+        "edps": 17.796
       },
       {
         "id": "vanilluxe",
-        "rank": 30,
-        "tier": "C",
-        "edps": 17.68
-      },
-      {
-        "id": "abomasnow_shadow",
         "rank": 31,
         "tier": "C",
-        "edps": 17.649
-      },
-      {
-        "id": "gardevoir_shadow",
-        "rank": 32,
-        "tier": "C",
-        "edps": 17.626
-      },
-      {
-        "id": "regice_shadow",
-        "rank": 33,
-        "tier": "C",
-        "edps": 17.55
+        "edps": 17.775
       },
       {
         "id": "mr_rime",
-        "rank": 34,
+        "rank": 32,
         "tier": "C",
-        "edps": 17.465
+        "edps": 17.72
       },
       {
-        "id": "ursaluna_shadow",
-        "rank": 35,
+        "id": "walrein_shadow",
+        "rank": 33,
         "tier": "C",
-        "edps": 17.342
-      },
-      {
-        "id": "cloyster_shadow",
-        "rank": 36,
-        "tier": "C",
-        "edps": 17.339
-      },
-      {
-        "id": "lapras_shadow",
-        "rank": 37,
-        "tier": "C",
-        "edps": 17.19
-      },
-      {
-        "id": "starmie_mega",
-        "rank": 38,
-        "tier": "C",
-        "edps": 17.109
-      },
-      {
-        "id": "articuno",
-        "rank": 39,
-        "tier": "C",
-        "edps": 17.099
-      },
-      {
-        "id": "blastoise_mega",
-        "rank": 40,
-        "tier": "C",
-        "edps": 16.933
-      },
-      {
-        "id": "avalugg_hisuian",
-        "rank": 41,
-        "tier": "C",
-        "edps": 16.927
-      },
-      {
-        "id": "piloswine_shadow",
-        "rank": 42,
-        "tier": "C",
-        "edps": 16.9
-      },
-      {
-        "id": "porygon_z_shadow",
-        "rank": 43,
-        "tier": "C",
-        "edps": 16.856
+        "edps": 17.664
       },
       {
         "id": "ninetales_alolan_shadow",
-        "rank": 44,
+        "rank": 34,
         "tier": "C",
-        "edps": 16.837
+        "edps": 17.593
+      },
+      {
+        "id": "starmie_mega",
+        "rank": 35,
+        "tier": "C",
+        "edps": 17.556
       },
       {
         "id": "ho_oh_shadow",
-        "rank": 45,
+        "rank": 36,
         "tier": "C",
-        "edps": 16.598
+        "edps": 17.468
       },
       {
-        "id": "cryogonal",
+        "id": "abomasnow_shadow",
+        "rank": 38,
+        "tier": "C",
+        "edps": 17.429
+      },
+      {
+        "id": "aurorus",
+        "rank": 39,
+        "tier": "C",
+        "edps": 17.422
+      },
+      {
+        "id": "ursaluna_shadow",
+        "rank": 40,
+        "tier": "C",
+        "edps": 17.328
+      },
+      {
+        "id": "articuno",
+        "rank": 41,
+        "tier": "C",
+        "edps": 17.312
+      },
+      {
+        "id": "cloyster_shadow",
+        "rank": 42,
+        "tier": "C",
+        "edps": 17.294
+      },
+      {
+        "id": "genesect_chill",
+        "rank": 43,
+        "tier": "C",
+        "edps": 17.214
+      },
+      {
+        "id": "piloswine_shadow",
+        "rank": 44,
+        "tier": "C",
+        "edps": 17.052
+      },
+      {
+        "id": "blastoise_mega",
+        "rank": 45,
+        "tier": "C",
+        "edps": 17.041
+      },
+      {
+        "id": "lapras_shadow",
+        "rank": 46,
+        "tier": "C",
+        "edps": 16.959
+      },
+      {
+        "id": "avalugg_hisuian",
         "rank": 47,
         "tier": "C",
-        "edps": 16.511
+        "edps": 16.902
       },
       {
         "id": "jynx",
         "rank": 48,
         "tier": "C",
-        "edps": 16.457
+        "edps": 16.889
+      },
+      {
+        "id": "cryogonal",
+        "rank": 49,
+        "tier": "C",
+        "edps": 16.52
       },
       {
         "id": "beartic",
-        "rank": 49,
-        "tier": "C",
-        "edps": 16.302
-      },
-      {
-        "id": "kyogre",
         "rank": 50,
-        "tier": "C",
-        "edps": 16.038
+        "tier": "D",
+        "edps": 16.422
       }
     ],
     "fighting": [
@@ -1803,597 +1797,597 @@
         "id": "mewtwo_mega_x",
         "rank": 1,
         "tier": "SSSS",
-        "edps": 37.741
-      },
-      {
-        "id": "blaziken_mega",
-        "rank": 2,
-        "tier": "SSS",
-        "edps": 30.534
+        "edps": 38.969
       },
       {
         "id": "lucario_mega",
+        "rank": 2,
+        "tier": "SSS",
+        "edps": 33.237
+      },
+      {
+        "id": "blaziken_mega",
         "rank": 3,
         "tier": "SS",
-        "edps": 30.371
+        "edps": 32.291
       },
       {
         "id": "keldeo_resolute",
         "rank": 4,
         "tier": "SS",
-        "edps": 28.352
+        "edps": 29.348
       },
       {
-        "id": "mewtwo_mega_y",
+        "id": "falinks_mega",
         "rank": 5,
         "tier": "S",
-        "edps": 27.617
+        "edps": 28.867
       },
       {
         "id": "gallade_mega",
         "rank": 6,
         "tier": "S",
-        "edps": 27.513
+        "edps": 28.483
       },
       {
-        "id": "falinks_mega",
+        "id": "mewtwo_mega_y",
         "rank": 7,
         "tier": "S",
-        "edps": 26.72
-      },
-      {
-        "id": "heracross_mega",
-        "rank": 8,
-        "tier": "S",
-        "edps": 24.513
-      },
-      {
-        "id": "conkeldurr_shadow",
-        "rank": 9,
-        "tier": "A",
-        "edps": 24.338
-      },
-      {
-        "id": "terrakion",
-        "rank": 10,
-        "tier": "A",
-        "edps": 24.226
+        "edps": 28.233
       },
       {
         "id": "blaziken_shadow",
+        "rank": 8,
+        "tier": "S",
+        "edps": 26.035
+      },
+      {
+        "id": "heracross_mega",
+        "rank": 9,
+        "tier": "A",
+        "edps": 25.73
+      },
+      {
+        "id": "conkeldurr_shadow",
+        "rank": 10,
+        "tier": "A",
+        "edps": 25.565
+      },
+      {
+        "id": "terrakion",
         "rank": 11,
         "tier": "A",
-        "edps": 23.559
-      },
-      {
-        "id": "latios_mega",
-        "rank": 12,
-        "tier": "A",
-        "edps": 23.557
-      },
-      {
-        "id": "keldeo_ordinary",
-        "rank": 13,
-        "tier": "A",
-        "edps": 22.973
-      },
-      {
-        "id": "gallade_shadow",
-        "rank": 14,
-        "tier": "A",
-        "edps": 22.647
+        "edps": 24.793
       },
       {
         "id": "lucario",
-        "rank": 15,
+        "rank": 12,
         "tier": "A",
-        "edps": 22.227
+        "edps": 24.347
       },
       {
-        "id": "raikou_shadow",
-        "rank": 16,
-        "tier": "B",
-        "edps": 22.18
+        "id": "gallade_shadow",
+        "rank": 13,
+        "tier": "A",
+        "edps": 23.673
       },
       {
-        "id": "mewtwo_shadow",
-        "rank": 17,
+        "id": "keldeo_ordinary",
+        "rank": 14,
         "tier": "B",
-        "edps": 21.713
+        "edps": 23.555
       },
       {
-        "id": "hariyama_shadow",
-        "rank": 18,
+        "id": "latios_mega",
+        "rank": 15,
         "tier": "B",
-        "edps": 21.693
-      },
-      {
-        "id": "urshifu_rapid_strike",
-        "rank": 19,
-        "tier": "B",
-        "edps": 21.577
-      },
-      {
-        "id": "urshifu_single_strike",
-        "rank": 20,
-        "tier": "B",
-        "edps": 21.577
-      },
-      {
-        "id": "latios_shadow",
-        "rank": 21,
-        "tier": "B",
-        "edps": 21.565
+        "edps": 23.538
       },
       {
         "id": "machamp_shadow",
-        "rank": 22,
+        "rank": 16,
         "tier": "B",
-        "edps": 21.469
+        "edps": 22.919
+      },
+      {
+        "id": "raikou_shadow",
+        "rank": 17,
+        "tier": "B",
+        "edps": 22.914
       },
       {
         "id": "blaziken",
-        "rank": 23,
+        "rank": 18,
         "tier": "B",
-        "edps": 21.331
+        "edps": 22.9
       },
       {
-        "id": "conkeldurr",
-        "rank": 24,
+        "id": "mewtwo_shadow",
+        "rank": 19,
         "tier": "B",
-        "edps": 21.198
+        "edps": 22.702
       },
       {
-        "id": "latias_mega",
-        "rank": 25,
+        "id": "hariyama_shadow",
+        "rank": 20,
         "tier": "B",
-        "edps": 20.918
+        "edps": 22.564
+      },
+      {
+        "id": "urshifu_rapid_strike",
+        "rank": 21,
+        "tier": "B",
+        "edps": 22.314
       },
       {
         "id": "alakazam_mega",
-        "rank": 26,
+        "rank": 22,
         "tier": "B",
-        "edps": 20.895
+        "edps": 22.116
       },
       {
-        "id": "regigigas_shadow",
-        "rank": 27,
+        "id": "conkeldurr",
+        "rank": 23,
         "tier": "B",
-        "edps": 20.457
+        "edps": 21.964
       },
       {
-        "id": "kartana",
-        "rank": 28,
+        "id": "urshifu_single_strike",
+        "rank": 24,
         "tier": "B",
-        "edps": 20.041
+        "edps": 21.894
+      },
+      {
+        "id": "latios_shadow",
+        "rank": 25,
+        "tier": "B",
+        "edps": 21.477
       },
       {
         "id": "lopunny_mega",
+        "rank": 26,
+        "tier": "C",
+        "edps": 21.411
+      },
+      {
+        "id": "kartana",
+        "rank": 27,
+        "tier": "C",
+        "edps": 21.275
+      },
+      {
+        "id": "regigigas_shadow",
+        "rank": 28,
+        "tier": "C",
+        "edps": 21.163
+      },
+      {
+        "id": "latias_mega",
         "rank": 29,
         "tier": "C",
-        "edps": 20.019
-      },
-      {
-        "id": "gallade",
-        "rank": 30,
-        "tier": "C",
-        "edps": 19.887
-      },
-      {
-        "id": "bewear_shadow",
-        "rank": 31,
-        "tier": "C",
-        "edps": 19.649
+        "edps": 20.911
       },
       {
         "id": "marshadow",
-        "rank": 32,
+        "rank": 30,
         "tier": "C",
-        "edps": 19.407
+        "edps": 20.745
       },
       {
         "id": "annihilape_shadow",
+        "rank": 31,
+        "tier": "C",
+        "edps": 20.69
+      },
+      {
+        "id": "gallade",
+        "rank": 32,
+        "tier": "C",
+        "edps": 20.53
+      },
+      {
+        "id": "bewear_shadow",
         "rank": 33,
         "tier": "C",
-        "edps": 19.369
-      },
-      {
-        "id": "mewtwo",
-        "rank": 34,
-        "tier": "C",
-        "edps": 19.332
-      },
-      {
-        "id": "raikou",
-        "rank": 35,
-        "tier": "C",
-        "edps": 19.3
-      },
-      {
-        "id": "latias_shadow",
-        "rank": 36,
-        "tier": "C",
-        "edps": 19.22
-      },
-      {
-        "id": "decidueye_hisuian",
-        "rank": 37,
-        "tier": "C",
-        "edps": 18.97
-      },
-      {
-        "id": "hariyama",
-        "rank": 38,
-        "tier": "C",
-        "edps": 18.942
-      },
-      {
-        "id": "cobalion",
-        "rank": 39,
-        "tier": "C",
-        "edps": 18.919
-      },
-      {
-        "id": "virizion",
-        "rank": 40,
-        "tier": "C",
-        "edps": 18.919
-      },
-      {
-        "id": "chesnaught_mega",
-        "rank": 41,
-        "tier": "C",
-        "edps": 18.873
-      },
-      {
-        "id": "machamp",
-        "rank": 42,
-        "tier": "C",
-        "edps": 18.872
-      },
-      {
-        "id": "buzzwole",
-        "rank": 43,
-        "tier": "C",
-        "edps": 18.821
-      },
-      {
-        "id": "latios",
-        "rank": 44,
-        "tier": "C",
-        "edps": 18.807
-      },
-      {
-        "id": "haxorus_shadow",
-        "rank": 45,
-        "tier": "C",
-        "edps": 18.533
-      },
-      {
-        "id": "rhyperior_shadow",
-        "rank": 46,
-        "tier": "C",
-        "edps": 18.499
-      },
-      {
-        "id": "zapdos_galarian",
-        "rank": 47,
-        "tier": "C",
-        "edps": 18.385
+        "edps": 20.143
       },
       {
         "id": "emboar_shadow",
-        "rank": 48,
+        "rank": 34,
         "tier": "C",
-        "edps": 18.081
+        "edps": 20.085
+      },
+      {
+        "id": "machamp",
+        "rank": 35,
+        "tier": "C",
+        "edps": 19.838
+      },
+      {
+        "id": "mewtwo",
+        "rank": 36,
+        "tier": "D",
+        "edps": 19.781
+      },
+      {
+        "id": "toxicroak_shadow",
+        "rank": 37,
+        "tier": "D",
+        "edps": 19.722
+      },
+      {
+        "id": "raikou",
+        "rank": 38,
+        "tier": "D",
+        "edps": 19.716
+      },
+      {
+        "id": "hariyama",
+        "rank": 39,
+        "tier": "D",
+        "edps": 19.454
+      },
+      {
+        "id": "zapdos_galarian",
+        "rank": 40,
+        "tier": "D",
+        "edps": 19.417
+      },
+      {
+        "id": "decidueye_hisuian",
+        "rank": 41,
+        "tier": "D",
+        "edps": 19.411
+      },
+      {
+        "id": "buzzwole",
+        "rank": 42,
+        "tier": "D",
+        "edps": 19.365
+      },
+      {
+        "id": "cobalion",
+        "rank": 43,
+        "tier": "D",
+        "edps": 19.301
+      },
+      {
+        "id": "haxorus_shadow",
+        "rank": 44,
+        "tier": "D",
+        "edps": 19.296
+      },
+      {
+        "id": "latias_shadow",
+        "rank": 45,
+        "tier": "D",
+        "edps": 19.136
+      },
+      {
+        "id": "virizion",
+        "rank": 46,
+        "tier": "D",
+        "edps": 19.052
+      },
+      {
+        "id": "chesnaught_mega",
+        "rank": 47,
+        "tier": "D",
+        "edps": 19.043
+      },
+      {
+        "id": "sneasler_shadow",
+        "rank": 48,
+        "tier": "D",
+        "edps": 18.962
+      },
+      {
+        "id": "breloom",
+        "rank": 49,
+        "tier": "D",
+        "edps": 18.918
       },
       {
         "id": "poliwrath_shadow",
-        "rank": 49,
-        "tier": "D",
-        "edps": 17.918
-      },
-      {
-        "id": "regigigas",
         "rank": 50,
         "tier": "D",
-        "edps": 17.831
+        "edps": 18.916
       }
     ],
     "poison": [
       {
-        "id": "eternatus",
+        "id": "victreebel_mega",
         "rank": 1,
         "tier": "SS",
-        "edps": 24.851
-      },
-      {
-        "id": "victreebel_mega",
-        "rank": 2,
-        "tier": "SS",
-        "edps": 24.116
+        "edps": 26.288
       },
       {
         "id": "gengar_mega",
+        "rank": 2,
+        "tier": "S",
+        "edps": 25.243
+      },
+      {
+        "id": "eternatus",
         "rank": 3,
-        "tier": "SS",
-        "edps": 23.182
+        "tier": "S",
+        "edps": 25.083
       },
       {
         "id": "regigigas_shadow",
         "rank": 4,
-        "tier": "SS",
-        "edps": 23.025
-      },
-      {
-        "id": "nihilego",
-        "rank": 5,
-        "tier": "SS",
-        "edps": 21.969
+        "tier": "S",
+        "edps": 24.284
       },
       {
         "id": "beedrill_mega",
-        "rank": 6,
-        "tier": "SS",
-        "edps": 21.361
+        "rank": 5,
+        "tier": "S",
+        "edps": 23.881
       },
       {
-        "id": "regigigas",
-        "rank": 7,
+        "id": "nihilego",
+        "rank": 6,
         "tier": "S",
-        "edps": 20.105
+        "edps": 22.524
       },
       {
         "id": "naganadel",
-        "rank": 8,
-        "tier": "S",
-        "edps": 20.028
+        "rank": 7,
+        "tier": "A",
+        "edps": 21.415
       },
       {
-        "id": "darkrai_shadow",
+        "id": "regigigas",
+        "rank": 8,
+        "tier": "A",
+        "edps": 20.907
+      },
+      {
+        "id": "gengar_shadow",
         "rank": 9,
-        "tier": "S",
-        "edps": 18.443
+        "tier": "A",
+        "edps": 20.884
       },
       {
         "id": "roserade",
         "rank": 10,
         "tier": "A",
-        "edps": 18.401
+        "edps": 20.024
+      },
+      {
+        "id": "revavroom",
+        "rank": 11,
+        "tier": "B",
+        "edps": 19.269
+      },
+      {
+        "id": "scolipede_shadow",
+        "rank": 12,
+        "tier": "B",
+        "edps": 19.26
       },
       {
         "id": "overqwil",
-        "rank": 11,
-        "tier": "A",
-        "edps": 18.075
-      },
-      {
-        "id": "toxicroak_shadow",
-        "rank": 12,
-        "tier": "A",
-        "edps": 17.638
-      },
-      {
-        "id": "muk_alolan_shadow",
         "rank": 13,
-        "tier": "A",
-        "edps": 17.549
+        "tier": "B",
+        "edps": 19.246
       },
       {
         "id": "muk_shadow",
         "rank": 14,
-        "tier": "A",
-        "edps": 17.549
-      },
-      {
-        "id": "venusaur_mega",
-        "rank": 15,
-        "tier": "A",
-        "edps": 17.123
+        "tier": "B",
+        "edps": 19.18
       },
       {
         "id": "vileplume_shadow",
+        "rank": 15,
+        "tier": "B",
+        "edps": 19.056
+      },
+      {
+        "id": "darkrai_shadow",
         "rank": 16,
-        "tier": "A",
-        "edps": 17.121
+        "tier": "B",
+        "edps": 18.922
       },
       {
-        "id": "scolipede_shadow",
+        "id": "muk_alolan_shadow",
         "rank": 17,
-        "tier": "A",
-        "edps": 17.049
-      },
-      {
-        "id": "skuntank_shadow",
-        "rank": 18,
-        "tier": "A",
-        "edps": 17.024
-      },
-      {
-        "id": "ho_oh_shadow",
-        "rank": 19,
-        "tier": "A",
-        "edps": 16.907
-      },
-      {
-        "id": "revavroom",
-        "rank": 21,
-        "tier": "A",
-        "edps": 16.767
-      },
-      {
-        "id": "gengar_shadow",
-        "rank": 22,
-        "tier": "A",
-        "edps": 16.755
-      },
-      {
-        "id": "keldeo_resolute",
-        "rank": 23,
-        "tier": "A",
-        "edps": 16.42
+        "tier": "B",
+        "edps": 18.84
       },
       {
         "id": "victreebel_shadow",
-        "rank": 24,
+        "rank": 18,
         "tier": "B",
-        "edps": 16.417
+        "edps": 18.829
       },
       {
-        "id": "darkrai",
+        "id": "toxicroak_shadow",
+        "rank": 19,
+        "tier": "B",
+        "edps": 18.774
+      },
+      {
+        "id": "skuntank_shadow",
+        "rank": 20,
+        "tier": "B",
+        "edps": 18.624
+      },
+      {
+        "id": "gengar",
+        "rank": 21,
+        "tier": "B",
+        "edps": 18.354
+      },
+      {
+        "id": "ho_oh_shadow",
+        "rank": 22,
+        "tier": "B",
+        "edps": 18.28
+      },
+      {
+        "id": "genesect_douse",
+        "rank": 24,
+        "tier": "B",
+        "edps": 17.876
+      },
+      {
+        "id": "venusaur_mega",
         "rank": 25,
         "tier": "B",
-        "edps": 16.301
+        "edps": 17.666
       },
       {
         "id": "crobat_shadow",
         "rank": 26,
-        "tier": "B",
-        "edps": 16.1
+        "tier": "C",
+        "edps": 17.534
       },
       {
-        "id": "toxicroak",
+        "id": "nidoking_shadow",
         "rank": 27,
-        "tier": "B",
-        "edps": 16.073
+        "tier": "C",
+        "edps": 17.089
       },
       {
-        "id": "genesect_douse",
+        "id": "drapion_shadow",
         "rank": 28,
-        "tier": "B",
-        "edps": 16.007
+        "tier": "C",
+        "edps": 17.009
       },
       {
         "id": "sneasler_shadow",
         "rank": 29,
-        "tier": "B",
-        "edps": 15.934
-      },
-      {
-        "id": "gengar",
-        "rank": 30,
-        "tier": "B",
-        "edps": 15.748
-      },
-      {
-        "id": "drapion_shadow",
-        "rank": 31,
-        "tier": "B",
-        "edps": 15.679
-      },
-      {
-        "id": "volcanion",
-        "rank": 32,
-        "tier": "B",
-        "edps": 15.64
-      },
-      {
-        "id": "venusaur_shadow",
-        "rank": 33,
-        "tier": "B",
-        "edps": 15.575
+        "tier": "C",
+        "edps": 17
       },
       {
         "id": "scolipede",
+        "rank": 30,
+        "tier": "C",
+        "edps": 16.924
+      },
+      {
+        "id": "toxicroak",
+        "rank": 31,
+        "tier": "C",
+        "edps": 16.86
+      },
+      {
+        "id": "venusaur_shadow",
+        "rank": 32,
+        "tier": "C",
+        "edps": 16.671
+      },
+      {
+        "id": "darkrai",
+        "rank": 33,
+        "tier": "C",
+        "edps": 16.613
+      },
+      {
+        "id": "volcanion",
         "rank": 34,
-        "tier": "B",
-        "edps": 15.405
+        "tier": "C",
+        "edps": 16.522
       },
       {
         "id": "vileplume",
         "rank": 35,
-        "tier": "B",
-        "edps": 15.374
-      },
-      {
-        "id": "muk",
-        "rank": 36,
-        "tier": "B",
-        "edps": 15.373
-      },
-      {
-        "id": "muk_alolan",
-        "rank": 37,
-        "tier": "B",
-        "edps": 15.373
-      },
-      {
-        "id": "slowbro_galarian",
-        "rank": 38,
-        "tier": "B",
-        "edps": 15.328
-      },
-      {
-        "id": "starmie_mega",
-        "rank": 39,
-        "tier": "B",
-        "edps": 15.234
-      },
-      {
-        "id": "skuntank",
-        "rank": 40,
-        "tier": "B",
-        "edps": 15.223
-      },
-      {
-        "id": "nidoking_shadow",
-        "rank": 41,
-        "tier": "B",
-        "edps": 15.072
-      },
-      {
-        "id": "tangrowth_shadow",
-        "rank": 42,
-        "tier": "B",
-        "edps": 15.032
-      },
-      {
-        "id": "swampert_mega",
-        "rank": 43,
-        "tier": "B",
-        "edps": 15.015
+        "tier": "C",
+        "edps": 16.487
       },
       {
         "id": "victreebel",
-        "rank": 44,
-        "tier": "B",
-        "edps": 15.015
-      },
-      {
-        "id": "conkeldurr_shadow",
-        "rank": 45,
-        "tier": "B",
-        "edps": 14.716
-      },
-      {
-        "id": "ho_oh",
-        "rank": 46,
+        "rank": 36,
         "tier": "C",
-        "edps": 14.644
+        "edps": 16.474
       },
       {
-        "id": "nidoqueen_shadow",
-        "rank": 47,
+        "id": "muk",
+        "rank": 37,
         "tier": "C",
-        "edps": 14.607
+        "edps": 16.445
+      },
+      {
+        "id": "starmie_mega",
+        "rank": 38,
+        "tier": "C",
+        "edps": 16.288
+      },
+      {
+        "id": "slowbro_galarian",
+        "rank": 39,
+        "tier": "C",
+        "edps": 16.261
+      },
+      {
+        "id": "keldeo_resolute",
+        "rank": 40,
+        "tier": "C",
+        "edps": 16.26
+      },
+      {
+        "id": "muk_alolan",
+        "rank": 41,
+        "tier": "C",
+        "edps": 16.212
+      },
+      {
+        "id": "skuntank",
+        "rank": 42,
+        "tier": "C",
+        "edps": 16.121
       },
       {
         "id": "grafaiai",
+        "rank": 43,
+        "tier": "C",
+        "edps": 16.11
+      },
+      {
+        "id": "nidoqueen_shadow",
+        "rank": 44,
+        "tier": "C",
+        "edps": 15.883
+      },
+      {
+        "id": "salazzle",
+        "rank": 45,
+        "tier": "C",
+        "edps": 15.759
+      },
+      {
+        "id": "tangrowth_shadow",
+        "rank": 46,
+        "tier": "C",
+        "edps": 15.601
+      },
+      {
+        "id": "ho_oh",
+        "rank": 47,
+        "tier": "D",
+        "edps": 15.545
+      },
+      {
+        "id": "beedrill_shadow",
         "rank": 48,
-        "tier": "C",
-        "edps": 14.534
+        "tier": "D",
+        "edps": 15.25
       },
       {
-        "id": "keldeo_ordinary",
+        "id": "tentacruel_shadow",
         "rank": 49,
-        "tier": "C",
-        "edps": 14.48
+        "tier": "D",
+        "edps": 15.087
       },
       {
-        "id": "marshadow",
+        "id": "crobat",
         "rank": 50,
-        "tier": "C",
-        "edps": 14.22
+        "tier": "D",
+        "edps": 15.065
       }
     ],
     "ground": [
@@ -2401,585 +2395,585 @@
         "id": "groudon_primal",
         "rank": 1,
         "tier": "SSS",
-        "edps": 29.157
+        "edps": 29.957
       },
       {
         "id": "garchomp_mega",
         "rank": 2,
         "tier": "SS",
-        "edps": 27.04
+        "edps": 27.231
       },
       {
         "id": "groudon_shadow",
         "rank": 3,
         "tier": "SS",
-        "edps": 24.631
+        "edps": 25.867
       },
       {
         "id": "garchomp_shadow",
         "rank": 4,
         "tier": "S",
-        "edps": 24.241
+        "edps": 24.945
       },
       {
         "id": "landorus_therian",
         "rank": 5,
         "tier": "S",
-        "edps": 22.977
-      },
-      {
-        "id": "rhyperior_shadow",
-        "rank": 6,
-        "tier": "S",
-        "edps": 22.765
+        "edps": 24.327
       },
       {
         "id": "landorus_incarnate_shadow",
-        "rank": 7,
+        "rank": 6,
         "tier": "S",
-        "edps": 22.466
+        "edps": 23.781
       },
       {
         "id": "excadrill_shadow",
+        "rank": 7,
+        "tier": "S",
+        "edps": 23.309
+      },
+      {
+        "id": "rhyperior_shadow",
         "rank": 8,
         "tier": "S",
-        "edps": 22.173
+        "edps": 22.832
       },
       {
         "id": "groudon",
         "rank": 9,
         "tier": "S",
-        "edps": 21.494
+        "edps": 22.337
       },
       {
         "id": "swampert_mega",
         "rank": 10,
-        "tier": "A",
-        "edps": 21.317
-      },
-      {
-        "id": "mamoswine_shadow",
-        "rank": 11,
-        "tier": "A",
-        "edps": 21.156
+        "tier": "S",
+        "edps": 21.813
       },
       {
         "id": "garchomp",
+        "rank": 11,
+        "tier": "A",
+        "edps": 21.24
+      },
+      {
+        "id": "golurk_shadow",
         "rank": 12,
         "tier": "A",
-        "edps": 20.829
-      },
-      {
-        "id": "heracross_mega",
-        "rank": 13,
-        "tier": "A",
-        "edps": 20.354
-      },
-      {
-        "id": "regigigas_shadow",
-        "rank": 14,
-        "tier": "A",
-        "edps": 20.009
+        "edps": 20.569
       },
       {
         "id": "landorus_incarnate",
-        "rank": 15,
+        "rank": 13,
         "tier": "A",
-        "edps": 19.858
+        "edps": 20.462
+      },
+      {
+        "id": "mamoswine_shadow",
+        "rank": 14,
+        "tier": "A",
+        "edps": 20.357
       },
       {
         "id": "excadrill",
+        "rank": 15,
+        "tier": "A",
+        "edps": 20.343
+      },
+      {
+        "id": "heracross_mega",
         "rank": 16,
         "tier": "A",
-        "edps": 19.835
+        "edps": 20.303
       },
       {
         "id": "hippowdon_shadow",
         "rank": 17,
         "tier": "A",
-        "edps": 19.729
+        "edps": 20.19
+      },
+      {
+        "id": "regigigas_shadow",
+        "rank": 18,
+        "tier": "A",
+        "edps": 20.186
       },
       {
         "id": "rhydon_shadow",
-        "rank": 18,
-        "tier": "A",
-        "edps": 19.574
-      },
-      {
-        "id": "rhyperior",
         "rank": 19,
         "tier": "A",
-        "edps": 19.497
-      },
-      {
-        "id": "golurk_shadow",
-        "rank": 20,
-        "tier": "A",
-        "edps": 19.23
+        "edps": 19.791
       },
       {
         "id": "starmie_mega",
-        "rank": 21,
+        "rank": 20,
         "tier": "A",
-        "edps": 19.001
-      },
-      {
-        "id": "mamoswine",
-        "rank": 22,
-        "tier": "A",
-        "edps": 18.76
-      },
-      {
-        "id": "heatran_shadow",
-        "rank": 23,
-        "tier": "A",
-        "edps": 18.368
+        "edps": 19.726
       },
       {
         "id": "donphan_shadow",
+        "rank": 21,
+        "tier": "A",
+        "edps": 19.561
+      },
+      {
+        "id": "rhyperior",
+        "rank": 22,
+        "tier": "A",
+        "edps": 19.554
+      },
+      {
+        "id": "flygon_shadow",
+        "rank": 23,
+        "tier": "A",
+        "edps": 19.097
+      },
+      {
+        "id": "heatran_shadow",
         "rank": 24,
-        "tier": "B",
-        "edps": 18.327
+        "tier": "A",
+        "edps": 18.624
       },
       {
         "id": "torterra_shadow",
         "rank": 25,
         "tier": "B",
-        "edps": 17.776
-      },
-      {
-        "id": "flygon_shadow",
-        "rank": 26,
-        "tier": "B",
-        "edps": 17.755
-      },
-      {
-        "id": "golem_shadow",
-        "rank": 27,
-        "tier": "B",
-        "edps": 17.698
+        "edps": 18.517
       },
       {
         "id": "swampert_shadow",
+        "rank": 26,
+        "tier": "B",
+        "edps": 18.492
+      },
+      {
+        "id": "mamoswine",
+        "rank": 27,
+        "tier": "B",
+        "edps": 18.257
+      },
+      {
+        "id": "golem_shadow",
         "rank": 28,
         "tier": "B",
-        "edps": 17.56
+        "edps": 18.217
+      },
+      {
+        "id": "golurk",
+        "rank": 29,
+        "tier": "B",
+        "edps": 17.848
       },
       {
         "id": "metagross_mega",
-        "rank": 29,
-        "tier": "B",
-        "edps": 17.56
-      },
-      {
-        "id": "regigigas",
         "rank": 30,
         "tier": "B",
-        "edps": 17.424
+        "edps": 17.788
       },
       {
         "id": "entei_shadow",
         "rank": 31,
         "tier": "B",
-        "edps": 17.423
+        "edps": 17.584
       },
       {
-        "id": "rhydon",
+        "id": "regigigas",
         "rank": 32,
         "tier": "B",
-        "edps": 17.162
+        "edps": 17.54
       },
       {
-        "id": "ursaluna_shadow",
+        "id": "krookodile",
         "rank": 33,
         "tier": "B",
-        "edps": 17.155
+        "edps": 17.519
       },
       {
-        "id": "staraptor_mega",
+        "id": "nidoqueen_shadow",
         "rank": 34,
         "tier": "B",
-        "edps": 17.043
+        "edps": 17.464
       },
       {
         "id": "ho_oh_shadow",
         "rank": 35,
         "tier": "B",
-        "edps": 17.015
+        "edps": 17.433
       },
       {
-        "id": "golurk",
+        "id": "ursaluna_shadow",
         "rank": 37,
         "tier": "B",
-        "edps": 16.983
+        "edps": 17.375
+      },
+      {
+        "id": "rhydon",
+        "rank": 38,
+        "tier": "B",
+        "edps": 17.32
+      },
+      {
+        "id": "staraptor_mega",
+        "rank": 39,
+        "tier": "B",
+        "edps": 17.252
+      },
+      {
+        "id": "palossand_shadow",
+        "rank": 40,
+        "tier": "B",
+        "edps": 17.241
       },
       {
         "id": "hippowdon",
-        "rank": 38,
-        "tier": "B",
-        "edps": 16.978
-      },
-      {
-        "id": "krookodile",
-        "rank": 39,
-        "tier": "B",
-        "edps": 16.855
-      },
-      {
-        "id": "aerodactyl_mega",
-        "rank": 40,
-        "tier": "B",
-        "edps": 16.705
-      },
-      {
-        "id": "metagross_shadow",
         "rank": 41,
         "tier": "B",
-        "edps": 16.558
+        "edps": 17.239
       },
       {
-        "id": "nidoqueen_shadow",
+        "id": "gliscor_shadow",
         "rank": 42,
         "tier": "B",
-        "edps": 16.473
+        "edps": 17.209
       },
       {
-        "id": "kangaskhan_mega",
+        "id": "haxorus_shadow",
         "rank": 43,
-        "tier": "C",
-        "edps": 16.406
+        "tier": "B",
+        "edps": 17.176
       },
       {
         "id": "mudsdale",
         "rank": 44,
-        "tier": "C",
-        "edps": 16.366
+        "tier": "B",
+        "edps": 17.156
       },
       {
-        "id": "magmortar_shadow",
+        "id": "metagross_shadow",
         "rank": 45,
-        "tier": "C",
-        "edps": 16.161
+        "tier": "B",
+        "edps": 17.043
       },
       {
         "id": "donphan",
         "rank": 46,
-        "tier": "C",
-        "edps": 16.153
+        "tier": "B",
+        "edps": 16.996
       },
       {
         "id": "sceptile_mega",
         "rank": 47,
         "tier": "C",
-        "edps": 16.122
+        "edps": 16.921
       },
       {
-        "id": "gliscor_shadow",
+        "id": "magmortar_shadow",
         "rank": 48,
         "tier": "C",
-        "edps": 16.093
+        "edps": 16.857
       },
       {
-        "id": "haxorus_shadow",
+        "id": "camerupt_mega",
         "rank": 49,
         "tier": "C",
-        "edps": 15.94
+        "edps": 16.79
       },
       {
-        "id": "terrakion",
+        "id": "nidoking_shadow",
         "rank": 50,
         "tier": "C",
-        "edps": 15.929
+        "edps": 16.745
       }
     ],
     "flying": [
       {
         "id": "rayquaza_mega",
         "rank": 1,
-        "tier": "SSSSS",
-        "edps": 40.599
+        "tier": "SSSS",
+        "edps": 41.274
       },
       {
         "id": "staraptor_mega",
         "rank": 2,
         "tier": "SSS",
-        "edps": 30.434
+        "edps": 32.275
       },
       {
         "id": "rayquaza",
         "rank": 3,
         "tier": "SS",
-        "edps": 29.436
+        "edps": 30.859
       },
       {
         "id": "moltres_shadow",
         "rank": 4,
         "tier": "SS",
-        "edps": 27.736
-      },
-      {
-        "id": "salamence_mega",
-        "rank": 5,
-        "tier": "S",
-        "edps": 27.7
+        "edps": 30.396
       },
       {
         "id": "skarmory_mega",
-        "rank": 6,
-        "tier": "S",
-        "edps": 27.155
+        "rank": 5,
+        "tier": "SS",
+        "edps": 30.16
       },
       {
         "id": "salamence_shadow",
+        "rank": 6,
+        "tier": "SS",
+        "edps": 28.669
+      },
+      {
+        "id": "salamence_mega",
         "rank": 7,
         "tier": "S",
-        "edps": 26.978
+        "edps": 28.367
       },
       {
-        "id": "yveltal",
+        "id": "toucannon_shadow",
         "rank": 8,
         "tier": "S",
-        "edps": 25.258
+        "edps": 26.721
       },
       {
-        "id": "articuno_galarian",
+        "id": "enamorus_incarnate",
         "rank": 9,
         "tier": "A",
-        "edps": 24.434
+        "edps": 26.091
       },
       {
         "id": "charizard_mega_y",
         "rank": 10,
         "tier": "A",
-        "edps": 24.424
+        "edps": 26.088
       },
       {
-        "id": "toucannon_shadow",
+        "id": "yveltal",
         "rank": 11,
         "tier": "A",
-        "edps": 24.361
+        "edps": 25.979
+      },
+      {
+        "id": "staraptor_shadow",
+        "rank": 12,
+        "tier": "A",
+        "edps": 25.866
       },
       {
         "id": "moltres",
-        "rank": 12,
-        "tier": "A",
-        "edps": 24.22
-      },
-      {
-        "id": "lugia_shadow",
         "rank": 13,
         "tier": "A",
-        "edps": 24.206
+        "edps": 25.835
       },
       {
         "id": "ho_oh_shadow",
         "rank": 14,
         "tier": "A",
-        "edps": 23.834
+        "edps": 25.594
       },
       {
-        "id": "regigigas_shadow",
+        "id": "articuno_galarian",
         "rank": 16,
         "tier": "A",
-        "edps": 23.776
+        "edps": 25.381
       },
       {
-        "id": "salamence",
+        "id": "lugia_shadow",
         "rank": 17,
         "tier": "A",
-        "edps": 23.675
-      },
-      {
-        "id": "staraptor_shadow",
-        "rank": 18,
-        "tier": "A",
-        "edps": 23.574
+        "edps": 25.213
       },
       {
         "id": "zapdos_shadow",
-        "rank": 19,
+        "rank": 18,
         "tier": "A",
-        "edps": 23.515
-      },
-      {
-        "id": "enamorus_incarnate",
-        "rank": 21,
-        "tier": "A",
-        "edps": 23.298
+        "edps": 24.906
       },
       {
         "id": "pidgeot_mega",
-        "rank": 22,
+        "rank": 19,
         "tier": "A",
-        "edps": 23.248
+        "edps": 24.816
+      },
+      {
+        "id": "salamence",
+        "rank": 20,
+        "tier": "A",
+        "edps": 24.627
+      },
+      {
+        "id": "enamorus_therian",
+        "rank": 22,
+        "tier": "B",
+        "edps": 23.846
       },
       {
         "id": "toucannon",
         "rank": 23,
-        "tier": "A",
-        "edps": 22.442
-      },
-      {
-        "id": "enamorus_therian",
-        "rank": 24,
         "tier": "B",
-        "edps": 22.236
-      },
-      {
-        "id": "braviary",
-        "rank": 25,
-        "tier": "B",
-        "edps": 21.906
-      },
-      {
-        "id": "zacian_crowned_sword",
-        "rank": 26,
-        "tier": "B",
-        "edps": 21.728
+        "edps": 23.644
       },
       {
         "id": "blaziken_mega",
-        "rank": 27,
+        "rank": 24,
         "tier": "B",
-        "edps": 21.446
+        "edps": 23.384
       },
       {
-        "id": "staraptor",
-        "rank": 28,
+        "id": "zacian_crowned_sword",
+        "rank": 25,
         "tier": "B",
-        "edps": 21.271
+        "edps": 23.335
+      },
+      {
+        "id": "regigigas_shadow",
+        "rank": 26,
+        "tier": "B",
+        "edps": 23.334
       },
       {
         "id": "tornadus_therian",
+        "rank": 27,
+        "tier": "B",
+        "edps": 23.017
+      },
+      {
+        "id": "tornadus_incarnate_shadow",
+        "rank": 28,
+        "tier": "B",
+        "edps": 22.969
+      },
+      {
+        "id": "staraptor",
         "rank": 29,
         "tier": "B",
-        "edps": 20.916
+        "edps": 22.77
       },
       {
-        "id": "regigigas",
+        "id": "braviary",
         "rank": 30,
-        "tier": "C",
-        "edps": 20.751
+        "tier": "B",
+        "edps": 22.631
       },
       {
-        "id": "hydreigon_shadow",
+        "id": "unfezant_shadow",
         "rank": 31,
-        "tier": "C",
-        "edps": 20.735
+        "tier": "B",
+        "edps": 22.15
       },
       {
         "id": "ho_oh",
         "rank": 32,
         "tier": "C",
-        "edps": 20.63
-      },
-      {
-        "id": "moltres_galarian",
-        "rank": 33,
-        "tier": "C",
-        "edps": 20.521
-      },
-      {
-        "id": "zapdos",
-        "rank": 34,
-        "tier": "C",
-        "edps": 20.414
+        "edps": 21.76
       },
       {
         "id": "braviary_hisuian",
+        "rank": 33,
+        "tier": "C",
+        "edps": 21.722
+      },
+      {
+        "id": "honchkrow_shadow",
+        "rank": 34,
+        "tier": "C",
+        "edps": 21.57
+      },
+      {
+        "id": "charizard_shadow",
         "rank": 35,
         "tier": "C",
-        "edps": 20.326
+        "edps": 21.487
+      },
+      {
+        "id": "vikavolt_shadow",
+        "rank": 36,
+        "tier": "C",
+        "edps": 21.292
+      },
+      {
+        "id": "zapdos",
+        "rank": 37,
+        "tier": "C",
+        "edps": 21.19
       },
       {
         "id": "zapdos_galarian",
-        "rank": 36,
-        "tier": "C",
-        "edps": 20.258
-      },
-      {
-        "id": "unfezant_shadow",
-        "rank": 37,
-        "tier": "C",
-        "edps": 20.212
-      },
-      {
-        "id": "tornadus_incarnate_shadow",
         "rank": 38,
         "tier": "C",
-        "edps": 20.073
+        "edps": 21.1
       },
       {
         "id": "charizard_mega_x",
         "rank": 39,
         "tier": "C",
-        "edps": 19.996
+        "edps": 21.018
       },
       {
-        "id": "lugia",
+        "id": "moltres_galarian",
         "rank": 40,
         "tier": "C",
-        "edps": 19.787
+        "edps": 21.005
       },
       {
-        "id": "honchkrow_shadow",
+        "id": "regigigas",
         "rank": 41,
         "tier": "C",
-        "edps": 19.747
-      },
-      {
-        "id": "vikavolt_shadow",
-        "rank": 42,
-        "tier": "C",
-        "edps": 19.201
-      },
-      {
-        "id": "charizard_shadow",
-        "rank": 43,
-        "tier": "D",
-        "edps": 19.121
-      },
-      {
-        "id": "honchkrow",
-        "rank": 44,
-        "tier": "D",
-        "edps": 18.584
-      },
-      {
-        "id": "lunala",
-        "rank": 45,
-        "tier": "D",
-        "edps": 18.469
-      },
-      {
-        "id": "dragonite_mega",
-        "rank": 46,
-        "tier": "D",
-        "edps": 18.394
-      },
-      {
-        "id": "unfezant",
-        "rank": 47,
-        "tier": "D",
-        "edps": 18.391
+        "edps": 20.724
       },
       {
         "id": "tornadus_incarnate",
+        "rank": 42,
+        "tier": "C",
+        "edps": 20.251
+      },
+      {
+        "id": "talonflame_shadow",
+        "rank": 43,
+        "tier": "D",
+        "edps": 20.17
+      },
+      {
+        "id": "swanna_shadow",
+        "rank": 44,
+        "tier": "D",
+        "edps": 20.06
+      },
+      {
+        "id": "lugia",
+        "rank": 45,
+        "tier": "D",
+        "edps": 20.009
+      },
+      {
+        "id": "honchkrow",
+        "rank": 46,
+        "tier": "D",
+        "edps": 19.761
+      },
+      {
+        "id": "hydreigon_shadow",
+        "rank": 47,
+        "tier": "D",
+        "edps": 19.719
+      },
+      {
+        "id": "flamigo",
         "rank": 48,
         "tier": "D",
-        "edps": 18.242
+        "edps": 19.495
       },
       {
-        "id": "hydreigon",
+        "id": "unfezant",
         "rank": 49,
         "tier": "D",
-        "edps": 18.108
+        "edps": 19.469
       },
       {
-        "id": "bombirdier",
+        "id": "dragonite_mega",
         "rank": 50,
         "tier": "D",
-        "edps": 17.851
+        "edps": 19.37
       }
     ],
     "psychic": [
@@ -2987,289 +2981,289 @@
         "id": "mewtwo_mega_y",
         "rank": 1,
         "tier": "SSSSS",
-        "edps": 41.609
+        "edps": 41.76
       },
       {
         "id": "mewtwo_mega_x",
         "rank": 2,
         "tier": "SSSSS",
-        "edps": 34.843
+        "edps": 35.472
       },
       {
         "id": "mewtwo_shadow",
         "rank": 3,
         "tier": "SSSSS",
-        "edps": 28.943
+        "edps": 30.049
       },
       {
         "id": "alakazam_mega",
         "rank": 4,
-        "tier": "SSSSS",
-        "edps": 25.788
-      },
-      {
-        "id": "mewtwo",
-        "rank": 5,
         "tier": "SSSS",
-        "edps": 25.588
+        "edps": 27.065
       },
       {
         "id": "latios_mega",
+        "rank": 5,
+        "tier": "SSS",
+        "edps": 26.034
+      },
+      {
+        "id": "mewtwo",
         "rank": 6,
-        "tier": "SSSS",
-        "edps": 25.21
+        "tier": "SSS",
+        "edps": 25.949
       },
       {
         "id": "gallade_mega",
         "rank": 7,
-        "tier": "SSSS",
-        "edps": 24.732
+        "tier": "SSS",
+        "edps": 25.865
       },
       {
         "id": "gardevoir_mega",
         "rank": 8,
-        "tier": "SSSS",
-        "edps": 24.728
+        "tier": "SSS",
+        "edps": 25.818
       },
       {
         "id": "delphox_mega",
         "rank": 9,
-        "tier": "SSSS",
-        "edps": 24.691
+        "tier": "SSS",
+        "edps": 25.697
       },
       {
         "id": "lugia_shadow",
         "rank": 10,
-        "tier": "SSSS",
-        "edps": 24.403
+        "tier": "SSS",
+        "edps": 25.37
       },
       {
         "id": "articuno_galarian",
         "rank": 11,
-        "tier": "SSSS",
-        "edps": 23.744
-      },
-      {
-        "id": "metagross_mega",
-        "rank": 13,
         "tier": "SSS",
-        "edps": 23.419
+        "edps": 24.609
       },
       {
         "id": "latios_shadow",
+        "rank": 13,
+        "tier": "SS",
+        "edps": 23.979
+      },
+      {
+        "id": "ho_oh_shadow",
         "rank": 14,
-        "tier": "SSS",
-        "edps": 23.1
+        "tier": "SS",
+        "edps": 23.874
       },
       {
-        "id": "hoopa_unbound",
-        "rank": 15,
-        "tier": "SSS",
-        "edps": 23.027
-      },
-      {
-        "id": "malamar_mega",
+        "id": "metagross_mega",
         "rank": 16,
-        "tier": "SSS",
-        "edps": 22.898
+        "tier": "SS",
+        "edps": 23.769
       },
       {
-        "id": "latias_mega",
+        "id": "necrozma_dusk_mane",
         "rank": 17,
-        "tier": "SSS",
-        "edps": 22.688
+        "tier": "SS",
+        "edps": 23.391
       },
       {
         "id": "metagross_shadow",
         "rank": 18,
-        "tier": "SSS",
-        "edps": 22.522
-      },
-      {
-        "id": "necrozma_dusk_mane",
-        "rank": 19,
         "tier": "SS",
-        "edps": 22.313
-      },
-      {
-        "id": "ho_oh_shadow",
-        "rank": 20,
-        "tier": "SS",
-        "edps": 22.237
-      },
-      {
-        "id": "regigigas_shadow",
-        "rank": 22,
-        "tier": "SS",
-        "edps": 22.05
-      },
-      {
-        "id": "lunala",
-        "rank": 23,
-        "tier": "SS",
-        "edps": 21.624
+        "edps": 23.384
       },
       {
         "id": "necrozma_dawn_wings",
-        "rank": 24,
+        "rank": 19,
         "tier": "SS",
-        "edps": 21.488
+        "edps": 23.11
       },
       {
-        "id": "enamorus_therian",
-        "rank": 25,
+        "id": "latias_mega",
+        "rank": 20,
         "tier": "SS",
-        "edps": 21.266
-      },
-      {
-        "id": "starmie_mega",
-        "rank": 26,
-        "tier": "SS",
-        "edps": 20.769
-      },
-      {
-        "id": "deoxys",
-        "rank": 27,
-        "tier": "S",
-        "edps": 20.757
+        "edps": 22.952
       },
       {
         "id": "enamorus_incarnate",
+        "rank": 21,
+        "tier": "SS",
+        "edps": 22.747
+      },
+      {
+        "id": "deoxys",
+        "rank": 22,
+        "tier": "SS",
+        "edps": 22.726
+      },
+      {
+        "id": "enamorus_therian",
+        "rank": 23,
+        "tier": "SS",
+        "edps": 22.636
+      },
+      {
+        "id": "hoopa_unbound",
+        "rank": 24,
+        "tier": "SS",
+        "edps": 22.521
+      },
+      {
+        "id": "malamar_mega",
+        "rank": 25,
+        "tier": "SS",
+        "edps": 22.457
+      },
+      {
+        "id": "lunala",
+        "rank": 26,
+        "tier": "SS",
+        "edps": 22.151
+      },
+      {
+        "id": "gengar_mega",
+        "rank": 27,
+        "tier": "S",
+        "edps": 21.794
+      },
+      {
+        "id": "gallade_shadow",
         "rank": 28,
         "tier": "S",
-        "edps": 20.743
+        "edps": 21.7
       },
       {
-        "id": "latias_shadow",
+        "id": "regigigas_shadow",
         "rank": 29,
         "tier": "S",
-        "edps": 20.508
+        "edps": 21.557
       },
       {
-        "id": "exeggutor_shadow",
+        "id": "starmie_mega",
         "rank": 30,
         "tier": "S",
-        "edps": 20.383
+        "edps": 21.397
       },
       {
         "id": "gardevoir_shadow",
         "rank": 31,
         "tier": "S",
-        "edps": 20.243
-      },
-      {
-        "id": "gallade_shadow",
-        "rank": 32,
-        "tier": "S",
-        "edps": 20.243
-      },
-      {
-        "id": "latios",
-        "rank": 33,
-        "tier": "S",
-        "edps": 20.055
-      },
-      {
-        "id": "lugia",
-        "rank": 34,
-        "tier": "S",
-        "edps": 19.882
+        "edps": 21.372
       },
       {
         "id": "alakazam_shadow",
+        "rank": 32,
+        "tier": "S",
+        "edps": 21.341
+      },
+      {
+        "id": "latias_shadow",
+        "rank": 33,
+        "tier": "S",
+        "edps": 21.125
+      },
+      {
+        "id": "hoopa_confined",
+        "rank": 34,
+        "tier": "S",
+        "edps": 20.959
+      },
+      {
+        "id": "latios",
         "rank": 35,
         "tier": "S",
-        "edps": 19.838
+        "edps": 20.629
       },
       {
         "id": "deoxys_speed",
         "rank": 36,
-        "tier": "S",
-        "edps": 19.76
-      },
-      {
-        "id": "hoopa_confined",
-        "rank": 37,
-        "tier": "S",
-        "edps": 19.53
-      },
-      {
-        "id": "metagross",
-        "rank": 38,
         "tier": "A",
-        "edps": 19.453
-      },
-      {
-        "id": "gengar_mega",
-        "rank": 39,
-        "tier": "A",
-        "edps": 19.427
+        "edps": 20.376
       },
       {
         "id": "ho_oh",
-        "rank": 40,
+        "rank": 37,
         "tier": "A",
-        "edps": 19.28
+        "edps": 20.347
       },
       {
-        "id": "regigigas",
-        "rank": 41,
+        "id": "lugia",
+        "rank": 38,
         "tier": "A",
-        "edps": 19.219
-      },
-      {
-        "id": "yveltal",
-        "rank": 42,
-        "tier": "A",
-        "edps": 19.049
-      },
-      {
-        "id": "slowbro_mega",
-        "rank": 43,
-        "tier": "A",
-        "edps": 18.944
-      },
-      {
-        "id": "braviary_hisuian",
-        "rank": 44,
-        "tier": "A",
-        "edps": 18.939
+        "edps": 20.186
       },
       {
         "id": "delphox_shadow",
-        "rank": 45,
+        "rank": 39,
         "tier": "A",
-        "edps": 18.923
+        "edps": 20.07
       },
       {
-        "id": "tapu_lele",
-        "rank": 46,
+        "id": "metagross",
+        "rank": 40,
         "tier": "A",
-        "edps": 18.705
+        "edps": 20.001
+      },
+      {
+        "id": "braviary_hisuian",
+        "rank": 41,
+        "tier": "A",
+        "edps": 19.838
+      },
+      {
+        "id": "exeggutor_shadow",
+        "rank": 42,
+        "tier": "A",
+        "edps": 19.694
       },
       {
         "id": "espeon",
-        "rank": 47,
+        "rank": 43,
         "tier": "A",
-        "edps": 18.594
+        "edps": 19.55
       },
       {
-        "id": "meloetta_aria",
-        "rank": 48,
+        "id": "tapu_lele",
+        "rank": 44,
         "tier": "A",
-        "edps": 18.501
+        "edps": 19.431
+      },
+      {
+        "id": "yveltal",
+        "rank": 45,
+        "tier": "B",
+        "edps": 19.281
+      },
+      {
+        "id": "slowbro_mega",
+        "rank": 46,
+        "tier": "B",
+        "edps": 19.089
       },
       {
         "id": "alakazam",
-        "rank": 49,
-        "tier": "A",
-        "edps": 18.209
+        "rank": 47,
+        "tier": "B",
+        "edps": 19.068
       },
       {
-        "id": "necrozma",
+        "id": "landorus_therian",
+        "rank": 48,
+        "tier": "B",
+        "edps": 19.009
+      },
+      {
+        "id": "regigigas",
+        "rank": 49,
+        "tier": "B",
+        "edps": 18.907
+      },
+      {
+        "id": "gallade",
         "rank": 50,
         "tier": "B",
-        "edps": 17.991
+        "edps": 18.79
       }
     ],
     "bug": [
@@ -3277,597 +3271,597 @@
         "id": "heracross_mega",
         "rank": 1,
         "tier": "SS",
-        "edps": 25.125
+        "edps": 25.614
       },
       {
         "id": "beedrill_mega",
         "rank": 2,
         "tier": "SS",
-        "edps": 24.482
+        "edps": 25.048
       },
       {
         "id": "regigigas_shadow",
         "rank": 3,
         "tier": "S",
-        "edps": 22.839
+        "edps": 23.421
       },
       {
         "id": "pinsir_mega",
         "rank": 4,
         "tier": "S",
-        "edps": 22.416
+        "edps": 22.78
       },
       {
         "id": "scizor_mega",
         "rank": 5,
         "tier": "S",
-        "edps": 21.046
+        "edps": 21.753
       },
       {
         "id": "vikavolt_shadow",
         "rank": 6,
         "tier": "A",
-        "edps": 20.315
-      },
-      {
-        "id": "volcarona",
-        "rank": 7,
-        "tier": "A",
-        "edps": 20.127
-      },
-      {
-        "id": "regigigas",
-        "rank": 8,
-        "tier": "A",
-        "edps": 19.941
+        "edps": 21.579
       },
       {
         "id": "scizor_shadow",
+        "rank": 7,
+        "tier": "A",
+        "edps": 21.036
+      },
+      {
+        "id": "volcarona",
+        "rank": 8,
+        "tier": "A",
+        "edps": 20.757
+      },
+      {
+        "id": "regigigas",
         "rank": 9,
         "tier": "A",
-        "edps": 19.372
-      },
-      {
-        "id": "metagross_mega",
-        "rank": 10,
-        "tier": "A",
-        "edps": 19.264
-      },
-      {
-        "id": "sceptile_mega",
-        "rank": 11,
-        "tier": "A",
-        "edps": 19.089
+        "edps": 20.323
       },
       {
         "id": "pinsir_shadow",
+        "rank": 10,
+        "tier": "A",
+        "edps": 20.11
+      },
+      {
+        "id": "golisopod_shadow",
+        "rank": 11,
+        "tier": "A",
+        "edps": 19.942
+      },
+      {
+        "id": "metagross_mega",
         "rank": 12,
         "tier": "A",
-        "edps": 19.043
+        "edps": 19.817
+      },
+      {
+        "id": "escavalier_shadow",
+        "rank": 13,
+        "tier": "A",
+        "edps": 19.744
       },
       {
         "id": "metagross_shadow",
-        "rank": 13,
+        "rank": 14,
         "tier": "A",
-        "edps": 18.693
+        "edps": 19.704
+      },
+      {
+        "id": "sceptile_mega",
+        "rank": 15,
+        "tier": "A",
+        "edps": 19.607
       },
       {
         "id": "genesect_burn",
-        "rank": 14,
+        "rank": 16,
         "tier": "A",
-        "edps": 18.583
+        "edps": 19.54
       },
       {
         "id": "genesect_chill",
-        "rank": 15,
+        "rank": 17,
         "tier": "A",
-        "edps": 18.583
+        "edps": 19.54
       },
       {
         "id": "genesect_douse",
-        "rank": 16,
+        "rank": 18,
         "tier": "A",
-        "edps": 18.583
+        "edps": 19.54
       },
       {
         "id": "genesect",
-        "rank": 17,
+        "rank": 19,
         "tier": "A",
-        "edps": 18.583
+        "edps": 19.54
       },
       {
         "id": "genesect_shock",
-        "rank": 18,
-        "tier": "A",
-        "edps": 18.583
-      },
-      {
-        "id": "vikavolt",
-        "rank": 19,
-        "tier": "A",
-        "edps": 17.955
-      },
-      {
-        "id": "kleavor",
         "rank": 20,
-        "tier": "B",
-        "edps": 17.935
+        "tier": "A",
+        "edps": 19.54
       },
       {
         "id": "kartana",
         "rank": 21,
-        "tier": "B",
-        "edps": 17.808
+        "tier": "A",
+        "edps": 19.303
+      },
+      {
+        "id": "vikavolt",
+        "rank": 22,
+        "tier": "A",
+        "edps": 18.792
       },
       {
         "id": "scyther_shadow",
-        "rank": 22,
-        "tier": "B",
-        "edps": 17.714
-      },
-      {
-        "id": "escavalier_shadow",
         "rank": 23,
         "tier": "B",
-        "edps": 17.337
+        "edps": 18.572
       },
       {
-        "id": "heracross",
+        "id": "kleavor",
         "rank": 24,
         "tier": "B",
-        "edps": 17.172
-      },
-      {
-        "id": "yanmega",
-        "rank": 25,
-        "tier": "B",
-        "edps": 17.082
-      },
-      {
-        "id": "centiskorch",
-        "rank": 26,
-        "tier": "B",
-        "edps": 17.044
+        "edps": 18.444
       },
       {
         "id": "scizor",
-        "rank": 27,
+        "rank": 25,
         "tier": "B",
-        "edps": 17.016
+        "edps": 18.14
+      },
+      {
+        "id": "absol_mega",
+        "rank": 26,
+        "tier": "B",
+        "edps": 17.947
       },
       {
         "id": "pinsir",
+        "rank": 27,
+        "tier": "B",
+        "edps": 17.539
+      },
+      {
+        "id": "yanmega",
         "rank": 28,
         "tier": "B",
-        "edps": 16.983
+        "edps": 17.493
+      },
+      {
+        "id": "centiskorch",
+        "rank": 29,
+        "tier": "B",
+        "edps": 17.468
+      },
+      {
+        "id": "heracross",
+        "rank": 30,
+        "tier": "B",
+        "edps": 17.436
+      },
+      {
+        "id": "escavalier",
+        "rank": 31,
+        "tier": "B",
+        "edps": 17.225
       },
       {
         "id": "golisopod",
-        "rank": 29,
+        "rank": 32,
         "tier": "B",
-        "edps": 16.737
-      },
-      {
-        "id": "crustle_shadow",
-        "rank": 30,
-        "tier": "B",
-        "edps": 16.222
+        "edps": 17.113
       },
       {
         "id": "xerneas",
-        "rank": 31,
-        "tier": "C",
-        "edps": 16.216
+        "rank": 33,
+        "tier": "B",
+        "edps": 16.997
       },
       {
         "id": "metagross",
-        "rank": 32,
-        "tier": "C",
-        "edps": 16.142
+        "rank": 34,
+        "tier": "B",
+        "edps": 16.812
       },
       {
         "id": "heatran_shadow",
-        "rank": 33,
-        "tier": "C",
-        "edps": 16.128
-      },
-      {
-        "id": "frosmoth",
-        "rank": 34,
-        "tier": "C",
-        "edps": 16.041
-      },
-      {
-        "id": "scyther",
         "rank": 35,
         "tier": "C",
-        "edps": 15.876
-      },
-      {
-        "id": "pheromosa",
-        "rank": 36,
-        "tier": "C",
-        "edps": 15.873
-      },
-      {
-        "id": "scolipede_shadow",
-        "rank": 37,
-        "tier": "C",
-        "edps": 15.863
-      },
-      {
-        "id": "sneasler_shadow",
-        "rank": 38,
-        "tier": "C",
-        "edps": 15.78
-      },
-      {
-        "id": "ho_oh_shadow",
-        "rank": 39,
-        "tier": "C",
-        "edps": 15.719
+        "edps": 16.767
       },
       {
         "id": "starmie_mega",
+        "rank": 36,
+        "tier": "C",
+        "edps": 16.763
+      },
+      {
+        "id": "accelgor_shadow",
+        "rank": 37,
+        "tier": "C",
+        "edps": 16.704
+      },
+      {
+        "id": "crustle_shadow",
+        "rank": 38,
+        "tier": "C",
+        "edps": 16.687
+      },
+      {
+        "id": "frosmoth",
+        "rank": 39,
+        "tier": "C",
+        "edps": 16.479
+      },
+      {
+        "id": "durant",
+        "rank": 40,
+        "tier": "C",
+        "edps": 16.401
+      },
+      {
+        "id": "scyther",
         "rank": 41,
         "tier": "C",
-        "edps": 15.708
+        "edps": 16.33
       },
       {
         "id": "kingambit",
         "rank": 42,
         "tier": "C",
-        "edps": 15.667
+        "edps": 16.308
       },
       {
-        "id": "escavalier",
+        "id": "ho_oh_shadow",
         "rank": 43,
         "tier": "C",
-        "edps": 15.574
+        "edps": 16.234
       },
       {
-        "id": "accelgor_shadow",
-        "rank": 44,
-        "tier": "C",
-        "edps": 15.323
-      },
-      {
-        "id": "durant",
+        "id": "pheromosa",
         "rank": 45,
         "tier": "C",
-        "edps": 15.216
-      },
-      {
-        "id": "absol_mega",
-        "rank": 46,
-        "tier": "C",
-        "edps": 14.929
-      },
-      {
-        "id": "samurott_shadow",
-        "rank": 47,
-        "tier": "C",
-        "edps": 14.824
-      },
-      {
-        "id": "leavanny",
-        "rank": 48,
-        "tier": "C",
-        "edps": 14.824
+        "edps": 16.217
       },
       {
         "id": "galvantula_shadow",
-        "rank": 49,
+        "rank": 46,
         "tier": "C",
-        "edps": 14.401
+        "edps": 16.131
       },
       {
-        "id": "sceptile_shadow",
+        "id": "scolipede_shadow",
+        "rank": 47,
+        "tier": "C",
+        "edps": 16.122
+      },
+      {
+        "id": "samurott_shadow",
+        "rank": 48,
+        "tier": "C",
+        "edps": 15.579
+      },
+      {
+        "id": "lokix",
+        "rank": 49,
+        "tier": "C",
+        "edps": 15.417
+      },
+      {
+        "id": "leavanny",
         "rank": 50,
-        "tier": "D",
-        "edps": 14.296
+        "tier": "C",
+        "edps": 15.328
       }
     ],
     "rock": [
       {
-        "id": "rhyperior_shadow",
+        "id": "diancie_mega",
         "rank": 1,
         "tier": "SS",
-        "edps": 26.035
+        "edps": 26.677
       },
       {
-        "id": "diancie_mega",
+        "id": "rhyperior_shadow",
         "rank": 2,
         "tier": "SS",
-        "edps": 25.156
+        "edps": 26.119
       },
       {
         "id": "tyranitar_mega",
         "rank": 3,
         "tier": "SS",
-        "edps": 24.141
+        "edps": 24.566
       },
       {
-        "id": "regigigas_shadow",
+        "id": "gigalith_shadow",
         "rank": 4,
         "tier": "S",
-        "edps": 23.083
+        "edps": 23.933
       },
       {
         "id": "aerodactyl_mega",
         "rank": 5,
         "tier": "S",
-        "edps": 23.017
-      },
-      {
-        "id": "gigalith_shadow",
-        "rank": 6,
-        "tier": "S",
-        "edps": 22.668
-      },
-      {
-        "id": "rhyperior",
-        "rank": 7,
-        "tier": "S",
-        "edps": 22.273
-      },
-      {
-        "id": "tyranitar_shadow",
-        "rank": 8,
-        "tier": "S",
-        "edps": 22.196
+        "edps": 23.754
       },
       {
         "id": "rampardos_shadow",
-        "rank": 9,
+        "rank": 6,
         "tier": "S",
-        "edps": 22.046
+        "edps": 23.651
       },
       {
-        "id": "rayquaza_mega",
-        "rank": 10,
+        "id": "regigigas_shadow",
+        "rank": 7,
         "tier": "S",
-        "edps": 22.004
+        "edps": 23.47
       },
       {
         "id": "tyrantrum_shadow",
-        "rank": 11,
+        "rank": 8,
         "tier": "S",
-        "edps": 21.707
+        "edps": 22.746
       },
       {
-        "id": "terrakion",
-        "rank": 12,
+        "id": "tyranitar_shadow",
+        "rank": 9,
         "tier": "S",
-        "edps": 20.397
+        "edps": 22.675
+      },
+      {
+        "id": "rhyperior",
+        "rank": 10,
+        "tier": "S",
+        "edps": 22.287
       },
       {
         "id": "glimmora",
-        "rank": 13,
-        "tier": "A",
-        "edps": 20.388
+        "rank": 11,
+        "tier": "S",
+        "edps": 21.842
+      },
+      {
+        "id": "rayquaza_mega",
+        "rank": 12,
+        "tier": "S",
+        "edps": 21.73
       },
       {
         "id": "rampardos",
-        "rank": 14,
-        "tier": "A",
-        "edps": 20.352
-      },
-      {
-        "id": "aurorus_shadow",
-        "rank": 15,
-        "tier": "A",
-        "edps": 20.344
-      },
-      {
-        "id": "regigigas",
-        "rank": 16,
-        "tier": "A",
-        "edps": 20.139
+        "rank": 13,
+        "tier": "S",
+        "edps": 21.176
       },
       {
         "id": "gigalith",
-        "rank": 17,
+        "rank": 14,
         "tier": "A",
-        "edps": 20.027
+        "edps": 20.906
       },
       {
-        "id": "landorus_incarnate_shadow",
-        "rank": 18,
+        "id": "terrakion",
+        "rank": 15,
         "tier": "A",
-        "edps": 19.719
-      },
-      {
-        "id": "tyrantrum",
-        "rank": 19,
-        "tier": "A",
-        "edps": 19.31
-      },
-      {
-        "id": "tyranitar",
-        "rank": 20,
-        "tier": "A",
-        "edps": 19.239
+        "edps": 20.846
       },
       {
         "id": "aggron_shadow",
-        "rank": 21,
+        "rank": 16,
         "tier": "A",
-        "edps": 19.201
+        "edps": 20.604
+      },
+      {
+        "id": "regigigas",
+        "rank": 17,
+        "tier": "A",
+        "edps": 20.403
+      },
+      {
+        "id": "tyrantrum",
+        "rank": 18,
+        "tier": "A",
+        "edps": 20.026
+      },
+      {
+        "id": "aurorus_shadow",
+        "rank": 19,
+        "tier": "A",
+        "edps": 19.979
       },
       {
         "id": "aerodactyl_shadow",
+        "rank": 20,
+        "tier": "A",
+        "edps": 19.809
+      },
+      {
+        "id": "landorus_incarnate_shadow",
+        "rank": 21,
+        "tier": "A",
+        "edps": 19.718
+      },
+      {
+        "id": "tyranitar",
         "rank": 22,
         "tier": "A",
-        "edps": 18.873
+        "edps": 19.563
       },
       {
         "id": "golem_alolan_shadow",
         "rank": 23,
         "tier": "A",
-        "edps": 18.681
-      },
-      {
-        "id": "golem_shadow",
-        "rank": 24,
-        "tier": "A",
-        "edps": 18.681
-      },
-      {
-        "id": "heracross_mega",
-        "rank": 25,
-        "tier": "A",
-        "edps": 18.53
+        "edps": 19.563
       },
       {
         "id": "omastar_shadow",
-        "rank": 26,
+        "rank": 24,
         "tier": "A",
-        "edps": 18.38
+        "edps": 19.42
       },
       {
-        "id": "stonjourner",
-        "rank": 27,
+        "id": "golem_shadow",
+        "rank": 25,
         "tier": "A",
-        "edps": 18.309
-      },
-      {
-        "id": "kyurem_black",
-        "rank": 28,
-        "tier": "A",
-        "edps": 18.121
+        "edps": 19.147
       },
       {
         "id": "aggron_mega",
-        "rank": 29,
+        "rank": 26,
         "tier": "A",
-        "edps": 18.118
-      },
-      {
-        "id": "crustle_shadow",
-        "rank": 30,
-        "tier": "A",
-        "edps": 18.033
-      },
-      {
-        "id": "nihilego",
-        "rank": 31,
-        "tier": "A",
-        "edps": 17.801
-      },
-      {
-        "id": "kyurem_white",
-        "rank": 32,
-        "tier": "A",
-        "edps": 17.795
-      },
-      {
-        "id": "aurorus",
-        "rank": 33,
-        "tier": "A",
-        "edps": 17.758
+        "edps": 18.741
       },
       {
         "id": "starmie_mega",
-        "rank": 34,
+        "rank": 27,
         "tier": "A",
-        "edps": 17.536
+        "edps": 18.664
+      },
+      {
+        "id": "stonjourner",
+        "rank": 28,
+        "tier": "A",
+        "edps": 18.503
+      },
+      {
+        "id": "crustle_shadow",
+        "rank": 29,
+        "tier": "A",
+        "edps": 18.399
       },
       {
         "id": "archeops_shadow",
-        "rank": 35,
+        "rank": 30,
         "tier": "A",
-        "edps": 17.453
+        "edps": 18.303
       },
       {
-        "id": "hippowdon_shadow",
+        "id": "kyurem_black",
+        "rank": 31,
+        "tier": "A",
+        "edps": 18.108
+      },
+      {
+        "id": "aggron",
+        "rank": 32,
+        "tier": "B",
+        "edps": 17.811
+      },
+      {
+        "id": "nihilego",
+        "rank": 33,
+        "tier": "B",
+        "edps": 17.799
+      },
+      {
+        "id": "heracross_mega",
+        "rank": 34,
+        "tier": "B",
+        "edps": 17.753
+      },
+      {
+        "id": "reshiram_shadow",
+        "rank": 35,
+        "tier": "B",
+        "edps": 17.718
+      },
+      {
+        "id": "aurorus",
         "rank": 36,
         "tier": "B",
-        "edps": 17.354
+        "edps": 17.69
       },
       {
         "id": "excadrill_shadow",
         "rank": 37,
         "tier": "B",
-        "edps": 17.289
+        "edps": 17.678
       },
       {
-        "id": "landorus_incarnate",
+        "id": "kyurem_white",
         "rank": 38,
         "tier": "B",
-        "edps": 17.147
+        "edps": 17.662
       },
       {
-        "id": "ampharos_mega",
+        "id": "regirock_shadow",
         "rank": 39,
         "tier": "B",
-        "edps": 17.125
+        "edps": 17.642
       },
       {
         "id": "blastoise_mega",
         "rank": 40,
         "tier": "B",
-        "edps": 17.125
+        "edps": 17.592
       },
       {
-        "id": "regirock_shadow",
+        "id": "ampharos_mega",
         "rank": 41,
         "tier": "B",
-        "edps": 17.05
+        "edps": 17.49
       },
       {
-        "id": "reshiram_shadow",
+        "id": "landorus_incarnate",
         "rank": 42,
         "tier": "B",
-        "edps": 17.023
-      },
-      {
-        "id": "aggron",
-        "rank": 43,
-        "tier": "B",
-        "edps": 16.855
+        "edps": 17.356
       },
       {
         "id": "aerodactyl",
+        "rank": 43,
+        "tier": "B",
+        "edps": 17.336
+      },
+      {
+        "id": "hippowdon_shadow",
         "rank": 44,
         "tier": "B",
-        "edps": 16.843
-      },
-      {
-        "id": "ursaluna_shadow",
-        "rank": 45,
-        "tier": "B",
-        "edps": 16.6
-      },
-      {
-        "id": "zapdos_shadow",
-        "rank": 46,
-        "tier": "B",
-        "edps": 16.455
+        "edps": 17.211
       },
       {
         "id": "stakataka",
+        "rank": 45,
+        "tier": "B",
+        "edps": 17.137
+      },
+      {
+        "id": "omastar",
+        "rank": 46,
+        "tier": "B",
+        "edps": 16.778
+      },
+      {
+        "id": "golem_alolan",
         "rank": 47,
         "tier": "B",
-        "edps": 16.422
+        "edps": 16.754
       },
       {
-        "id": "glalie_mega",
+        "id": "zapdos_shadow",
         "rank": 48,
         "tier": "B",
-        "edps": 16.273
+        "edps": 16.748
       },
       {
-        "id": "kleavor",
+        "id": "ursaluna_shadow",
         "rank": 49,
         "tier": "B",
-        "edps": 16.202
+        "edps": 16.69
       },
       {
-        "id": "golem",
+        "id": "carracosta_shadow",
         "rank": 50,
         "tier": "B",
-        "edps": 16.158
+        "edps": 16.686
       }
     ],
     "ghost": [
@@ -3875,289 +3869,289 @@
         "id": "necrozma_dawn_wings",
         "rank": 1,
         "tier": "SSS",
-        "edps": 28.116
+        "edps": 28.968
       },
       {
         "id": "mewtwo_mega_y",
         "rank": 2,
-        "tier": "SSS",
-        "edps": 27.229
+        "tier": "SS",
+        "edps": 27.4
       },
       {
         "id": "gengar_mega",
         "rank": 3,
-        "tier": "SSS",
-        "edps": 27.031
+        "tier": "SS",
+        "edps": 26.77
       },
       {
         "id": "mewtwo_mega_x",
         "rank": 4,
         "tier": "SS",
-        "edps": 26.366
+        "edps": 26.007
       },
       {
         "id": "darkrai_shadow",
         "rank": 5,
         "tier": "SS",
-        "edps": 23.306
+        "edps": 25.059
       },
       {
-        "id": "lunala",
+        "id": "chandelure_shadow",
         "rank": 6,
         "tier": "S",
-        "edps": 22.607
+        "edps": 23.444
       },
       {
         "id": "banette_mega",
         "rank": 7,
         "tier": "S",
-        "edps": 22.18
+        "edps": 23.138
       },
       {
         "id": "mewtwo_shadow",
         "rank": 8,
         "tier": "S",
-        "edps": 22.118
+        "edps": 22.862
       },
       {
-        "id": "chandelure_shadow",
+        "id": "lunala",
         "rank": 9,
         "tier": "S",
-        "edps": 21.599
-      },
-      {
-        "id": "kyurem_black",
-        "rank": 10,
-        "tier": "S",
-        "edps": 21.536
-      },
-      {
-        "id": "giratina_altered_shadow",
-        "rank": 11,
-        "tier": "S",
-        "edps": 20.931
+        "edps": 22.644
       },
       {
         "id": "alakazam_mega",
-        "rank": 12,
-        "tier": "A",
-        "edps": 20.763
-      },
-      {
-        "id": "giratina_origin",
-        "rank": 13,
-        "tier": "A",
-        "edps": 20.756
-      },
-      {
-        "id": "regigigas_shadow",
-        "rank": 14,
-        "tier": "A",
-        "edps": 20.749
-      },
-      {
-        "id": "dragapult",
-        "rank": 15,
-        "tier": "A",
-        "edps": 20.663
+        "rank": 10,
+        "tier": "S",
+        "edps": 21.771
       },
       {
         "id": "darkrai",
-        "rank": 16,
+        "rank": 11,
         "tier": "A",
-        "edps": 20.407
+        "edps": 21.617
+      },
+      {
+        "id": "kyurem_black",
+        "rank": 12,
+        "tier": "A",
+        "edps": 21.54
+      },
+      {
+        "id": "regigigas_shadow",
+        "rank": 13,
+        "tier": "A",
+        "edps": 21.436
       },
       {
         "id": "gholdengo",
-        "rank": 17,
+        "rank": 14,
         "tier": "A",
-        "edps": 20.395
-      },
-      {
-        "id": "gengar_shadow",
-        "rank": 18,
-        "tier": "A",
-        "edps": 20.239
-      },
-      {
-        "id": "gardevoir_mega",
-        "rank": 19,
-        "tier": "A",
-        "edps": 19.773
-      },
-      {
-        "id": "chandelure",
-        "rank": 20,
-        "tier": "A",
-        "edps": 19.605
-      },
-      {
-        "id": "hoopa_confined",
-        "rank": 21,
-        "tier": "A",
-        "edps": 19.446
-      },
-      {
-        "id": "mewtwo",
-        "rank": 22,
-        "tier": "A",
-        "edps": 19.247
-      },
-      {
-        "id": "necrozma_dusk_mane",
-        "rank": 23,
-        "tier": "A",
-        "edps": 19.242
-      },
-      {
-        "id": "hoopa_unbound",
-        "rank": 24,
-        "tier": "A",
-        "edps": 19.229
+        "edps": 21.424
       },
       {
         "id": "blacephalon",
+        "rank": 15,
+        "tier": "A",
+        "edps": 21.073
+      },
+      {
+        "id": "giratina_altered_shadow",
+        "rank": 16,
+        "tier": "A",
+        "edps": 21.064
+      },
+      {
+        "id": "dragapult",
+        "rank": 17,
+        "tier": "A",
+        "edps": 20.919
+      },
+      {
+        "id": "giratina_origin",
+        "rank": 18,
+        "tier": "A",
+        "edps": 20.884
+      },
+      {
+        "id": "chandelure",
+        "rank": 19,
+        "tier": "A",
+        "edps": 20.635
+      },
+      {
+        "id": "hoopa_unbound",
+        "rank": 20,
+        "tier": "A",
+        "edps": 20.513
+      },
+      {
+        "id": "gardevoir_mega",
+        "rank": 21,
+        "tier": "A",
+        "edps": 20.507
+      },
+      {
+        "id": "necrozma_dusk_mane",
+        "rank": 22,
+        "tier": "A",
+        "edps": 20.466
+      },
+      {
+        "id": "hoopa_confined",
+        "rank": 23,
+        "tier": "A",
+        "edps": 20.115
+      },
+      {
+        "id": "gengar_shadow",
+        "rank": 24,
+        "tier": "A",
+        "edps": 20.018
+      },
+      {
+        "id": "mewtwo",
         "rank": 25,
         "tier": "A",
-        "edps": 19.028
-      },
-      {
-        "id": "gengar",
-        "rank": 26,
-        "tier": "A",
-        "edps": 18.75
-      },
-      {
-        "id": "raikou_shadow",
-        "rank": 27,
-        "tier": "B",
-        "edps": 18.623
+        "edps": 19.682
       },
       {
         "id": "metagross_mega",
-        "rank": 28,
-        "tier": "B",
-        "edps": 18.533
-      },
-      {
-        "id": "annihilape_shadow",
-        "rank": 29,
-        "tier": "B",
-        "edps": 18.351
-      },
-      {
-        "id": "lucario_mega",
-        "rank": 30,
-        "tier": "B",
-        "edps": 18.235
+        "rank": 26,
+        "tier": "A",
+        "edps": 19.239
       },
       {
         "id": "metagross_shadow",
-        "rank": 31,
+        "rank": 27,
         "tier": "B",
-        "edps": 18.208
+        "edps": 19.13
       },
       {
-        "id": "dhelmise",
-        "rank": 32,
+        "id": "raikou_shadow",
+        "rank": 28,
         "tier": "B",
-        "edps": 18.162
-      },
-      {
-        "id": "polteageist",
-        "rank": 33,
-        "tier": "B",
-        "edps": 18.154
-      },
-      {
-        "id": "regigigas",
-        "rank": 35,
-        "tier": "B",
-        "edps": 18.1
-      },
-      {
-        "id": "trevenant_shadow",
-        "rank": 36,
-        "tier": "B",
-        "edps": 18.024
+        "edps": 19.062
       },
       {
         "id": "typhlosion_hisuian",
+        "rank": 29,
+        "tier": "B",
+        "edps": 18.873
+      },
+      {
+        "id": "polteageist",
+        "rank": 30,
+        "tier": "B",
+        "edps": 18.83
+      },
+      {
+        "id": "lucario_mega",
+        "rank": 32,
+        "tier": "B",
+        "edps": 18.719
+      },
+      {
+        "id": "dhelmise",
+        "rank": 33,
+        "tier": "B",
+        "edps": 18.685
+      },
+      {
+        "id": "regigigas",
+        "rank": 34,
+        "tier": "B",
+        "edps": 18.585
+      },
+      {
+        "id": "trevenant_shadow",
+        "rank": 35,
+        "tier": "B",
+        "edps": 18.562
+      },
+      {
+        "id": "gengar",
+        "rank": 36,
+        "tier": "B",
+        "edps": 18.47
+      },
+      {
+        "id": "mismagius_shadow",
         "rank": 37,
         "tier": "B",
-        "edps": 17.907
+        "edps": 18.378
       },
       {
         "id": "giratina_altered",
         "rank": 38,
         "tier": "B",
-        "edps": 17.896
+        "edps": 17.963
       },
       {
         "id": "skeledirge",
         "rank": 39,
         "tier": "B",
-        "edps": 17.506
+        "edps": 17.872
+      },
+      {
+        "id": "zoroark_hisuian",
+        "rank": 40,
+        "tier": "B",
+        "edps": 17.823
       },
       {
         "id": "drifblim_shadow",
-        "rank": 40,
-        "tier": "B",
-        "edps": 17.488
-      },
-      {
-        "id": "mismagius_shadow",
         "rank": 41,
         "tier": "B",
-        "edps": 17.372
+        "edps": 17.66
       },
       {
         "id": "sinistcha",
         "rank": 42,
         "tier": "B",
-        "edps": 17.069
+        "edps": 17.535
       },
       {
-        "id": "lopunny_mega",
+        "id": "annihilape_shadow",
         "rank": 44,
         "tier": "B",
-        "edps": 16.831
-      },
-      {
-        "id": "reuniclus_shadow",
-        "rank": 45,
-        "tier": "B",
-        "edps": 16.48
-      },
-      {
-        "id": "raikou",
-        "rank": 46,
-        "tier": "C",
-        "edps": 16.361
+        "edps": 17.535
       },
       {
         "id": "starmie_mega",
+        "rank": 45,
+        "tier": "B",
+        "edps": 17.532
+      },
+      {
+        "id": "reuniclus_shadow",
+        "rank": 46,
+        "tier": "B",
+        "edps": 17.179
+      },
+      {
+        "id": "alakazam_shadow",
         "rank": 47,
         "tier": "C",
-        "edps": 16.331
+        "edps": 17.106
+      },
+      {
+        "id": "gardevoir_shadow",
+        "rank": 48,
+        "tier": "C",
+        "edps": 17.084
       },
       {
         "id": "ceruledge",
-        "rank": 48,
-        "tier": "C",
-        "edps": 16.114
-      },
-      {
-        "id": "trevenant",
         "rank": 49,
         "tier": "C",
-        "edps": 16.022
+        "edps": 16.768
       },
       {
-        "id": "zoroark_hisuian",
+        "id": "raikou",
         "rank": 50,
         "tier": "C",
-        "edps": 15.954
+        "edps": 16.64
       }
     ],
     "dragon": [
@@ -4165,301 +4159,301 @@
         "id": "eternatus",
         "rank": 1,
         "tier": "SSS",
-        "edps": 32.793
+        "edps": 32.056
       },
       {
         "id": "rayquaza_mega",
         "rank": 2,
-        "tier": "SSS",
-        "edps": 32.686
+        "tier": "SS",
+        "edps": 31.446
       },
       {
         "id": "dragonite_mega",
         "rank": 3,
         "tier": "SS",
-        "edps": 30.515
-      },
-      {
-        "id": "kyurem_black",
-        "rank": 4,
-        "tier": "SS",
-        "edps": 30.284
+        "edps": 29.912
       },
       {
         "id": "garchomp_mega",
+        "rank": 4,
+        "tier": "SS",
+        "edps": 29.5
+      },
+      {
+        "id": "kyurem_black",
         "rank": 5,
         "tier": "SS",
-        "edps": 29.959
+        "edps": 29.27
       },
       {
         "id": "kyurem_white",
         "rank": 6,
         "tier": "SS",
-        "edps": 28.307
+        "edps": 27.471
       },
       {
         "id": "garchomp_shadow",
         "rank": 7,
         "tier": "S",
-        "edps": 26.862
-      },
-      {
-        "id": "haxorus_shadow",
-        "rank": 8,
-        "tier": "S",
-        "edps": 25.482
+        "edps": 26.156
       },
       {
         "id": "salamence_mega",
-        "rank": 9,
-        "tier": "A",
-        "edps": 25.439
+        "rank": 8,
+        "tier": "S",
+        "edps": 25.091
       },
       {
-        "id": "baxcalibur",
-        "rank": 10,
-        "tier": "A",
-        "edps": 24.764
+        "id": "haxorus_shadow",
+        "rank": 9,
+        "tier": "S",
+        "edps": 25.088
       },
       {
         "id": "palkia_shadow",
+        "rank": 10,
+        "tier": "S",
+        "edps": 24.499
+      },
+      {
+        "id": "dialga_shadow",
         "rank": 11,
         "tier": "A",
-        "edps": 24.748
-      },
-      {
-        "id": "regidrago",
-        "rank": 12,
-        "tier": "A",
-        "edps": 24.726
-      },
-      {
-        "id": "salamence_shadow",
-        "rank": 13,
-        "tier": "A",
-        "edps": 24.695
+        "edps": 24.453
       },
       {
         "id": "palkia_origin",
-        "rank": 14,
+        "rank": 12,
         "tier": "A",
-        "edps": 24.455
+        "edps": 24.221
+      },
+      {
+        "id": "dialga_origin",
+        "rank": 13,
+        "tier": "A",
+        "edps": 24.025
       },
       {
         "id": "zekrom_shadow",
-        "rank": 15,
+        "rank": 14,
         "tier": "A",
-        "edps": 24.428
+        "edps": 23.993
       },
       {
-        "id": "dragonite_shadow",
+        "id": "baxcalibur",
+        "rank": 15,
+        "tier": "A",
+        "edps": 23.833
+      },
+      {
+        "id": "salamence_shadow",
         "rank": 16,
         "tier": "A",
-        "edps": 24.312
+        "edps": 23.788
       },
       {
         "id": "latios_mega",
         "rank": 17,
         "tier": "A",
-        "edps": 23.984
+        "edps": 23.71
       },
       {
-        "id": "rayquaza",
+        "id": "regidrago",
         "rank": 18,
         "tier": "A",
-        "edps": 23.732
+        "edps": 23.599
       },
       {
-        "id": "dialga_shadow",
+        "id": "dragonite_shadow",
         "rank": 19,
         "tier": "A",
-        "edps": 23.591
+        "edps": 23.31
       },
       {
         "id": "reshiram_shadow",
         "rank": 20,
         "tier": "A",
-        "edps": 23.591
+        "edps": 23.168
       },
       {
-        "id": "dialga_origin",
+        "id": "rayquaza",
         "rank": 21,
         "tier": "A",
-        "edps": 23.443
-      },
-      {
-        "id": "garchomp",
-        "rank": 22,
-        "tier": "A",
-        "edps": 22.979
-      },
-      {
-        "id": "sceptile_mega",
-        "rank": 23,
-        "tier": "B",
-        "edps": 22.744
-      },
-      {
-        "id": "haxorus",
-        "rank": 24,
-        "tier": "B",
-        "edps": 22.7
-      },
-      {
-        "id": "latias_mega",
-        "rank": 25,
-        "tier": "B",
-        "edps": 22.695
+        "edps": 23.083
       },
       {
         "id": "groudon_primal",
+        "rank": 22,
+        "tier": "A",
+        "edps": 22.948
+      },
+      {
+        "id": "garchomp",
+        "rank": 23,
+        "tier": "A",
+        "edps": 22.542
+      },
+      {
+        "id": "latias_mega",
+        "rank": 24,
+        "tier": "A",
+        "edps": 22.486
+      },
+      {
+        "id": "regigigas_shadow",
+        "rank": 25,
+        "tier": "A",
+        "edps": 22.262
+      },
+      {
+        "id": "haxorus",
         "rank": 26,
         "tier": "B",
-        "edps": 22.601
+        "edps": 22.228
       },
       {
         "id": "latios_shadow",
         "rank": 27,
         "tier": "B",
-        "edps": 22.198
-      },
-      {
-        "id": "regigigas_shadow",
-        "rank": 28,
-        "tier": "B",
-        "edps": 22.019
+        "edps": 21.806
       },
       {
         "id": "dragapult",
-        "rank": 29,
+        "rank": 28,
         "tier": "B",
-        "edps": 21.979
+        "edps": 21.543
       },
       {
         "id": "palkia",
-        "rank": 30,
+        "rank": 29,
         "tier": "B",
-        "edps": 21.68
+        "edps": 21.532
       },
       {
-        "id": "kyurem",
+        "id": "dialga",
+        "rank": 30,
+        "tier": "B",
+        "edps": 21.493
+      },
+      {
+        "id": "sceptile_mega",
         "rank": 31,
         "tier": "B",
-        "edps": 21.483
+        "edps": 21.48
       },
       {
         "id": "salamence",
         "rank": 32,
         "tier": "B",
-        "edps": 21.47
+        "edps": 20.933
       },
       {
         "id": "zekrom",
         "rank": 33,
         "tier": "B",
-        "edps": 21.064
-      },
-      {
-        "id": "dragonite",
-        "rank": 34,
-        "tier": "B",
-        "edps": 20.96
+        "edps": 20.807
       },
       {
         "id": "hydreigon_shadow",
-        "rank": 35,
+        "rank": 34,
         "tier": "B",
-        "edps": 20.882
+        "edps": 20.733
       },
       {
-        "id": "dialga",
+        "id": "kyurem",
+        "rank": 35,
+        "tier": "B",
+        "edps": 20.663
+      },
+      {
+        "id": "dragonite",
         "rank": 36,
         "tier": "B",
-        "edps": 20.653
+        "edps": 20.575
       },
       {
         "id": "reshiram",
         "rank": 37,
         "tier": "B",
-        "edps": 20.653
+        "edps": 20.39
       },
       {
         "id": "latias_shadow",
         "rank": 38,
-        "tier": "C",
-        "edps": 20.564
-      },
-      {
-        "id": "tyrantrum_shadow",
-        "rank": 39,
-        "tier": "C",
-        "edps": 20.439
+        "tier": "B",
+        "edps": 20.242
       },
       {
         "id": "gyarados_mega",
-        "rank": 40,
-        "tier": "C",
-        "edps": 19.973
+        "rank": 39,
+        "tier": "B",
+        "edps": 20.152
       },
       {
         "id": "tyranitar_mega",
-        "rank": 41,
-        "tier": "C",
-        "edps": 19.707
+        "rank": 40,
+        "tier": "B",
+        "edps": 19.784
       },
       {
         "id": "groudon_shadow",
+        "rank": 41,
+        "tier": "C",
+        "edps": 19.717
+      },
+      {
+        "id": "tyrantrum_shadow",
         "rank": 42,
         "tier": "C",
-        "edps": 19.451
-      },
-      {
-        "id": "charizard_mega_x",
-        "rank": 43,
-        "tier": "C",
-        "edps": 19.429
-      },
-      {
-        "id": "exeggutor_alolan_shadow",
-        "rank": 44,
-        "tier": "C",
-        "edps": 19.273
+        "edps": 19.623
       },
       {
         "id": "regigigas",
-        "rank": 45,
+        "rank": 43,
         "tier": "C",
-        "edps": 19.214
+        "edps": 19.389
+      },
+      {
+        "id": "charizard_mega_x",
+        "rank": 44,
+        "tier": "C",
+        "edps": 19.171
       },
       {
         "id": "latios",
+        "rank": 45,
+        "tier": "C",
+        "edps": 18.923
+      },
+      {
+        "id": "charizard_mega_y",
         "rank": 46,
         "tier": "C",
-        "edps": 19.193
+        "edps": 18.921
       },
       {
         "id": "rhyperior_shadow",
         "rank": 47,
         "tier": "C",
-        "edps": 19.067
-      },
-      {
-        "id": "charizard_mega_y",
-        "rank": 48,
-        "tier": "C",
-        "edps": 18.837
+        "edps": 18.528
       },
       {
         "id": "tyranitar_shadow",
-        "rank": 49,
+        "rank": 48,
         "tier": "C",
-        "edps": 18.519
+        "edps": 18.49
       },
       {
         "id": "gyarados_shadow",
+        "rank": 49,
+        "tier": "C",
+        "edps": 18.277
+      },
+      {
+        "id": "hydreigon",
         "rank": 50,
         "tier": "C",
-        "edps": 18.193
+        "edps": 18.059
       }
     ],
     "dark": [
@@ -4467,591 +4461,591 @@
         "id": "houndoom_mega",
         "rank": 1,
         "tier": "SS",
-        "edps": 27.847
+        "edps": 30.537
       },
       {
         "id": "tyranitar_mega",
         "rank": 2,
         "tier": "SS",
-        "edps": 27.323
-      },
-      {
-        "id": "gengar_mega",
-        "rank": 3,
-        "tier": "S",
-        "edps": 26.066
-      },
-      {
-        "id": "tyranitar_shadow",
-        "rank": 4,
-        "tier": "S",
-        "edps": 25.776
-      },
-      {
-        "id": "hydreigon_shadow",
-        "rank": 5,
-        "tier": "S",
-        "edps": 25.229
+        "edps": 27.395
       },
       {
         "id": "darkrai_shadow",
-        "rank": 6,
-        "tier": "S",
-        "edps": 25.173
+        "rank": 3,
+        "tier": "SS",
+        "edps": 27.354
       },
       {
-        "id": "greninja_mega",
-        "rank": 7,
+        "id": "hydreigon_shadow",
+        "rank": 4,
         "tier": "S",
-        "edps": 23.459
+        "edps": 26.14
+      },
+      {
+        "id": "tyranitar_shadow",
+        "rank": 5,
+        "tier": "S",
+        "edps": 25.864
+      },
+      {
+        "id": "gengar_mega",
+        "rank": 6,
+        "tier": "S",
+        "edps": 25.621
       },
       {
         "id": "absol_mega",
-        "rank": 8,
-        "tier": "A",
-        "edps": 22.684
+        "rank": 7,
+        "tier": "S",
+        "edps": 25.317
       },
       {
-        "id": "salamence_mega",
+        "id": "greninja_mega",
+        "rank": 8,
+        "tier": "S",
+        "edps": 24.866
+      },
+      {
+        "id": "darkrai",
         "rank": 9,
-        "tier": "A",
-        "edps": 22.379
+        "tier": "S",
+        "edps": 23.493
       },
       {
         "id": "salamence_shadow",
         "rank": 10,
         "tier": "A",
-        "edps": 22.15
+        "edps": 22.567
       },
       {
-        "id": "tyranitar",
+        "id": "salamence_mega",
         "rank": 11,
         "tier": "A",
-        "edps": 22.047
-      },
-      {
-        "id": "darkrai",
-        "rank": 12,
-        "tier": "A",
-        "edps": 22.037
+        "edps": 22.431
       },
       {
         "id": "hydreigon",
-        "rank": 13,
+        "rank": 12,
         "tier": "A",
-        "edps": 21.81
+        "edps": 22.304
       },
       {
-        "id": "gyarados_mega",
+        "id": "tyranitar",
+        "rank": 13,
+        "tier": "A",
+        "edps": 22.041
+      },
+      {
+        "id": "absol_shadow",
         "rank": 14,
         "tier": "A",
-        "edps": 21.202
+        "edps": 21.879
       },
       {
         "id": "weavile_shadow",
         "rank": 15,
         "tier": "A",
-        "edps": 20.547
+        "edps": 21.762
+      },
+      {
+        "id": "gyarados_mega",
+        "rank": 16,
+        "tier": "A",
+        "edps": 21.686
       },
       {
         "id": "regigigas_shadow",
-        "rank": 16,
-        "tier": "B",
-        "edps": 20.493
+        "rank": 17,
+        "tier": "A",
+        "edps": 21.269
       },
       {
         "id": "muk_alolan_shadow",
-        "rank": 17,
-        "tier": "B",
-        "edps": 20.241
+        "rank": 18,
+        "tier": "A",
+        "edps": 21.197
       },
       {
-        "id": "aerodactyl_mega",
-        "rank": 18,
-        "tier": "B",
-        "edps": 20.221
+        "id": "greninja_shadow",
+        "rank": 19,
+        "tier": "A",
+        "edps": 20.947
+      },
+      {
+        "id": "houndoom_shadow",
+        "rank": 20,
+        "tier": "A",
+        "edps": 20.861
       },
       {
         "id": "kingambit",
-        "rank": 19,
-        "tier": "B",
-        "edps": 20.108
-      },
-      {
-        "id": "yveltal",
-        "rank": 20,
-        "tier": "B",
-        "edps": 19.64
-      },
-      {
-        "id": "guzzlord",
         "rank": 21,
-        "tier": "B",
-        "edps": 19.475
+        "tier": "A",
+        "edps": 20.713
       },
       {
         "id": "incineroar",
         "rank": 22,
-        "tier": "B",
-        "edps": 19.369
-      },
-      {
-        "id": "salamence",
-        "rank": 23,
-        "tier": "B",
-        "edps": 19.257
-      },
-      {
-        "id": "ampharos_mega",
-        "rank": 24,
-        "tier": "B",
-        "edps": 19.2
-      },
-      {
-        "id": "gengar_shadow",
-        "rank": 25,
-        "tier": "B",
-        "edps": 19.072
-      },
-      {
-        "id": "greninja_shadow",
-        "rank": 26,
-        "tier": "B",
-        "edps": 18.862
-      },
-      {
-        "id": "conkeldurr_shadow",
-        "rank": 27,
-        "tier": "B",
-        "edps": 18.826
-      },
-      {
-        "id": "hoopa_unbound",
-        "rank": 28,
-        "tier": "B",
-        "edps": 18.576
-      },
-      {
-        "id": "zarude",
-        "rank": 29,
-        "tier": "C",
-        "edps": 18.574
-      },
-      {
-        "id": "absol_shadow",
-        "rank": 30,
-        "tier": "C",
-        "edps": 18.456
-      },
-      {
-        "id": "polteageist",
-        "rank": 31,
-        "tier": "C",
-        "edps": 18.435
-      },
-      {
-        "id": "necrozma_dawn_wings",
-        "rank": 33,
-        "tier": "C",
-        "edps": 18.395
-      },
-      {
-        "id": "manectric_mega",
-        "rank": 34,
-        "tier": "C",
-        "edps": 18.31
-      },
-      {
-        "id": "houndoom_shadow",
-        "rank": 35,
-        "tier": "C",
-        "edps": 18.287
-      },
-      {
-        "id": "weavile",
-        "rank": 36,
-        "tier": "C",
-        "edps": 18.224
-      },
-      {
-        "id": "urshifu_single_strike",
-        "rank": 37,
-        "tier": "C",
-        "edps": 18.109
-      },
-      {
-        "id": "sharpedo_mega",
-        "rank": 38,
-        "tier": "C",
-        "edps": 18.059
-      },
-      {
-        "id": "trevenant_shadow",
-        "rank": 39,
-        "tier": "C",
-        "edps": 17.887
-      },
-      {
-        "id": "regigigas",
-        "rank": 40,
-        "tier": "C",
-        "edps": 17.864
-      },
-      {
-        "id": "gengar",
-        "rank": 41,
-        "tier": "C",
-        "edps": 17.812
-      },
-      {
-        "id": "mismagius_shadow",
-        "rank": 42,
-        "tier": "C",
-        "edps": 17.687
+        "tier": "A",
+        "edps": 20.37
       },
       {
         "id": "honchkrow_shadow",
-        "rank": 43,
-        "tier": "C",
-        "edps": 17.654
+        "rank": 23,
+        "tier": "B",
+        "edps": 20.283
       },
       {
-        "id": "reshiram_shadow",
-        "rank": 44,
-        "tier": "C",
-        "edps": 17.585
+        "id": "aerodactyl_mega",
+        "rank": 24,
+        "tier": "B",
+        "edps": 20.263
       },
       {
-        "id": "zekrom_shadow",
-        "rank": 45,
-        "tier": "C",
-        "edps": 17.585
+        "id": "yveltal",
+        "rank": 25,
+        "tier": "B",
+        "edps": 20.186
       },
       {
-        "id": "regidrago",
-        "rank": 46,
-        "tier": "C",
-        "edps": 17.489
-      },
-      {
-        "id": "muk_alolan",
-        "rank": 47,
-        "tier": "C",
-        "edps": 17.469
+        "id": "hoopa_unbound",
+        "rank": 26,
+        "tier": "B",
+        "edps": 20.02
       },
       {
         "id": "absol",
-        "rank": 48,
-        "tier": "C",
-        "edps": 17.382
+        "rank": 27,
+        "tier": "B",
+        "edps": 19.771
+      },
+      {
+        "id": "ampharos_mega",
+        "rank": 28,
+        "tier": "B",
+        "edps": 19.55
+      },
+      {
+        "id": "salamence",
+        "rank": 29,
+        "tier": "B",
+        "edps": 19.526
+      },
+      {
+        "id": "sharpedo_mega",
+        "rank": 30,
+        "tier": "B",
+        "edps": 19.449
+      },
+      {
+        "id": "manectric_mega",
+        "rank": 31,
+        "tier": "B",
+        "edps": 19.371
+      },
+      {
+        "id": "guzzlord",
+        "rank": 32,
+        "tier": "B",
+        "edps": 19.367
+      },
+      {
+        "id": "weavile",
+        "rank": 33,
+        "tier": "B",
+        "edps": 19.077
+      },
+      {
+        "id": "polteageist",
+        "rank": 34,
+        "tier": "B",
+        "edps": 19.023
+      },
+      {
+        "id": "urshifu_single_strike",
+        "rank": 36,
+        "tier": "B",
+        "edps": 19.022
+      },
+      {
+        "id": "zarude",
+        "rank": 37,
+        "tier": "B",
+        "edps": 18.969
+      },
+      {
+        "id": "necrozma_dawn_wings",
+        "rank": 38,
+        "tier": "B",
+        "edps": 18.851
+      },
+      {
+        "id": "mismagius_shadow",
+        "rank": 39,
+        "tier": "B",
+        "edps": 18.571
       },
       {
         "id": "grimmsnarl",
-        "rank": 49,
+        "rank": 40,
         "tier": "C",
-        "edps": 17.245
+        "edps": 18.498
       },
       {
-        "id": "tornadus_incarnate_shadow",
+        "id": "regigigas",
+        "rank": 41,
+        "tier": "C",
+        "edps": 18.397
+      },
+      {
+        "id": "trevenant_shadow",
+        "rank": 42,
+        "tier": "C",
+        "edps": 18.383
+      },
+      {
+        "id": "zoroark",
+        "rank": 43,
+        "tier": "C",
+        "edps": 18.358
+      },
+      {
+        "id": "shiftry_shadow",
+        "rank": 44,
+        "tier": "C",
+        "edps": 18.323
+      },
+      {
+        "id": "gengar_shadow",
+        "rank": 45,
+        "tier": "C",
+        "edps": 18.313
+      },
+      {
+        "id": "zoroark_hisuian",
+        "rank": 46,
+        "tier": "C",
+        "edps": 18.298
+      },
+      {
+        "id": "greninja",
+        "rank": 47,
+        "tier": "C",
+        "edps": 18.277
+      },
+      {
+        "id": "houndoom",
+        "rank": 48,
+        "tier": "C",
+        "edps": 18.146
+      },
+      {
+        "id": "reshiram_shadow",
+        "rank": 49,
+        "tier": "C",
+        "edps": 18.119
+      },
+      {
+        "id": "conkeldurr_shadow",
         "rank": 50,
         "tier": "C",
-        "edps": 17.188
+        "edps": 18.07
       }
     ],
     "steel": [
       {
-        "id": "zamazenta_crowned_shield",
+        "id": "zacian_crowned_sword",
         "rank": 1,
         "tier": "SSS",
-        "edps": 31.763
+        "edps": 33.081
       },
       {
-        "id": "zacian_crowned_sword",
+        "id": "zamazenta_crowned_shield",
         "rank": 2,
         "tier": "SSS",
-        "edps": 30.749
+        "edps": 32.217
       },
       {
         "id": "necrozma_dusk_mane",
         "rank": 3,
-        "tier": "SS",
-        "edps": 29.495
-      },
-      {
-        "id": "metagross_mega",
-        "rank": 4,
-        "tier": "SS",
-        "edps": 26.337
+        "tier": "SSS",
+        "edps": 31.569
       },
       {
         "id": "metagross_shadow",
+        "rank": 4,
+        "tier": "SS",
+        "edps": 27.325
+      },
+      {
+        "id": "metagross_mega",
         "rank": 5,
         "tier": "S",
-        "edps": 25.528
+        "edps": 27.225
       },
       {
         "id": "lucario_mega",
         "rank": 6,
         "tier": "S",
-        "edps": 24.852
+        "edps": 26.996
       },
       {
         "id": "dialga_shadow",
         "rank": 7,
         "tier": "S",
-        "edps": 22.737
+        "edps": 24.024
       },
       {
         "id": "metagross",
         "rank": 8,
         "tier": "A",
-        "edps": 22.056
+        "edps": 23.201
       },
       {
-        "id": "kyurem_white",
+        "id": "skarmory_mega",
         "rank": 9,
         "tier": "A",
-        "edps": 21.457
+        "edps": 22.61
       },
       {
         "id": "regigigas_shadow",
         "rank": 10,
         "tier": "A",
-        "edps": 21.3
-      },
-      {
-        "id": "necrozma_dawn_wings",
-        "rank": 11,
-        "tier": "A",
-        "edps": 20.785
-      },
-      {
-        "id": "skarmory_mega",
-        "rank": 12,
-        "tier": "A",
-        "edps": 20.704
+        "edps": 22.143
       },
       {
         "id": "excadrill_shadow",
+        "rank": 11,
+        "tier": "A",
+        "edps": 21.727
+      },
+      {
+        "id": "necrozma_dawn_wings",
+        "rank": 12,
+        "tier": "A",
+        "edps": 21.679
+      },
+      {
+        "id": "kyurem_white",
         "rank": 13,
         "tier": "A",
-        "edps": 20.015
-      },
-      {
-        "id": "dragonite_mega",
-        "rank": 14,
-        "tier": "B",
-        "edps": 19.915
-      },
-      {
-        "id": "dialga_origin",
-        "rank": 15,
-        "tier": "B",
-        "edps": 19.635
-      },
-      {
-        "id": "dialga",
-        "rank": 16,
-        "tier": "B",
-        "edps": 19.632
-      },
-      {
-        "id": "melmetal",
-        "rank": 17,
-        "tier": "B",
-        "edps": 19.618
+        "edps": 21.393
       },
       {
         "id": "tinkaton",
-        "rank": 18,
-        "tier": "B",
-        "edps": 19.163
+        "rank": 14,
+        "tier": "A",
+        "edps": 21.078
       },
       {
-        "id": "aggron_mega",
-        "rank": 19,
+        "id": "dialga",
+        "rank": 15,
         "tier": "B",
-        "edps": 19.133
+        "edps": 20.508
       },
       {
-        "id": "tyranitar_mega",
-        "rank": 20,
+        "id": "dialga_origin",
+        "rank": 16,
         "tier": "B",
-        "edps": 18.82
-      },
-      {
-        "id": "regigigas",
-        "rank": 21,
-        "tier": "B",
-        "edps": 18.816
-      },
-      {
-        "id": "genesect_burn",
-        "rank": 22,
-        "tier": "B",
-        "edps": 18.724
-      },
-      {
-        "id": "genesect_chill",
-        "rank": 23,
-        "tier": "B",
-        "edps": 18.724
-      },
-      {
-        "id": "genesect_douse",
-        "rank": 24,
-        "tier": "B",
-        "edps": 18.724
-      },
-      {
-        "id": "genesect",
-        "rank": 25,
-        "tier": "B",
-        "edps": 18.724
-      },
-      {
-        "id": "genesect_shock",
-        "rank": 26,
-        "tier": "B",
-        "edps": 18.724
-      },
-      {
-        "id": "scizor_mega",
-        "rank": 27,
-        "tier": "B",
-        "edps": 18.278
-      },
-      {
-        "id": "jirachi",
-        "rank": 28,
-        "tier": "B",
-        "edps": 18.212
+        "edps": 20.223
       },
       {
         "id": "lucario",
-        "rank": 29,
-        "tier": "C",
-        "edps": 18.053
+        "rank": 17,
+        "tier": "B",
+        "edps": 19.95
       },
       {
-        "id": "aerodactyl_mega",
-        "rank": 30,
-        "tier": "C",
-        "edps": 18.035
+        "id": "melmetal",
+        "rank": 18,
+        "tier": "B",
+        "edps": 19.859
       },
       {
-        "id": "ho_oh_shadow",
-        "rank": 31,
+        "id": "genesect_burn",
+        "rank": 19,
+        "tier": "B",
+        "edps": 19.705
+      },
+      {
+        "id": "genesect_chill",
+        "rank": 20,
+        "tier": "B",
+        "edps": 19.705
+      },
+      {
+        "id": "genesect_douse",
+        "rank": 21,
+        "tier": "B",
+        "edps": 19.705
+      },
+      {
+        "id": "genesect",
+        "rank": 22,
+        "tier": "B",
+        "edps": 19.705
+      },
+      {
+        "id": "genesect_shock",
+        "rank": 23,
+        "tier": "B",
+        "edps": 19.705
+      },
+      {
+        "id": "aggron_mega",
+        "rank": 24,
+        "tier": "B",
+        "edps": 19.678
+      },
+      {
+        "id": "dragonite_mega",
+        "rank": 25,
+        "tier": "B",
+        "edps": 19.659
+      },
+      {
+        "id": "scizor_mega",
+        "rank": 26,
+        "tier": "B",
+        "edps": 19.214
+      },
+      {
+        "id": "regigigas",
+        "rank": 27,
         "tier": "C",
-        "edps": 17.962
+        "edps": 19.157
+      },
+      {
+        "id": "tyranitar_mega",
+        "rank": 28,
+        "tier": "C",
+        "edps": 18.952
       },
       {
         "id": "heatran_shadow",
-        "rank": 32,
+        "rank": 29,
         "tier": "C",
-        "edps": 17.932
+        "edps": 18.825
       },
       {
         "id": "excadrill",
-        "rank": 33,
+        "rank": 30,
         "tier": "C",
-        "edps": 17.829
-      },
-      {
-        "id": "kingambit",
-        "rank": 35,
-        "tier": "C",
-        "edps": 17.576
-      },
-      {
-        "id": "aggron_shadow",
-        "rank": 36,
-        "tier": "C",
-        "edps": 17.386
+        "edps": 18.758
       },
       {
         "id": "empoleon_shadow",
-        "rank": 37,
+        "rank": 31,
         "tier": "C",
-        "edps": 17.311
+        "edps": 18.653
       },
       {
-        "id": "tyranitar_shadow",
-        "rank": 38,
+        "id": "ho_oh_shadow",
+        "rank": 32,
         "tier": "C",
-        "edps": 17.241
+        "edps": 18.608
+      },
+      {
+        "id": "jirachi",
+        "rank": 33,
+        "tier": "C",
+        "edps": 18.598
+      },
+      {
+        "id": "aerodactyl_mega",
+        "rank": 34,
+        "tier": "C",
+        "edps": 18.403
+      },
+      {
+        "id": "scizor_shadow",
+        "rank": 36,
+        "tier": "C",
+        "edps": 18.34
       },
       {
         "id": "starmie_mega",
+        "rank": 37,
+        "tier": "C",
+        "edps": 18.247
+      },
+      {
+        "id": "aggron_shadow",
+        "rank": 38,
+        "tier": "C",
+        "edps": 18.176
+      },
+      {
+        "id": "kingambit",
         "rank": 39,
         "tier": "C",
-        "edps": 16.906
+        "edps": 18.017
       },
       {
-        "id": "kyurem",
+        "id": "magneton_shadow",
         "rank": 40,
         "tier": "C",
-        "edps": 16.815
+        "edps": 17.406
       },
       {
-        "id": "dragonite_shadow",
+        "id": "magnezone_shadow",
         "rank": 41,
-        "tier": "C",
-        "edps": 16.751
+        "tier": "D",
+        "edps": 17.297
       },
       {
-        "id": "steelix_mega",
+        "id": "tyranitar_shadow",
         "rank": 42,
-        "tier": "C",
-        "edps": 16.668
+        "tier": "D",
+        "edps": 17.249
       },
       {
         "id": "archeops_shadow",
         "rank": 43,
-        "tier": "C",
-        "edps": 16.658
+        "tier": "D",
+        "edps": 17.061
       },
       {
-        "id": "scizor_shadow",
+        "id": "steelix_mega",
         "rank": 44,
-        "tier": "C",
-        "edps": 16.538
-      },
-      {
-        "id": "pidgeot_mega",
-        "rank": 45,
-        "tier": "C",
-        "edps": 16.071
-      },
-      {
-        "id": "gigalith_shadow",
-        "rank": 46,
         "tier": "D",
-        "edps": 16.051
-      },
-      {
-        "id": "hariyama_shadow",
-        "rank": 47,
-        "tier": "D",
-        "edps": 15.922
-      },
-      {
-        "id": "machamp_shadow",
-        "rank": 48,
-        "tier": "D",
-        "edps": 15.649
-      },
-      {
-        "id": "kyurem_black",
-        "rank": 49,
-        "tier": "D",
-        "edps": 15.644
+        "edps": 17.056
       },
       {
         "id": "duraludon",
+        "rank": 45,
+        "tier": "D",
+        "edps": 16.837
+      },
+      {
+        "id": "kyurem",
+        "rank": 46,
+        "tier": "D",
+        "edps": 16.735
+      },
+      {
+        "id": "pidgeot_mega",
+        "rank": 47,
+        "tier": "D",
+        "edps": 16.544
+      },
+      {
+        "id": "dragonite_shadow",
+        "rank": 48,
+        "tier": "D",
+        "edps": 16.48
+      },
+      {
+        "id": "kingler_shadow",
+        "rank": 49,
+        "tier": "D",
+        "edps": 16.358
+      },
+      {
+        "id": "bisharp",
         "rank": 50,
         "tier": "D",
-        "edps": 15.559
+        "edps": 16.327
       }
     ],
     "fairy": [
@@ -5059,301 +5053,301 @@
         "id": "gardevoir_mega",
         "rank": 1,
         "tier": "SSS",
-        "edps": 23.996
+        "edps": 25.607
       },
       {
         "id": "zacian_crowned_sword",
         "rank": 2,
-        "tier": "SSS",
-        "edps": 23.081
-      },
-      {
-        "id": "gallade_mega",
-        "rank": 3,
         "tier": "SS",
-        "edps": 19.648
-      },
-      {
-        "id": "alakazam_mega",
-        "rank": 4,
-        "tier": "S",
-        "edps": 19.545
-      },
-      {
-        "id": "enamorus_incarnate",
-        "rank": 5,
-        "tier": "S",
-        "edps": 19.492
+        "edps": 23.859
       },
       {
         "id": "gardevoir_shadow",
-        "rank": 6,
+        "rank": 3,
+        "tier": "SS",
+        "edps": 21.424
+      },
+      {
+        "id": "enamorus_incarnate",
+        "rank": 4,
         "tier": "S",
-        "edps": 19.466
+        "edps": 21.318
+      },
+      {
+        "id": "alakazam_mega",
+        "rank": 5,
+        "tier": "S",
+        "edps": 20.216
       },
       {
         "id": "tapu_lele",
-        "rank": 7,
+        "rank": 6,
         "tier": "S",
-        "edps": 18.792
+        "edps": 19.982
       },
       {
-        "id": "latias_mega",
+        "id": "gallade_mega",
+        "rank": 7,
+        "tier": "S",
+        "edps": 19.929
+      },
+      {
+        "id": "tapu_koko",
         "rank": 8,
         "tier": "S",
-        "edps": 18.715
+        "edps": 19.852
       },
       {
         "id": "xerneas",
         "rank": 9,
         "tier": "S",
-        "edps": 18.558
-      },
-      {
-        "id": "tapu_koko",
-        "rank": 10,
-        "tier": "S",
-        "edps": 18.179
+        "edps": 19.617
       },
       {
         "id": "tapu_bulu",
-        "rank": 11,
-        "tier": "A",
-        "edps": 18.129
-      },
-      {
-        "id": "xurkitree",
-        "rank": 12,
-        "tier": "A",
-        "edps": 17.822
-      },
-      {
-        "id": "togekiss",
-        "rank": 13,
-        "tier": "A",
-        "edps": 17.626
-      },
-      {
-        "id": "ursaluna_shadow",
-        "rank": 14,
-        "tier": "A",
-        "edps": 17.589
-      },
-      {
-        "id": "enamorus_therian",
-        "rank": 15,
-        "tier": "A",
-        "edps": 17.558
-      },
-      {
-        "id": "zacian_hero",
-        "rank": 16,
-        "tier": "A",
-        "edps": 17.558
-      },
-      {
-        "id": "gardevoir",
-        "rank": 17,
-        "tier": "A",
-        "edps": 17.294
-      },
-      {
-        "id": "latias_shadow",
-        "rank": 18,
-        "tier": "A",
-        "edps": 17.033
+        "rank": 10,
+        "tier": "S",
+        "edps": 19.097
       },
       {
         "id": "granbull_shadow",
-        "rank": 19,
+        "rank": 11,
         "tier": "A",
-        "edps": 16.665
+        "edps": 18.811
+      },
+      {
+        "id": "enamorus_therian",
+        "rank": 12,
+        "tier": "A",
+        "edps": 18.792
+      },
+      {
+        "id": "latias_mega",
+        "rank": 13,
+        "tier": "A",
+        "edps": 18.662
+      },
+      {
+        "id": "togekiss",
+        "rank": 14,
+        "tier": "A",
+        "edps": 18.423
+      },
+      {
+        "id": "gardevoir",
+        "rank": 15,
+        "tier": "A",
+        "edps": 18.41
+      },
+      {
+        "id": "xurkitree",
+        "rank": 16,
+        "tier": "A",
+        "edps": 18.389
+      },
+      {
+        "id": "zacian_hero",
+        "rank": 17,
+        "tier": "A",
+        "edps": 18.282
       },
       {
         "id": "diancie_mega",
-        "rank": 20,
-        "tier": "B",
-        "edps": 16.366
-      },
-      {
-        "id": "sylveon",
-        "rank": 21,
-        "tier": "B",
-        "edps": 16.155
-      },
-      {
-        "id": "raichu_mega_y",
-        "rank": 22,
-        "tier": "B",
-        "edps": 16.105
+        "rank": 18,
+        "tier": "A",
+        "edps": 17.877
       },
       {
         "id": "hatterene",
-        "rank": 23,
-        "tier": "B",
-        "edps": 16.076
+        "rank": 19,
+        "tier": "A",
+        "edps": 17.766
       },
       {
-        "id": "gallade_shadow",
-        "rank": 24,
-        "tier": "B",
-        "edps": 16.074
+        "id": "raichu_mega_y",
+        "rank": 20,
+        "tier": "A",
+        "edps": 17.596
       },
       {
-        "id": "tyrantrum_shadow",
-        "rank": 25,
-        "tier": "B",
-        "edps": 16.016
+        "id": "ursaluna_shadow",
+        "rank": 21,
+        "tier": "A",
+        "edps": 17.325
       },
       {
-        "id": "meloetta_aria",
-        "rank": 26,
-        "tier": "B",
-        "edps": 15.851
-      },
-      {
-        "id": "donphan_shadow",
-        "rank": 27,
-        "tier": "B",
-        "edps": 15.734
-      },
-      {
-        "id": "altaria_mega",
-        "rank": 28,
-        "tier": "B",
-        "edps": 15.706
+        "id": "latias_shadow",
+        "rank": 22,
+        "tier": "A",
+        "edps": 17.146
       },
       {
         "id": "primarina",
-        "rank": 29,
+        "rank": 23,
         "tier": "B",
-        "edps": 15.667
+        "edps": 16.994
+      },
+      {
+        "id": "sylveon",
+        "rank": 24,
+        "tier": "B",
+        "edps": 16.773
+      },
+      {
+        "id": "gallade_shadow",
+        "rank": 25,
+        "tier": "B",
+        "edps": 16.746
       },
       {
         "id": "banette_mega",
-        "rank": 30,
+        "rank": 26,
         "tier": "B",
-        "edps": 15.645
+        "edps": 16.738
       },
       {
-        "id": "raichu_mega_x",
-        "rank": 31,
+        "id": "altaria_mega",
+        "rank": 27,
         "tier": "B",
-        "edps": 15.139
-      },
-      {
-        "id": "ursaluna",
-        "rank": 32,
-        "tier": "C",
-        "edps": 15.057
-      },
-      {
-        "id": "grimmsnarl",
-        "rank": 33,
-        "tier": "C",
-        "edps": 14.969
+        "edps": 16.365
       },
       {
         "id": "granbull",
-        "rank": 34,
-        "tier": "C",
-        "edps": 14.967
-      },
-      {
-        "id": "alakazam_shadow",
-        "rank": 35,
-        "tier": "C",
-        "edps": 14.84
-      },
-      {
-        "id": "gholdengo",
-        "rank": 36,
-        "tier": "C",
-        "edps": 14.775
+        "rank": 28,
+        "tier": "B",
+        "edps": 16.326
       },
       {
         "id": "tinkaton",
-        "rank": 37,
-        "tier": "C",
-        "edps": 14.633
+        "rank": 29,
+        "tier": "B",
+        "edps": 16.119
       },
       {
-        "id": "latias",
+        "id": "raichu_mega_x",
+        "rank": 30,
+        "tier": "B",
+        "edps": 16.097
+      },
+      {
+        "id": "grimmsnarl",
+        "rank": 31,
+        "tier": "B",
+        "edps": 16.084
+      },
+      {
+        "id": "donphan_shadow",
+        "rank": 32,
+        "tier": "B",
+        "edps": 16.054
+      },
+      {
+        "id": "meloetta_aria",
+        "rank": 33,
+        "tier": "B",
+        "edps": 15.895
+      },
+      {
+        "id": "alakazam_shadow",
+        "rank": 34,
+        "tier": "B",
+        "edps": 15.86
+      },
+      {
+        "id": "weezing_galarian_shadow",
+        "rank": 35,
+        "tier": "B",
+        "edps": 15.83
+      },
+      {
+        "id": "tyrantrum_shadow",
+        "rank": 36,
+        "tier": "B",
+        "edps": 15.648
+      },
+      {
+        "id": "rapidash_galarian",
+        "rank": 37,
+        "tier": "B",
+        "edps": 15.516
+      },
+      {
+        "id": "gholdengo",
         "rank": 38,
-        "tier": "C",
-        "edps": 14.629
+        "tier": "B",
+        "edps": 15.507
       },
       {
         "id": "ninetales_alolan_shadow",
         "rank": 39,
-        "tier": "C",
-        "edps": 14.559
+        "tier": "B",
+        "edps": 15.499
       },
       {
         "id": "tapu_fini",
         "rank": 40,
-        "tier": "C",
-        "edps": 14.546
-      },
-      {
-        "id": "beartic",
-        "rank": 41,
-        "tier": "C",
-        "edps": 14.529
-      },
-      {
-        "id": "ursaring_shadow",
-        "rank": 42,
-        "tier": "C",
-        "edps": 14.497
+        "tier": "B",
+        "edps": 15.302
       },
       {
         "id": "florges",
+        "rank": 41,
+        "tier": "C",
+        "edps": 15.241
+      },
+      {
+        "id": "ursaluna",
+        "rank": 42,
+        "tier": "C",
+        "edps": 14.869
+      },
+      {
+        "id": "latias",
         "rank": 43,
         "tier": "C",
-        "edps": 14.266
+        "edps": 14.709
       },
       {
-        "id": "weezing_galarian_shadow",
+        "id": "clefable",
         "rank": 44,
         "tier": "C",
-        "edps": 14.222
+        "edps": 14.561
       },
       {
-        "id": "zamazenta_crowned_shield",
+        "id": "mawile_mega",
         "rank": 45,
         "tier": "C",
-        "edps": 14.106
-      },
-      {
-        "id": "glimmora",
-        "rank": 46,
-        "tier": "C",
-        "edps": 14.08
+        "edps": 14.543
       },
       {
         "id": "gallade",
+        "rank": 46,
+        "tier": "C",
+        "edps": 14.525
+      },
+      {
+        "id": "ursaring_shadow",
         "rank": 47,
         "tier": "C",
-        "edps": 14.062
+        "edps": 14.522
       },
       {
-        "id": "lunala",
+        "id": "zamazenta_crowned_shield",
         "rank": 48,
         "tier": "C",
-        "edps": 14.041
+        "edps": 14.499
       },
       {
-        "id": "rapidash_galarian",
+        "id": "ribombee",
         "rank": 49,
         "tier": "C",
-        "edps": 13.976
+        "edps": 14.476
       },
       {
-        "id": "tyrantrum",
+        "id": "beartic",
         "rank": 50,
         "tier": "C",
-        "edps": 13.957
+        "edps": 14.387
       }
     ]
   }

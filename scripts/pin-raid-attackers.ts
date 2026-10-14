@@ -2,9 +2,11 @@
  * Refresh data/raid-attackers.json from Dittobase best-attackers pages.
  * Run: npm run pin:raid
  *
- * GitHub Pages serves this file. The browser cannot call dittobase.com
- * (no CORS header). Local `npm run dev` refreshes through the Vite `/ditto`
- * proxy. A failed fetch leaves the previous snapshot in place.
+ * The Pages app fetches this file from raw.githubusercontent.com (Dittobase
+ * sends no CORS header) and caches it for 24 hours. The scheduled workflow
+ * refreshes it. Local `npm run dev` still reads Dittobase through the Vite
+ * `/ditto` proxy. A failed fetch leaves the previous snapshot in place.
+ * Unchanged attacker lists are not rewritten.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -80,6 +82,12 @@ async function main(): Promise<void> {
       if (viableRaidTier(row.tier)) viable.add(row.id);
     }
   }
+  const previous = JSON.parse(readFileSync(outPath, "utf8")) as { lists?: unknown };
+  if (JSON.stringify(previous.lists) === JSON.stringify(file.lists)) {
+    console.log(`unchanged (${viable.size} viable / ${ranked.size} ranked)`);
+    return;
+  }
+
   writeFileSync(outPath, `${JSON.stringify(file, null, 2)}\n`);
 
   const pin = JSON.parse(readFileSync(pinPath, "utf8")) as {

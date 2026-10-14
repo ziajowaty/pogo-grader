@@ -180,7 +180,7 @@ must(
   "bulbasaur inherits Mega Venusaur Grass type rank",
 );
 must(raidMegaVenusaur?.typeRanks.poison != null, "Mega Venusaur has a Poison type rank");
-must(raidVenusaur?.viable === false && raidVenusaur?.typeRanks.grass === 29, "regular Venusaur is Grass #29 and not KEEP");
+must(raidVenusaur?.viable === false && raidVenusaur?.typeRanks.grass === 28, "regular Venusaur is Grass #28 and not KEEP");
 must(raidVenusaur?.typeRanks.poison == null, "regular Venusaur has no Poison move rank");
 must(
   meta.raidRankings?.find((row) => row.speciesId === "chesnaught_mega")?.typeRanks.grass === 1,
@@ -200,12 +200,13 @@ must(
   "Mega Raichu Y is Electric #1",
 );
 const raidTinkaton = meta.raidRankings?.find((row) => row.speciesId === "tinkaton");
-must(raidTinkaton?.typeRanks.fairy === 37 && raidTinkaton?.typeTiers?.fairy === "C", "Tinkaton is Fairy #37");
-must(meta.raidAttackers.has("tinkaton") === false && raidTinkaton?.viable === false, "Tinkaton is not raid KEEP");
+must(raidTinkaton?.typeRanks.fairy === 29 && raidTinkaton?.typeTiers?.fairy === "B", "Tinkaton is Fairy #29");
+must(raidTinkaton?.typeRanks.steel === 14 && raidTinkaton?.typeTiers?.steel === "A", "Tinkaton is Steel #14");
+must(meta.raidAttackers.has("tinkaton") === true && raidTinkaton?.viable === true, "Tinkaton Steel A is raid KEEP");
 const raidMegaGardevoir = meta.raidRankings?.find((row) => row.speciesId === "gardevoir_mega");
 must(raidMegaGardevoir?.typeRanks.fairy === 1, "Mega Gardevoir is Fairy #1");
 const raidMegaAlakazam = meta.raidRankings?.find((row) => row.speciesId === "alakazam_mega");
-must(raidMegaAlakazam?.typeRanks.fairy === 4, "Mega Alakazam is Fairy #4");
+must(raidMegaAlakazam?.typeRanks.fairy === 5, "Mega Alakazam is Fairy #5");
 must(
   raidMegaAlakazam?.types.includes("psychic") === true && raidMegaAlakazam?.types.includes("fairy") !== true,
   "Mega Alakazam stays Psychic while ranking as a Fairy attacker",

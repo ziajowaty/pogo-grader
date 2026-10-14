@@ -34,6 +34,12 @@ const PVPOKE_TTL_MS = 24 * 60 * 60 * 1000;
 const PVPOKE_CACHE_KEY = "pogo-grader.pvpokeLists.v3";
 const RAID_TTL_MS = 24 * 60 * 60 * 1000;
 const RAID_CACHE_KEY = "pogo-grader.raidAttackers.dittobase";
+/**
+ * Published raid snapshot. raw.githubusercontent.com sends CORS headers;
+ * dittobase.com does not. The pin workflow refreshes this file from Dittobase.
+ */
+const RAID_PUBLISHED_URL =
+  "https://raw.githubusercontent.com/ziajowaty/pogo-grader/main/data/raid-attackers.json";
 const RAID_LIVE_MIN = 40;
 const GL_RANKINGS_URL =
   "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-1500.json";
@@ -81,11 +87,7 @@ function dittobaseTypeFetchUrl(type: PokemonType): string {
   return `/ditto/pokemon-go/best-attackers/${type}`;
 }
 
-/**
- * Dittobase does not send Access-Control-Allow-Origin. The Vite dev server
- * proxies `/ditto`. A static host such as GitHub Pages cannot, so production
- * stays on the snapshot pinned at build time.
- */
+/** Local `npm run dev` reads Dittobase through the Vite `/ditto` proxy. */
 function dittobaseLiveEnabled(): boolean {
   return typeof window !== "undefined" && import.meta.env?.DEV === true;
 }
@@ -836,6 +838,14 @@ function writeRaidCache(file: DittoRaidFile, fetchedAt: number): void {
   }
 }
 
+async function fetchPublishedRaidFile(): Promise<DittoRaidFile> {
+  const res = await fetch(RAID_PUBLISHED_URL, { cache: "no-cache" });
+  if (!res.ok) throw new Error(`Raid snapshot ${res.status}`);
+  const file = (await res.json()) as DittoRaidFile;
+  if (!raidFileUsable(file)) throw new Error("Raid snapshot too small");
+  return file;
+}
+
 async function fetchDittobaseRaidFile(): Promise<DittoRaidFile> {
   const headers: Record<string, string> = {};
   if (typeof window === "undefined") headers["User-Agent"] = DITTOBASE_UA;
@@ -855,7 +865,9 @@ async function fetchDittobaseRaidFile(): Promise<DittoRaidFile> {
 
 async function fetchLiveRaid(stale: CachedRaidFile | null): Promise<RaidLists> {
   try {
-    const live = await fetchDittobaseRaidFile();
+    const live = dittobaseLiveEnabled()
+      ? await fetchDittobaseRaidFile()
+      : await fetchPublishedRaidFile();
     const fetchedAt = Date.now();
     writeRaidCache(live, fetchedAt);
     return { file: live, fetchedAt, source: "live" };
@@ -869,7 +881,6 @@ async function fetchLiveRaid(stale: CachedRaidFile | null): Promise<RaidLists> {
 
 async function loadRaidLists(): Promise<RaidLists> {
   const bundled = bundledRaidLists();
-  if (!dittobaseLiveEnabled()) return bundled;
   const canFetch = typeof fetch === "function" && typeof localStorage !== "undefined";
   if (!canFetch) return bundled;
 

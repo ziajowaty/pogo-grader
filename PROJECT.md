@@ -44,7 +44,7 @@ KEEP if any class fires. DUMP only if every keep class fails and the copy is not
 - **No seat:** LOOK the one best copy. DUMP extras.
 - **DUMP fuel:** extras after seats are filled, and junk extras that are not the best copy. **CSV stream order** (KEEP / LOOK / DUMP tracks are a partition of the export, never re-sorted).
 
-Fetch the two PvPoke ranking JSON files (extract IDs). 24h browser cache. Dittobase best-attackers pages (eDPS per move type; A tier and better are raid KEEP) are pinned into `data/raid-attackers.json` by `npm run pin:raid` and again in the Pages build. Keep `data/base-stats.json`, CPM, `gl-evolution.json`, that raid snapshot, and limited/legendary/mythical vendored. PvPoke fails closed: live → stale cache → bundled snapshot. Node tests skip fetch. Vite `/ditto` proxy for local raid refresh; GitHub Pages ships the pinned snapshot and does not request dittobase.com.
+Fetch the two PvPoke ranking JSON files (extract IDs) and the published Dittobase raid snapshot. 24h browser cache for both. Dittobase best-attackers pages (eDPS per move type; A tier and better are raid KEEP) are pinned into `data/raid-attackers.json` by `npm run pin:raid` and the daily pin workflow; Pages reads that file from raw.githubusercontent.com because dittobase.com sends no CORS header. Keep `data/base-stats.json`, CPM, `gl-evolution.json`, that raid snapshot, and limited/legendary/mythical vendored. Fail closed: live → stale cache → bundled snapshot. Node tests skip fetch. Vite `/ditto` proxy for local Dittobase refresh.
 
 ## Forbidden
 

@@ -1,5 +1,5 @@
 {
-  "fetched": "2026-10-03",
+  "fetched": "2026-10-14",
   "pvpokeGamemasterTimestamp": "2026-09-18 15:44:18",
   "sources": {
     "gl": "https://raw.githubusercontent.com/pvpoke/pvpoke/master/src/data/rankings/all/overall/rankings-1500.json",
@@ -25,7 +25,7 @@
     "legendary": 126,
     "mythical": 55,
     "limited": 218,
-    "raidAttackers": 247,
+    "raidAttackers": 236,
     "speciesTypes": 1268
   },
   "note": "raidAttackers is Dittobase eDPS, A tier and better, one best moveset per species per attacking type. The JSON keeps the embedded page (lower tiers included) as the rankings fallback. species-types.json is a separate PvPoke gamemaster snapshot."
