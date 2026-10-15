@@ -1,6 +1,6 @@
 {
   "comment": "Dittobase eDPS raid attackers (level 40, best moveset per attacking type). Embedded first page of each type list. A tier and better are raid KEEP; lower tiers stay on the ranking table. Published for the site, which caches it for 24 hours. Local dev can refresh through the Vite proxy.",
-  "fetched": "2026-10-14",
+  "fetched": "2026-10-15",
   "updatedAt": "2026-10-11T14:03:06.724Z",
   "source": "https://www.dittobase.com/pokemon-go/best-attackers/{type}",
   "lists": {
@@ -1484,8 +1484,14 @@
         "edps": 16.696
       },
       {
-        "id": "toxtricity",
+        "id": "toxtricity_amped",
         "rank": 48,
+        "tier": "B",
+        "edps": 16.695
+      },
+      {
+        "id": "toxtricity_low_key",
+        "rank": 49,
         "tier": "B",
         "edps": 16.695
       },
